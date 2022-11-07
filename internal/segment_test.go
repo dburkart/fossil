@@ -25,7 +25,7 @@ func createFullSegment() Segment {
 	}
 
 	for i := 0; i < int(SegmentSize); i++ {
-		segment.AddEvent(event)
+		segment.Add(event)
 		event.Timestamp = event.Timestamp.Add(60000000000)
 	}
 

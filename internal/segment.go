@@ -27,7 +27,7 @@ type Segment struct {
 	Series      [SegmentSize]Event
 }
 
-func (s *Segment) AddEvent(e Event) (bool, error) {
+func (s *Segment) Add(e Event) (bool, error) {
 	if s.Size >= SegmentSize {
 		return false, errors.New("cannot add additional elements, segment at maximum size")
 	}
