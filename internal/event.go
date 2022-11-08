@@ -8,7 +8,9 @@ package internal
 
 import "time"
 
+type EventData string
+
 type Event struct {
 	Timestamp time.Time
-	Data      string
+	Data      EventData
 }
