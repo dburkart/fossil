@@ -7,11 +7,13 @@
 package internal
 
 import (
+	"path/filepath"
 	"sync"
 	"time"
 )
 
 type Database struct {
+	Path            string
 	Segments        []Segment
 	Current         int
 	SharedLock      sync.Mutex
@@ -25,7 +27,8 @@ func (d *Database) Add(data EventData) {
 	d.SharedLock.Lock()
 	defer d.SharedLock.Unlock()
 
-	// TODO: Write-Ahead logging here
+	log := WriteAheadLog{filepath.Join(d.Path, "wal.log")}
+	log.AddEvent(&e)
 
 	d.ExclusiveLock.Lock()
 	defer d.ExclusiveLock.Unlock()
@@ -40,8 +43,9 @@ func (d *Database) Add(data EventData) {
 	d.criticalSection = false
 }
 
-func NewDatabase() *Database {
+func NewDatabase(location string) *Database {
 	return &Database{
+		Path:     location,
 		Segments: []Segment{Segment{}},
 		Current:  0,
 	}
