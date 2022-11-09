@@ -27,7 +27,7 @@ type Database struct {
 func (d *Database) appendInternal(data Datum) {
 	if success, _ := d.segments[d.current].Append(data); !success {
 		d.current += 1
-		d.segments[d.current] = Segment{}
+		d.segments = append(d.segments, Segment{})
 		d.segments[d.current].Append(data)
 	}
 }
