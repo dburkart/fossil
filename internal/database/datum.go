@@ -12,6 +12,6 @@ type OpaqueData string
 
 type Datum struct {
 	Timestamp time.Time
-	Topic     string
+	TopicID   int
 	Data      OpaqueData
 }
