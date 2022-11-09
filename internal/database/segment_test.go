@@ -41,7 +41,7 @@ func TestAddingToSegment(t *testing.T) {
 	}
 
 	// Ensure that there is 1,000 indices
-	if segment.Index[IndexSize-1].index == 0 {
+	if segment.Index[IndexSize-1].Index == 0 {
 		t.Errorf("expected to find 1,000 indices")
 	}
 }

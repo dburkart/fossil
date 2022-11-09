@@ -67,7 +67,7 @@ func (w *WriteAheadLog) AddEvent(d *Datum) {
 		log.Fatal("encode:", err)
 	}
 
-	file, err := os.OpenFile(w.LogPath, os.O_APPEND|os.O_WRONLY, 0)
+	file, err := os.OpenFile(w.LogPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -7,32 +7,87 @@
 package database
 
 import (
+	"bytes"
+	"encoding/gob"
+	"io/ioutil"
+	"log"
+	"os"
 	"path/filepath"
 	"sync"
 	"time"
 )
 
 type Database struct {
-	Version int
-	Path    string
+	Version  int
+	Path     string
+	Segments []Segment
+	Current  int
 
 	// Private fields
-	segments        []Segment
-	current         int
 	sharedLock      sync.Mutex
 	exclusiveLock   sync.Mutex
 	criticalSection bool
+	appendCount     int
 }
 
 func (d *Database) appendInternal(data Datum) {
-	if success, _ := d.segments[d.current].Append(data); !success {
-		d.current += 1
-		d.segments = append(d.segments, Segment{})
-		d.segments[d.current].Append(data)
+	if success, _ := d.Segments[d.Current].Append(data); !success {
+		d.Current += 1
+		d.Segments = append(d.Segments, Segment{})
+		d.Segments[d.Current].Append(data)
 	}
+	d.appendCount += 1
+}
+
+func (d *Database) splatToDisk() {
+	var encoded bytes.Buffer
+
+	// Stop all writes
+	d.sharedLock.Lock()
+	defer d.sharedLock.Unlock()
+
+	enc := gob.NewEncoder(&encoded)
+	err := enc.Encode(d)
+	if err != nil {
+		log.Fatal("encode:", err)
+	}
+
+	backupDBPath := filepath.Join(d.Path, "database.bak")
+	file, err := os.OpenFile(backupDBPath, os.O_TRUNC|os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	_, err = file.Write(encoded.Bytes())
+	if err != nil {
+		return
+	}
+	file.Close()
+
+	// Enter the critical section, since we'll be zeroing out the WriteAheadLog
+	d.exclusiveLock.Lock()
+	defer d.exclusiveLock.Unlock()
+	d.criticalSection = true
+	// First, overwrite the database
+	err = os.Rename(backupDBPath, filepath.Join(d.Path, "database"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	// Next, zero out the WriteAheadLog
+	err = os.Remove(filepath.Join(d.Path, "wal.log"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	d.appendCount = 0
+	d.criticalSection = false
 }
 
 func (d *Database) Append(data []byte) {
+	if d.appendCount > SegmentSize {
+		d.splatToDisk()
+	}
+
 	e := Datum{Timestamp: time.Now(), Data: data}
 
 	d.sharedLock.Lock()
@@ -51,13 +106,30 @@ func (d *Database) Append(data []byte) {
 }
 
 func NewDatabase(location string) *Database {
-	db := Database{
-		Version:  1,
-		Path:     location,
-		segments: []Segment{Segment{}},
-		current:  0,
+	var db Database
+	if _, err := os.Stat(filepath.Join(location, "database")); err == nil {
+		contents, err := ioutil.ReadFile(filepath.Join(location, "database"))
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		dec := gob.NewDecoder(bytes.NewBuffer(contents))
+		err = dec.Decode(&db)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		db = Database{
+			Version:  1,
+			Path:     location,
+			Segments: []Segment{Segment{}},
+			Current:  0,
+		}
 	}
-	log := WriteAheadLog{filepath.Join(db.Path, "wal.log")}
-	log.ApplyToDB(&db)
+	wal := WriteAheadLog{filepath.Join(db.Path, "wal.log")}
+	wal.ApplyToDB(&db)
+	if db.appendCount > SegmentSize {
+		db.splatToDisk()
+	}
 	return &db
 }

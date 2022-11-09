@@ -15,14 +15,14 @@ const SegmentSize int = 10000
 const IndexSize int = 100
 
 type tsLookup struct {
-	timestamp time.Time
-	index     int
+	Timestamp time.Time
+	Index     int
 }
 
 type Segment struct {
 	HeadTime    time.Time
 	Index       [IndexSize]tsLookup
-	indexCursor int
+	IndexCursor int
 	Size        int
 	Series      [SegmentSize]Datum
 }
@@ -38,9 +38,9 @@ func (s *Segment) Append(d Datum) (bool, error) {
 
 	s.Series[s.Size] = d
 
-	if s.indexCursor < IndexSize && (s.Size%(SegmentSize/IndexSize) == 0) {
-		s.Index[s.indexCursor] = tsLookup{d.Timestamp, s.Size}
-		s.indexCursor += 1
+	if s.IndexCursor < IndexSize && (s.Size%(SegmentSize/IndexSize) == 0) {
+		s.Index[s.IndexCursor] = tsLookup{d.Timestamp, s.Size}
+		s.IndexCursor += 1
 	}
 
 	s.Size += 1
@@ -55,10 +55,10 @@ func (s *Segment) Range(begin time.Time, end time.Time) []Datum {
 		startIndex = 0
 	} else {
 		// TODO: This should be a binary search
-		for i := 0; i < s.indexCursor; i++ {
-			if s.Index[i].timestamp.After(begin) {
-				startIndex = s.Index[i].index
-				for j := s.Index[i-1].index; j < startIndex; j++ {
+		for i := 0; i < s.IndexCursor; i++ {
+			if s.Index[i].Timestamp.After(begin) {
+				startIndex = s.Index[i].Index
+				for j := s.Index[i-1].Index; j < startIndex; j++ {
 					if s.Series[j].Timestamp.After(begin) {
 						startIndex = j
 						break
@@ -73,10 +73,10 @@ func (s *Segment) Range(begin time.Time, end time.Time) []Datum {
 		endIndex = s.Size
 	} else {
 		// TODO: This should be a binary search
-		for i := s.indexCursor - 1; i >= 0; i-- {
-			if s.Index[i].timestamp.Before(end) {
-				endIndex = s.Index[i].index
-				for j := s.Index[i+1].index; j > endIndex; j-- {
+		for i := s.IndexCursor - 1; i >= 0; i-- {
+			if s.Index[i].Timestamp.Before(end) {
+				endIndex = s.Index[i].Index
+				for j := s.Index[i+1].Index; j > endIndex; j-- {
 					if s.Series[j].Timestamp.Before(end) {
 						endIndex = j
 						break
