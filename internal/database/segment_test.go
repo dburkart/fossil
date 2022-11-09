@@ -21,7 +21,7 @@ func createFullSegment() Segment {
 
 	event := Datum{
 		Timestamp: startTime(),
-		Data:      "{\"foo\": 12}",
+		Data:      []byte("{\"foo\": 12}"),
 	}
 
 	for i := 0; i < SegmentSize; i++ {

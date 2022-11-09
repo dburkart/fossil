@@ -8,10 +8,8 @@ package database
 
 import "time"
 
-type OpaqueData string
-
 type Datum struct {
 	Timestamp time.Time
 	TopicID   int
-	Data      OpaqueData
+	Data      []byte
 }
