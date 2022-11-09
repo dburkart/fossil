@@ -33,7 +33,7 @@ func (d *Database) appendInternal(data Datum) {
 }
 
 func (d *Database) Append(data OpaqueData) {
-	e := Datum{time.Now(), data}
+	e := Datum{Timestamp: time.Now(), Data: data}
 
 	d.sharedLock.Lock()
 	defer d.sharedLock.Unlock()
