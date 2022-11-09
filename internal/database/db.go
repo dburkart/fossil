@@ -21,6 +21,14 @@ type Database struct {
 	criticalSection bool
 }
 
+func (d *Database) appendInternal(data Datum) {
+	if success, _ := d.Segments[d.Current].Append(data); !success {
+		d.Current += 1
+		d.Segments[d.Current] = Segment{}
+		d.Segments[d.Current].Append(data)
+	}
+}
+
 func (d *Database) Append(data OpaqueData) {
 	e := Datum{time.Now(), data}
 
@@ -35,20 +43,17 @@ func (d *Database) Append(data OpaqueData) {
 	// Using this variable seems race-y, but I'm not sure how to check the
 	// state of a mutex in go
 	d.criticalSection = true
-
-	if success, _ := d.Segments[d.Current].Append(e); !success {
-		d.Current += 1
-		d.Segments[d.Current] = Segment{}
-		d.Segments[d.Current].Append(e)
-	}
-
+	d.appendInternal(e)
 	d.criticalSection = false
 }
 
 func NewDatabase(location string) *Database {
-	return &Database{
+	db := Database{
 		Path:     location,
 		Segments: []Segment{Segment{}},
 		Current:  0,
 	}
+	log := WriteAheadLog{filepath.Join(db.Path, "wal.log")}
+	log.ApplyToDB(&db)
+	return &db
 }
