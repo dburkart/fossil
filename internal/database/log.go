@@ -23,7 +23,7 @@ type WriteAheadLog struct {
 	LogPath string
 }
 
-func (w *WriteAheadLog) AddEvent(e *Event) {
+func (w *WriteAheadLog) AddEvent(e *Datum) {
 	var encoded bytes.Buffer
 
 	enc := gob.NewEncoder(&encoded)

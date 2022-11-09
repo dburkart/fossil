@@ -24,22 +24,22 @@ type Segment struct {
 	Index       [IndexSize]tsLookup
 	indexCursor int
 	Size        int
-	Series      [SegmentSize]Event
+	Series      [SegmentSize]Datum
 }
 
-func (s *Segment) Add(e Event) (bool, error) {
+func (s *Segment) Append(d Datum) (bool, error) {
 	if s.Size >= SegmentSize {
 		return false, errors.New("cannot add additional elements, segment at maximum size")
 	}
 
 	if s.Size == 0 {
-		s.HeadTime = e.Timestamp
+		s.HeadTime = d.Timestamp
 	}
 
-	s.Series[s.Size] = e
+	s.Series[s.Size] = d
 
 	if s.indexCursor < IndexSize && (s.Size%(SegmentSize/IndexSize) == 0) {
-		s.Index[s.indexCursor] = tsLookup{e.Timestamp, s.Size}
+		s.Index[s.indexCursor] = tsLookup{d.Timestamp, s.Size}
 		s.indexCursor += 1
 	}
 
@@ -48,7 +48,7 @@ func (s *Segment) Add(e Event) (bool, error) {
 	return true, nil
 }
 
-func (s *Segment) Range(begin time.Time, end time.Time) []Event {
+func (s *Segment) Range(begin time.Time, end time.Time) []Datum {
 	var startIndex, endIndex int
 	// First, find where we must start in our segment
 	if s.HeadTime.After(begin) {

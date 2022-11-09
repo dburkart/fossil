@@ -19,13 +19,13 @@ func startTime() time.Time {
 func createFullSegment() Segment {
 	segment := Segment{}
 
-	event := Event{
+	event := Datum{
 		Timestamp: startTime(),
 		Data:      "{\"foo\": 12}",
 	}
 
-	for i := 0; i < int(SegmentSize); i++ {
-		segment.Add(event)
+	for i := 0; i < SegmentSize; i++ {
+		segment.Append(event)
 		event.Timestamp = event.Timestamp.Add(60000000000)
 	}
 

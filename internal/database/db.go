@@ -21,8 +21,8 @@ type Database struct {
 	criticalSection bool
 }
 
-func (d *Database) Add(data EventData) {
-	e := Event{time.Now(), data}
+func (d *Database) Add(data OpaqueData) {
+	e := Datum{time.Now(), data}
 
 	d.SharedLock.Lock()
 	defer d.SharedLock.Unlock()
@@ -32,12 +32,14 @@ func (d *Database) Add(data EventData) {
 
 	d.ExclusiveLock.Lock()
 	defer d.ExclusiveLock.Unlock()
+	// Using this variable seems race-y, but I'm not sure how to check the
+	// state of a mutex in go
 	d.criticalSection = true
 
-	if success, _ := d.Segments[d.Current].Add(e); !success {
+	if success, _ := d.Segments[d.Current].Append(e); !success {
 		d.Current += 1
 		d.Segments[d.Current] = Segment{}
-		d.Segments[d.Current].Add(e)
+		d.Segments[d.Current].Append(e)
 	}
 
 	d.criticalSection = false

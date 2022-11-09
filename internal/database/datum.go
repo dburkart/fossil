@@ -8,9 +8,9 @@ package database
 
 import "time"
 
-type EventData string
+type OpaqueData string
 
-type Event struct {
+type Datum struct {
 	Timestamp time.Time
-	Data      EventData
+	Data      OpaqueData
 }
