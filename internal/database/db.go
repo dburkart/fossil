@@ -21,7 +21,7 @@ type Database struct {
 	criticalSection bool
 }
 
-func (d *Database) Add(data OpaqueData) {
+func (d *Database) Append(data OpaqueData) {
 	e := Datum{time.Now(), data}
 
 	d.SharedLock.Lock()
