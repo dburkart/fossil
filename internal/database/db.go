@@ -13,33 +13,36 @@ import (
 )
 
 type Database struct {
-	Path            string
-	Segments        []Segment
-	Current         int
-	SharedLock      sync.Mutex
-	ExclusiveLock   sync.Mutex
+	Version int
+	Path    string
+
+	// Private fields
+	segments        []Segment
+	current         int
+	sharedLock      sync.Mutex
+	exclusiveLock   sync.Mutex
 	criticalSection bool
 }
 
 func (d *Database) appendInternal(data Datum) {
-	if success, _ := d.Segments[d.Current].Append(data); !success {
-		d.Current += 1
-		d.Segments[d.Current] = Segment{}
-		d.Segments[d.Current].Append(data)
+	if success, _ := d.segments[d.current].Append(data); !success {
+		d.current += 1
+		d.segments[d.current] = Segment{}
+		d.segments[d.current].Append(data)
 	}
 }
 
 func (d *Database) Append(data OpaqueData) {
 	e := Datum{time.Now(), data}
 
-	d.SharedLock.Lock()
-	defer d.SharedLock.Unlock()
+	d.sharedLock.Lock()
+	defer d.sharedLock.Unlock()
 
 	log := WriteAheadLog{filepath.Join(d.Path, "wal.log")}
 	log.AddEvent(&e)
 
-	d.ExclusiveLock.Lock()
-	defer d.ExclusiveLock.Unlock()
+	d.exclusiveLock.Lock()
+	defer d.exclusiveLock.Unlock()
 	// Using this variable seems race-y, but I'm not sure how to check the
 	// state of a mutex in go
 	d.criticalSection = true
@@ -49,9 +52,10 @@ func (d *Database) Append(data OpaqueData) {
 
 func NewDatabase(location string) *Database {
 	db := Database{
+		Version:  1,
 		Path:     location,
-		Segments: []Segment{Segment{}},
-		Current:  0,
+		segments: []Segment{Segment{}},
+		current:  0,
 	}
 	log := WriteAheadLog{filepath.Join(db.Path, "wal.log")}
 	log.ApplyToDB(&db)
