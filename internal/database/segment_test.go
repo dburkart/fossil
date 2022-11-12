@@ -20,14 +20,16 @@ func createFullSegment() Segment {
 	segment := Segment{}
 
 	event := Datum{
-		Timestamp: startTime(),
-		Data:      []byte("{\"foo\": 12}"),
+		Data:  []byte("{\"foo\": 12}"),
+		Delta: 0,
 	}
 
 	for i := 0; i < SegmentSize; i++ {
 		segment.Append(event)
-		event.Timestamp = event.Timestamp.Add(60000000000)
+		event.Delta += 60000000000
 	}
+
+	segment.HeadTime = startTime()
 
 	return segment
 }
@@ -39,19 +41,14 @@ func TestAddingToSegment(t *testing.T) {
 	if segment.Size != SegmentSize {
 		t.Errorf("expected 10,000 events, but only found %d", segment.Size)
 	}
-
-	// Ensure that there is 1,000 indices
-	if segment.Index[IndexSize-1].Index == 0 {
-		t.Errorf("expected to find 1,000 indices")
-	}
 }
 
-func TestRangeFunctionality(t *testing.T) {
+func TestBinarySearch(t *testing.T) {
 	segment := createFullSegment()
 
-	events := segment.Range(startTime(), startTime().Add(time.Hour))
+	index, _ := segment.FindApproximateDatum(startTime().Add(120000012345))
 
-	if len(events) != 58 {
-		t.Errorf("expected 58 events, got %d", len(events))
+	if index != 2 {
+		t.Errorf("expected value at index 2, but only got %d", index)
 	}
 }

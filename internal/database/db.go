@@ -14,7 +14,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"time"
 )
 
 type Database struct {
@@ -88,7 +87,7 @@ func (d *Database) Append(data []byte) {
 		d.splatToDisk()
 	}
 
-	e := Datum{Timestamp: time.Now(), Data: data}
+	e := Datum{Data: data, Delta: -1}
 
 	d.sharedLock.Lock()
 	defer d.sharedLock.Unlock()

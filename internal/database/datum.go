@@ -9,7 +9,7 @@ package database
 import "time"
 
 type Datum struct {
-	Timestamp time.Time
-	TopicID   int
-	Data      []byte
+	Delta   time.Duration
+	TopicID int
+	Data    []byte
 }

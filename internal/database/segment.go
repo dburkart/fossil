@@ -14,17 +14,17 @@ import (
 const SegmentSize int = 10000
 const IndexSize int = 100
 
-type tsLookup struct {
-	Timestamp time.Time
-	Index     int
+func absoluteDuration(x time.Duration) time.Duration {
+	if x < 0 {
+		return -x
+	}
+	return x
 }
 
 type Segment struct {
-	HeadTime    time.Time
-	Index       [IndexSize]tsLookup
-	IndexCursor int
-	Size        int
-	Series      [SegmentSize]Datum
+	HeadTime time.Time
+	Series   [SegmentSize]Datum
+	Size     int
 }
 
 func (s *Segment) Append(d Datum) (bool, error) {
@@ -33,59 +33,57 @@ func (s *Segment) Append(d Datum) (bool, error) {
 	}
 
 	if s.Size == 0 {
-		s.HeadTime = d.Timestamp
+		s.HeadTime = time.Now()
+	}
+
+	if d.Delta == -1 {
+		d.Delta = time.Now().Sub(s.HeadTime)
 	}
 
 	s.Series[s.Size] = d
-
-	if s.IndexCursor < IndexSize && (s.Size%(SegmentSize/IndexSize) == 0) {
-		s.Index[s.IndexCursor] = tsLookup{d.Timestamp, s.Size}
-		s.IndexCursor += 1
-	}
-
 	s.Size += 1
 
 	return true, nil
 }
 
-func (s *Segment) Range(begin time.Time, end time.Time) []Datum {
-	var startIndex, endIndex int
-	// First, find where we must start in our segment
-	if s.HeadTime.After(begin) {
-		startIndex = 0
-	} else {
-		// TODO: This should be a binary search
-		for i := 0; i < s.IndexCursor; i++ {
-			if s.Index[i].Timestamp.After(begin) {
-				startIndex = s.Index[i].Index
-				for j := s.Index[i-1].Index; j < startIndex; j++ {
-					if s.Series[j].Timestamp.After(begin) {
-						startIndex = j
-						break
-					}
-				}
-				break
-			}
+func (s *Segment) binarySearchApproximate(desired time.Duration, begin int, end int) (index int, proximity time.Duration) {
+	var subIndex int
+	var subProximity time.Duration
+
+	if begin == end {
+		return begin, s.Series[begin].Delta - desired
+	}
+
+	if end == begin+1 {
+		if absoluteDuration(s.Series[begin].Delta-desired) < absoluteDuration(s.Series[end].Delta-desired) {
+			return begin, s.Series[begin].Delta - desired
+		} else {
+			return end, s.Series[end].Delta - desired
 		}
 	}
 
-	if s.Series[s.Size-1].Timestamp.Before(end) {
-		endIndex = s.Size
+	index = (begin + end) / 2
+	proximity = s.Series[index].Delta - desired
+
+	if proximity < 0 {
+		subIndex, subProximity = s.binarySearchApproximate(desired, index, end)
 	} else {
-		// TODO: This should be a binary search
-		for i := s.IndexCursor - 1; i >= 0; i-- {
-			if s.Index[i].Timestamp.Before(end) {
-				endIndex = s.Index[i].Index
-				for j := s.Index[i+1].Index; j > endIndex; j-- {
-					if s.Series[j].Timestamp.Before(end) {
-						endIndex = j
-						break
-					}
-				}
-				break
-			}
-		}
+		subIndex, subProximity = s.binarySearchApproximate(desired, begin, index)
 	}
 
-	return s.Series[startIndex:endIndex]
+	if absoluteDuration(proximity) > absoluteDuration(subProximity) {
+		index = subIndex
+		proximity = subProximity
+	}
+
+	return
+}
+
+func (s *Segment) FindApproximateDatum(desired time.Time) (int, Datum) {
+	if desired.Before(s.HeadTime) {
+		return 0, s.Series[0]
+	}
+	desiredDuration := desired.Sub(s.HeadTime)
+	index, _ := s.binarySearchApproximate(desiredDuration, 0, s.Size-1)
+	return index, s.Series[index]
 }
