@@ -120,6 +120,17 @@ func (d *Database) Append(data []byte) {
 
 func NewDatabase(location string) *Database {
 	var db Database
+	// If the path does not exist, create a new directory
+	fileinfo, err := os.Stat(location)
+	if os.IsNotExist(err) {
+		err := os.Mkdir(location, 0700)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else if !fileinfo.IsDir() {
+		log.Fatal("Supplied path is not a directory")
+	}
+
 	if _, err := os.Stat(filepath.Join(location, "database")); err == nil {
 		contents, err := ioutil.ReadFile(filepath.Join(location, "database"))
 		if err != nil {
