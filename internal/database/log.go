@@ -105,7 +105,7 @@ func (w *WriteAheadLog) AddSegment(t time.Time) {
 	}
 	defer file.Close()
 
-	_, err = file.WriteString(fmt.Sprintf("%d;%t\n", actionAddSegment, base64.StdEncoding.EncodeToString(encoded.Bytes())))
+	_, err = file.WriteString(fmt.Sprintf("%d;%s\n", actionAddSegment, base64.StdEncoding.EncodeToString(encoded.Bytes())))
 	if err != nil {
 		log.Fatal(err)
 	}

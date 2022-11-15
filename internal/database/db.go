@@ -18,10 +18,12 @@ import (
 )
 
 type Database struct {
-	Version  int
-	Path     string
-	Segments []Segment
-	Current  int
+	Version    int
+	Path       string
+	Segments   []Segment
+	Current    int
+	Topics     map[string]int
+	TopicCount int
 
 	// Private fields
 	sharedLock      sync.Mutex
@@ -35,6 +37,16 @@ func (d *Database) appendInternal(data Datum) {
 		log.Fatal("We should never not have enough segments, since our write-ahead log creates them")
 	}
 	d.appendCount += 1
+}
+
+func (d *Database) addTopic(topicName string) int {
+	if index, exists := d.Topics[topicName]; exists {
+		return index
+	}
+	index := d.TopicCount
+	d.TopicCount += 1
+	d.Topics[topicName] = index
+	return index
 }
 
 func (d *Database) splatToDisk() {
@@ -81,9 +93,11 @@ func (d *Database) splatToDisk() {
 	d.criticalSection = false
 }
 
-func (d *Database) Append(data []byte) {
+func (d *Database) Append(data []byte, topic string) {
 	// Pull our timestamp at the top
 	appendTime := time.Now()
+
+	topicID := d.addTopic(topic)
 
 	// Calculate the delta
 	delta := appendTime.Sub(d.Segments[d.Current].HeadTime)
@@ -101,7 +115,7 @@ func (d *Database) Append(data []byte) {
 		log.AddSegment(appendTime)
 		delta = 0
 	}
-	e := Datum{Data: data, Delta: delta}
+	e := Datum{Data: data, TopicID: topicID, Delta: delta}
 	log.AddEvent(&e)
 
 	d.exclusiveLock.Lock()
@@ -144,11 +158,14 @@ func NewDatabase(location string) *Database {
 		}
 	} else {
 		db = Database{
-			Version:  1,
-			Path:     location,
-			Segments: []Segment{Segment{}},
-			Current:  0,
+			Version:    1,
+			Path:       location,
+			Segments:   []Segment{Segment{}},
+			Current:    0,
+			Topics:     make(map[string]int),
+			TopicCount: 0,
 		}
+		db.addTopic("default")
 	}
 	wal := WriteAheadLog{filepath.Join(db.Path, "wal.log")}
 	wal.ApplyToDB(&db)
