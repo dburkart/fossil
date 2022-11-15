@@ -93,6 +93,9 @@ func (d *Database) splatToDisk() {
 	d.criticalSection = false
 }
 
+//-- Public Interfaces
+
+// Append to the end of the database
 func (d *Database) Append(data []byte, topic string) {
 	// Pull our timestamp at the top
 	appendTime := time.Now()
@@ -130,6 +133,71 @@ func (d *Database) Append(data []byte, topic string) {
 	}
 	d.appendInternal(e)
 	d.criticalSection = false
+}
+
+// Retrieve a list of datum from the database matching some query
+// TODO: Eventually, this should return a proper result set
+func (d *Database) Retrieve(q Query) []Datum {
+	results := make([]Datum, 0)
+	// First, we deal with the time range
+	startFound := false
+	startIndex := 0
+
+	endFound := false
+	endIndex := 0
+
+	// If the query range is nil, we can skip this
+	if q.Range != nil {
+		for index, segment := range d.Segments {
+			if !startFound && segment.HeadTime.After(q.Range.Start) {
+				if index > 0 {
+					startIndex = index - 1
+				}
+				startFound = true
+			}
+
+			if !endFound && segment.HeadTime.After(q.Range.End) {
+				if index > 0 {
+					endIndex = index - 1
+				} else {
+					return results
+				}
+				endFound = true
+			}
+		}
+	}
+
+	// If endIndex is 0, that means there are no segments with head times after
+	// the specified end time, so use the last segment
+	if endIndex == 0 {
+		endIndex = d.Current
+	}
+
+	startSubIndex := 0
+	endSubIndex := d.Segments[endIndex].Size - 1
+
+	if q.Range != nil {
+		startSubIndex, _ = d.Segments[startIndex].FindApproximateDatum(q.Range.Start)
+		endSubIndex, _ = d.Segments[endIndex].FindApproximateDatum(q.Range.End)
+	}
+
+	// Handle the case where all of our datum is in a single segment
+	if startIndex == endIndex {
+		return d.Segments[startIndex].Series[startSubIndex:endSubIndex]
+	}
+
+	// Since our start and end are different segments, build a result set
+	for i := startIndex; i <= endIndex; i++ {
+		if i == startIndex {
+			results = append(results, d.Segments[i].Series[startSubIndex:]...)
+		} else if i == endIndex {
+			results = append(results, d.Segments[i].Series[:endSubIndex]...)
+		} else {
+			results = append(results, d.Segments[i].Series[:]...)
+		}
+	}
+
+	return results
 }
 
 func NewDatabase(location string) *Database {
