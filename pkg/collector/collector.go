@@ -50,5 +50,7 @@ func (c *Collector) Handle() {
 			continue
 		}
 		c.log.Info().Object("msg", msg).Msg("parsed message")
+
+		c.stream <- msg
 	}
 }
