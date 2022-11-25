@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2022, Gideon Williams gideon@gideonw.com
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
 package collector
 
 import (
@@ -21,11 +26,14 @@ func New(log zerolog.Logger, c *net.TCPConn, stream chan proto.Message) Collecto
 func (c *Collector) Handle() {
 	for {
 		reader := proto.NewMessageReader()
-		n, err := c.conn.ReadFrom(reader)
+		n, err := reader.ReadFrom(c.conn)
 		if err != nil {
 			c.log.Error().Err(err).Msg("error reading from the conn")
 		}
 
 		c.log.Info().Int64("read", n).Msg("read from conn")
+		for _, m := range reader.PopMessages() {
+			c.log.Info().Str("command", m.Command).Msg("read message")
+		}
 	}
 }

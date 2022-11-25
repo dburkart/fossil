@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2022, Gideon Williams gideon@gideonw.com
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
 package proto
 
 import (
@@ -56,4 +61,9 @@ func (r *MessageReader) ReadFrom(rdr io.Reader) (n int64, err error) {
 	}
 
 	return 0, nil
+}
+func (r *MessageReader) PopMessages() []Message {
+	ret := r.queue
+	r.queue = []Message{}
+	return ret
 }
