@@ -18,15 +18,17 @@ type Server struct {
 	log     zerolog.Logger
 	metrics MetricsStore
 
+	databasePath   string
 	collectionPort int
 	databasePort   int
 	metricsPort    int
 }
 
-func New(log zerolog.Logger, collectionPort, databasePort, metricsPort int) Server {
+func New(log zerolog.Logger, path string, collectionPort, databasePort, metricsPort int) Server {
 	return Server{
 		log,
 		NewMetricsStore(),
+		path,
 		collectionPort,
 		databasePort,
 		metricsPort,
