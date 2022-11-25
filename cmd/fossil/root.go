@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/dburkart/fossil/cmd/fossil/server"
+	"github.com/dburkart/fossil/cmd/fossil/test"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -44,6 +45,7 @@ func init() {
 
 	// Register commands on the root binary command
 	rootCmd.AddCommand(server.Command)
+	rootCmd.AddCommand(test.Command)
 }
 
 func initConfig() {
