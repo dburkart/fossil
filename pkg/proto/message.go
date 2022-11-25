@@ -8,11 +8,8 @@ package proto
 import (
 	"bytes"
 	"fmt"
-	"io"
-)
 
-var (
-	MESSAGE_TERMINATOR = []byte{'\n', '\r'}
+	"github.com/rs/zerolog"
 )
 
 type Message struct {
@@ -22,48 +19,21 @@ type Message struct {
 
 // ParseMessage searches the byte slice for a message terminator and parses a message from the sequence of bytes
 // it will return the number of bytes consumed
-func ParseMessage(b []byte) (Message, int64, error) {
+func ParseMessage(b []byte) (Message, error) {
 	ret := Message{}
-	// Search for message terminator
-	term := bytes.Index(b, MESSAGE_TERMINATOR)
-	if term == -1 {
-		return ret, 0, fmt.Errorf("invalid byte sequence")
+
+	ind := bytes.IndexByte(b, ' ')
+	if ind == -1 {
+		return ret, fmt.Errorf("malformed message")
+	}
+	ret.Command = string(b[0:ind])
+	if ind < len(b) {
+		ret.Data = b[ind+1:]
 	}
 
-	return ret, int64(term) + int64(len(MESSAGE_TERMINATOR)), nil
+	return ret, nil
 }
 
-type MessageReader struct {
-	io.ReaderFrom
-	io.Reader
-
-	queue []Message
-}
-
-func NewMessageReader() MessageReader {
-	return MessageReader{}
-}
-
-func (r *MessageReader) ReadFrom(rdr io.Reader) (n int64, err error) {
-	b, err := io.ReadAll(rdr)
-	if err != nil {
-		return 0, err
-	}
-
-	for i := int64(0); i < int64(len(b)); {
-		msg, n, err := ParseMessage(b[i:])
-		if err != nil {
-			return n, err
-		}
-
-		i += n
-		r.queue = append(r.queue, msg)
-	}
-
-	return 0, nil
-}
-func (r *MessageReader) PopMessages() []Message {
-	ret := r.queue
-	r.queue = []Message{}
-	return ret
+func (m Message) MarshalZerologObject(e *zerolog.Event) {
+	e.Str("command", m.Command).Bytes("data", m.Data)
 }

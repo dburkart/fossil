@@ -6,6 +6,8 @@
 package collector
 
 import (
+	"bufio"
+	"bytes"
 	"net"
 
 	"github.com/dburkart/fossil/pkg/proto"
@@ -24,16 +26,28 @@ func New(log zerolog.Logger, c *net.TCPConn, stream chan proto.Message) Collecto
 }
 
 func (c *Collector) Handle() {
+	scanner := bufio.NewScanner(c.conn)
 	for {
-		reader := proto.NewMessageReader()
-		n, err := reader.ReadFrom(c.conn)
-		if err != nil {
-			c.log.Error().Err(err).Msg("error reading from the conn")
+		scan := scanner.Scan()
+		if !scan {
+			if scanner.Err() != nil {
+				c.log.Error().Err(scanner.Err()).Msg("error reading from the conn")
+				continue
+			}
+			// io.EOF
+			c.conn.Close()
+			return
 		}
 
-		c.log.Info().Int64("read", n).Msg("read from conn")
-		for _, m := range reader.PopMessages() {
-			c.log.Info().Str("command", m.Command).Msg("read message")
+		line := scanner.Bytes()
+		c.log.Info().Int("read", len(line)).Msg("read from conn")
+		buf := bytes.NewBuffer(line)
+		msg, err := proto.ParseMessage(buf.Bytes())
+		if err != nil {
+			c.log.Trace().Bytes("buf", line).Send()
+			c.log.Error().Err(err).Msg("error parsing message from buffer")
+			continue
 		}
+		c.log.Info().Object("msg", msg).Msg("parsed message")
 	}
 }
