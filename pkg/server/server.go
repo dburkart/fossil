@@ -8,6 +8,7 @@ package server
 
 import (
 	"fmt"
+	"github.com/dburkart/fossil/pkg/database"
 	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -18,15 +19,20 @@ type Server struct {
 	log     zerolog.Logger
 	metrics MetricsStore
 
+	database       *database.Database
 	collectionPort int
 	databasePort   int
 	metricsPort    int
 }
 
-func New(log zerolog.Logger, collectionPort, databasePort, metricsPort int) Server {
+func New(log zerolog.Logger, path string, collectionPort, databasePort, metricsPort int) Server {
+	// TODO: We need a filesystem lock to ensure we don't double run a server on the same database
+	db := database.NewDatabase(path)
+
 	return Server{
 		log,
 		NewMetricsStore(),
+		db,
 		collectionPort,
 		databasePort,
 		metricsPort,
