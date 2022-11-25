@@ -23,6 +23,7 @@ var Command = &cobra.Command{
 		// Initialize database server
 		srv := server.New(
 			logger,
+			viper.GetString("database"),
 			viper.GetInt("collection-port"),
 			viper.GetInt("database-port"),
 			viper.GetInt("prom-http"),
