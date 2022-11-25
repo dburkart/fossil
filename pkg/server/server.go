@@ -28,7 +28,8 @@ func New(log zerolog.Logger, collectionPort, databasePort, metricsPort int) Serv
 }
 
 func (s Server) ServeDatabase() {
-
+	s.log.Info().Int("database-port", s.databasePort).Msg("listening for client connections")
+	s.log.Info().Int("collection-port", s.collectionPort).Msg("listening for metrics")
 }
 
 func (s Server) ServeMetrics() {
