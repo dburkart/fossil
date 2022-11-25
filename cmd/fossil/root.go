@@ -26,9 +26,10 @@ func init() {
 	// Configure the common binary options
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().CountP("verbose", "v", "-v for debug logs (-vv for trace)")
+	rootCmd.PersistentFlags().Bool("local", true, "Configures the logger to print readable logs") //TODO: true until we have a config file format
 
 	// Bind viper config to the root flags
-	viper.Set("local", true) // TODO: Until we have a config file pattern
+	viper.BindPFlag("local", rootCmd.PersistentFlags().Lookup("local"))
 	viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose"))
 
 	// Bind viper flags to ENV variables
