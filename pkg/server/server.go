@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Gideon Williams gideon@gideonw.com
+ * Copyright (c) 2022, Gideon Williams <gideon@gideonw.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -12,6 +12,7 @@ import (
 	"net/http"
 
 	"github.com/dburkart/fossil/pkg/collector"
+  "github.com/dburkart/fossil/pkg/database"
 	"github.com/dburkart/fossil/pkg/proto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
@@ -21,6 +22,7 @@ type Server struct {
 	log     zerolog.Logger
 	metrics MetricsStore
 
+	database       *database.Database
 	collectionPort int
 	databasePort   int
 	metricsPort    int
@@ -30,10 +32,14 @@ type Server struct {
 	collectors []collector.Collector
 }
 
-func New(log zerolog.Logger, collectionPort, databasePort, metricsPort int) Server {
+func New(log zerolog.Logger, path string, collectionPort, databasePort, metricsPort int) Server {
+	// TODO: We need a filesystem lock to ensure we don't double run a server on the same database
+	db := database.NewDatabase(path)
+
 	return Server{
 		log,
 		NewMetricsStore(),
+		db,
 		collectionPort,
 		databasePort,
 		metricsPort,

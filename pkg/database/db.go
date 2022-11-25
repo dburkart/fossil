@@ -165,6 +165,12 @@ func (d *Database) Retrieve(q Query) []Datum {
 				endFound = true
 			}
 		}
+
+		// If we haven't found a start to our range, then it's outside the
+		// bounds of our database.
+		if !startFound {
+			return results
+		}
 	}
 
 	// If endIndex is 0, that means there are no segments with head times after
