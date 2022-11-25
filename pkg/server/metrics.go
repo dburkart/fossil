@@ -16,7 +16,7 @@ type metricsStore struct {
 func NewMetricsStore() MetricsStore {
 	return &metricsStore{
 		ClientConnections: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "fossil_connections",
+			Name: "fossil_client_connections",
 			Help: "The total number of client connections",
 		}),
 	}
