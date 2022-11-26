@@ -5,7 +5,7 @@ query = quantifier [ identifier ] [ topic-selector ] [ time-predicate ] [ data-p
 
 ; Quantifier
 quantifier = "all" / sample
-sample = "sample(" time-amount ")"
+sample = "sample(" timespan ")"
 
 ; Identifier
 identifier = 1*(ALPHA / DIGIT)
