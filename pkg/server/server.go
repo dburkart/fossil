@@ -48,7 +48,7 @@ func New(log zerolog.Logger, path string, collectionPort, databasePort, metricsP
 	}
 }
 
-func (s Server) ServeDatabase() {
+func (s *Server) ServeDatabase() {
 	s.log.Info().Int("database-port", s.databasePort).Msg("listening for client connections")
 
 	go s.listenCollection()
@@ -81,7 +81,7 @@ func (s *Server) processMessages() {
 	}
 }
 
-func (s Server) ServeMetrics() {
+func (s *Server) ServeMetrics() {
 	s.log.Info().Int("port", s.metricsPort).Msg("/metrics endpoint started")
 	http.Handle("/metrics", promhttp.Handler())
 	http.ListenAndServe(fmt.Sprintf(":%d", s.metricsPort), nil)
