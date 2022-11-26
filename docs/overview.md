@@ -5,6 +5,8 @@ unimplemented and still in the design phase.
 
 ## Architecture
 
+### Database
+
 A fossil database essentially behaves as an unbounded array. It is divided up into *segments*, each of which is of a 
 fixed width and is made up of *datum*. Because Fossil is a time-series database, all datum are ordered sequentially. 
 For this reason, timestamps are only recorded in each segment data structure, and each datum only stores an offset in 
@@ -16,6 +18,35 @@ being stored in the database.
 In addition to the time and data that is being stored in each segment, datum can belong to a particular *topic*. The 
 topic is the primary way of indexing into the data (besides time, of course). Because a topic id is stored in each 
 datum, it is trivial to filter on a particular topic, or group of topics.
+
+### Server
+
+Fossil server uses a TCP socket to listen for client connections. Clients can act in two modes: 
+- **Fire and Forget** for data collection
+- **Active** for data collection and querying
+
+Connections are handled using goroutines and a message stream channel. Once the wire messages are parsed and sent over the stream the server beings to processed queued messages against the database.
+
+```mermaid
+graph TB;
+	server
+	processMessageStream[go processMessageStream]
+	listen --> accept
+	accept --> accept
+	accept -. collector.New .-> handle[go handle];
+	server --> listen
+	server --> processMessageStream
+	processMessageStream --> processMessageStream
+	handle -.msgStream .-> server
+
+	processMessageStream --> database
+```
+
+#### Fire and Forget
+Clients in Fire and Forget mode connected to the server are limited to write only commands from the command list to ensure performant writes.
+
+#### Active
+Clients connected in active mode are open to use all commands, read and write, on the database.
 
 ## Data Types (WIP)
 
@@ -51,7 +82,7 @@ For string, boolean, int*, float, and array, they are simply defined as the name
 | boolean | boolean                   |
 | int*    | int8, int16, int32, int64 |
 | float   | float                     |
-| array   | `[size]<type>`              |
+| array   | `[size]<type>`            |
 
 A shallow map has a syntax similar to a JSON object, except that values are types:
 
