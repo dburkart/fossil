@@ -12,7 +12,7 @@ import (
 	"net/http"
 
 	"github.com/dburkart/fossil/pkg/collector"
-  "github.com/dburkart/fossil/pkg/database"
+	"github.com/dburkart/fossil/pkg/database"
 	"github.com/dburkart/fossil/pkg/proto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
@@ -34,6 +34,7 @@ type Server struct {
 
 func New(log zerolog.Logger, path string, collectionPort, databasePort, metricsPort int) Server {
 	// TODO: We need a filesystem lock to ensure we don't double run a server on the same database
+	// https://pkg.go.dev/io/fs#FileMode ModeExclusive
 	db := database.NewDatabase(path)
 
 	return Server{
