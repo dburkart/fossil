@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strings"
 
 	"github.com/dburkart/fossil/pkg/collector"
 	"github.com/dburkart/fossil/pkg/database"
@@ -91,8 +92,7 @@ func (s *Server) processMessages() {
 	for m := range s.msgStream {
 		s.log.Info().Str("command", m.Command).Msg("handle")
 
-		// TODO: Handle uppercase and lowercase?
-		if handler, exists := commandMap[m.Command]; exists {
+		if handler, exists := commandMap[strings.ToUpper(m.Command)]; exists {
 			err := handler(s, m)
 			if err != nil {
 				s.log.Error().Err(err)
