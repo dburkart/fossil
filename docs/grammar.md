@@ -16,7 +16,7 @@ topic-list = topic ["," topic-list]
 topic = "#" 1*(ALPHA / DIGIT)
 
 ; Time
-time-predicate = 
+time-predicate = ( "since" time-expression ) / ( "until" time-expression ) / ( "between" time-expression ".." time-expression )
 time-whence = "+now" / "+begin" / "+" iso8601
 time-quantity = timespan / time-quantity ( "*" / "+" / "-" ) number
 timespan = "@second" / "@minute" / "@hour" / "@day" / "@week" / "@month" / "@year"
