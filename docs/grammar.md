@@ -41,3 +41,9 @@ all in #visits from @yesterday
 all x in #clicks since @day * 30 -> x.target == "window"
 sample(@minute) in #cpu-usage since @week
 ```
+
+## Semantic rules not covered by the grammar
+
+* A data-predicate is only valid as long as ALL of the following is true:
+  1. A topic-selector has been specified
+  2. The topic(s) in question have schemas specified
