@@ -11,6 +11,7 @@ type TokenType int
 const (
 	TOK_INVALID = iota
 	TOK_EOF
+	TOK_NL
 
 	TOK_IDENTIFIER
 	TOK_KEYWORD
