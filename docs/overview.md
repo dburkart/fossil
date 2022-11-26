@@ -72,11 +72,9 @@ in some way.
 Queries take the form of a predicate:
 
 ```
-QUANTIFIER [IDENTIFIER] [in TOPIC] [(from|since|between) PREDICATE] [-> DATA PREDICATE]
-
-Examples:
-
 all in #visits from @yesterday
 all x in #clicks since @day * 30 -> x.target == "window"
 sample(@minute) in #cpu-usage since @week
 ```
+
+For the full grammar, see [grammar](./grammar.md)
