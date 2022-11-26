@@ -7,7 +7,7 @@ For more detailed documentation of the internals see the [docs](/docs) folder.
 
 ### Use Cases
 
-Fossil is solves the following use cases:
+Fossil solves the following use cases:
 
 - Local Time Series Database that stores data in a local DB file
 - Collect data over a TCP connection in fire and forget mode
