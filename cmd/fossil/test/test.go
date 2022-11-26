@@ -27,7 +27,7 @@ var Command = &cobra.Command{
 			log.Error().Err(err).Str("host", host).Msg("unable to connect to server")
 		}
 
-		msg := []byte("INFO all\nINFO all\nINFO all\nINFO all\nAPPEND foo")
+		msg := []byte("INFO all\nINFO all\nINFO all\nINFO all\nAPPEND foo\n")
 		n, err := c.Write(msg)
 		if err != nil {
 			log.Error().Err(err).Str("host", host).Msg("unable to write to server")
