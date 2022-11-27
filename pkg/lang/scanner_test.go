@@ -24,7 +24,7 @@ func TestEmitKeyword(t *testing.T) {
 
 	expectedKeywordLexemes := []string{"all", "in"}
 
-	for i := 0; i < 2; i++ {
+	for i := 0; i < len(expectedKeywordLexemes); i++ {
 		tok := s.Emit()
 
 		if tok.Type != lang.TOK_KEYWORD {
@@ -58,5 +58,22 @@ func TestEmitIdentifier(t *testing.T) {
 
 	if tok.Lexeme != "a3" {
 		t.Error("wanted 'a3', got", tok.Lexeme)
+	}
+}
+
+func TestEmitTopic(t *testing.T) {
+	s := lang.Scanner{Input: "/foo/bar/baz /"}
+	expectedTopicLexemes := []string{"/foo/bar/baz", "/"}
+
+	for i := 0; i < len(expectedTopicLexemes); i++ {
+		tok := s.Emit()
+
+		if tok.Type != lang.TOK_TOPIC {
+			t.Error("wanted TOK_TOPIC, got", tok.Type)
+		}
+
+		if tok.Lexeme != expectedTopicLexemes[i] {
+			t.Errorf("wanted '%s', got '%s'", expectedTopicLexemes[i], tok.Lexeme)
+		}
 	}
 }

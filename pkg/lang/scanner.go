@@ -33,6 +33,20 @@ func (s *Scanner) MatchIdentifier() int {
 	return size
 }
 
+func (s *Scanner) MatchTopic() int {
+	i := s.Pos
+	r, width := utf8.DecodeRuneInString(s.Input[i:])
+	size := 0
+
+	for unicode.IsDigit(r) || unicode.IsLetter(r) || r == '/' {
+		size += width
+		i += width
+		r, width = utf8.DecodeRuneInString(s.Input[i:])
+	}
+
+	return size
+}
+
 func (s *Scanner) MatchNumber() int {
 	r, width := utf8.DecodeRuneInString(s.Input[s.Pos:])
 	size := 0
@@ -73,6 +87,9 @@ func (s *Scanner) Emit() Token {
 		case r == ')':
 			t.Type = TOK_PAREN_R
 			skip = width
+		case r == '/':
+			t.Type = TOK_TOPIC
+			skip = s.MatchTopic()
 		case unicode.IsDigit(r):
 			t.Type = TOK_NUMBER
 			skip = s.MatchNumber()
