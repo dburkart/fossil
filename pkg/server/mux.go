@@ -30,7 +30,8 @@ func NewMapMux() MessageMux {
 func (mm *MapMux) ServeMessage(w io.Writer, msg proto.Message) {
 	f, ok := mm.handlers[msg.Command]
 	if !ok {
-		panic("")
+		// NO OP for commands that do not exist
+		return
 	}
 	f(w, msg)
 }
@@ -41,6 +42,12 @@ func (mm *MapMux) Handle(s string, f HandleMessage) {
 
 type MessageServer struct {
 	log zerolog.Logger
+}
+
+func NewMessageServer(log zerolog.Logger) MessageServer {
+	return MessageServer{
+		log,
+	}
 }
 
 func (ms *MessageServer) ListenAndServe(port int, mux MessageMux) error {
