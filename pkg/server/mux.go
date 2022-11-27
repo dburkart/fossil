@@ -17,39 +17,6 @@ type MessageMux interface {
 
 type HandleMessage func(io.Writer, proto.Message)
 
-type SliceMux struct {
-	handlers []HandleMessage
-}
-
-func NewSliceMux() MessageMux {
-	return &SliceMux{
-		handlers: make([]HandleMessage, 0, 10),
-	}
-}
-
-func (m *SliceMux) ServeMessage(w io.Writer, msg proto.Message) {
-	cmd := hash(msg.Command)
-	if len(m.handlers) < cmd {
-		return
-	}
-
-	m.handlers[cmd](w, msg)
-}
-
-func hash(s string) int {
-	return int(s[0])
-}
-
-func (m *SliceMux) Handle(s string, f HandleMessage) {
-	h := hash(s)
-	if h >= len(m.handlers) {
-		temp := m.handlers
-		m.handlers = make([]HandleMessage, h+1, h+1)
-		copy(m.handlers, temp)
-	}
-	m.handlers[hash(s)] = f
-}
-
 type MapMux struct {
 	handlers map[string]HandleMessage
 }
