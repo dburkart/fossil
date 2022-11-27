@@ -19,12 +19,25 @@ type Scanner struct {
 	RuneWidth int
 }
 
-func (s *Scanner) MatchNumber() int {
+func (s *Scanner) MatchIdentifier() int {
 	i := s.Pos
 	r, width := utf8.DecodeRuneInString(s.Input[i:])
 	size := 0
 
-	for i := s.Pos; r >= '0' && r <= '9'; {
+	for unicode.IsDigit(r) || unicode.IsLetter(r) {
+		size += width
+		i += width
+		r, width = utf8.DecodeRuneInString(s.Input[i:])
+	}
+
+	return size
+}
+
+func (s *Scanner) MatchNumber() int {
+	r, width := utf8.DecodeRuneInString(s.Input[s.Pos:])
+	size := 0
+
+	for i := s.Pos; unicode.IsDigit(r); {
 		size += width
 		i += width
 		r, width = utf8.DecodeRuneInString(s.Input[i:])
@@ -42,6 +55,11 @@ func (s *Scanner) Emit() Token {
 		found := true
 		skip := 0
 
+		identifierFallthrough := func() {
+			t.Type = TOK_IDENTIFIER
+			skip = s.MatchIdentifier()
+		}
+
 		switch {
 		case r == '\n':
 			t.Type = TOK_NL
@@ -58,6 +76,9 @@ func (s *Scanner) Emit() Token {
 				skip = len("all")
 				break
 			}
+			identifierFallthrough()
+		case unicode.IsLetter(r):
+			identifierFallthrough()
 		}
 
 		s.Pos = s.Start + skip

@@ -24,10 +24,33 @@ func TestEmitKeyword(t *testing.T) {
 	tok := s.Emit()
 
 	if tok.Type != lang.TOK_KEYWORD {
-		t.Error("wanted TOK_IDENTIFIER, got", tok.Type)
+		t.Error("wanted TOK_KEYWORD, got", tok.Type)
 	}
 
 	if tok.Lexeme != "all" {
 		t.Error("wanted all, got", tok.Lexeme)
+	}
+}
+
+func TestEmitIdentifier(t *testing.T) {
+	s := lang.Scanner{Input: "variable a3 "}
+	tok := s.Emit()
+
+	if tok.Type != lang.TOK_IDENTIFIER {
+		t.Error("wanted TOK_IDENTIFIER, got", tok.Type)
+	}
+
+	if tok.Lexeme != "variable" {
+		t.Error("wanted 'variable', got", tok.Lexeme)
+	}
+
+	tok = s.Emit()
+
+	if tok.Type != lang.TOK_IDENTIFIER {
+		t.Error("wanted TOK_IDENTIFIER, got", tok.Type)
+	}
+
+	if tok.Lexeme != "a3" {
+		t.Error("wanted 'a3', got", tok.Lexeme)
 	}
 }
