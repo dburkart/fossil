@@ -1,18 +1,18 @@
 package server_test
 
 import (
+	"io"
 	"testing"
 
 	"github.com/dburkart/fossil/pkg/proto"
+	"github.com/dburkart/fossil/pkg/server"
 )
 
 func BenchmarkSliceCommandParse(b *testing.B) {
-	mux := Mux{
-		mapping: make([]HandleFunc, 0, 10),
-	}
-	mux.Handle("A", stub)
-	mux.Handle("B", stub)
-	mux.Handle("C", stub)
+	mux := server.NewSliceMux()
+	mux.Handle("A", stub2)
+	mux.Handle("B", stub2)
+	mux.Handle("C", stub2)
 
 	tests := []proto.Message{{
 		Command: "A",
@@ -23,59 +23,26 @@ func BenchmarkSliceCommandParse(b *testing.B) {
 	},
 	}
 
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		testMsg := tests[i%len(tests)]
-		ret := mux.Serve(testMsg)
-		if ret != testMsg.Command {
-			b.Errorf("Incorrect response for %s got %s", testMsg.Command, ret)
-		}
+		mux.ServeMessage(io.Discard, testMsg)
 	}
 }
 
-type Mux struct {
-	mapping []HandleFunc
-}
+func stub2(rw io.Writer, msg proto.Message) {
 
-type HandleFunc func(msg proto.Message) string
-
-func (m *Mux) Handle(command string, f HandleFunc) {
-	h := hash(command)
-	if h >= len(m.mapping) {
-		temp := m.mapping
-		m.mapping = make([]HandleFunc, h+1, h+1)
-		copy(m.mapping, temp)
-	}
-	m.mapping[hash(command)] = f
-}
-
-func (m *Mux) Serve(msg proto.Message) string {
-	cmd := hash(msg.Command)
-	if len(m.mapping) < cmd {
-		return ""
-	}
-
-	return m.mapping[cmd](msg)
-}
-
-func stub(msg proto.Message) string {
-	return msg.Command
-}
-
-func hash(s string) int {
-	return int(s[0])
 }
 
 func BenchmarkSwitchCommandParse(b *testing.B) {
-	mux := func(msg proto.Message) string {
+	mux := func(msg proto.Message) {
 		switch msg.Command {
 		case "A":
-			return "A"
+			stub2(io.Discard, msg)
 		case "B":
-			return "B"
+			stub2(io.Discard, msg)
 		case "C":
-			return "C"
-		default:
-			return ""
+			stub2(io.Discard, msg)
 		}
 	}
 
@@ -88,23 +55,19 @@ func BenchmarkSwitchCommandParse(b *testing.B) {
 	},
 	}
 
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		testMsg := tests[i%len(tests)]
-		ret := mux(testMsg)
-		if ret != testMsg.Command {
-			b.Errorf("Incorrect response for %s got %s", testMsg.Command, ret)
-		}
+		mux(testMsg)
 	}
 }
 
 func BenchmarkMapCommandParse(b *testing.B) {
-	mux := MapMux{
-		mapping: make(map[string]HandleFunc),
-	}
+	mux := server.NewMapMux()
 
-	mux.Handle("A", stub)
-	mux.Handle("B", stub)
-	mux.Handle("C", stub)
+	mux.Handle("A", stub2)
+	mux.Handle("B", stub2)
+	mux.Handle("C", stub2)
 
 	tests := []proto.Message{{
 		Command: "A",
@@ -115,24 +78,9 @@ func BenchmarkMapCommandParse(b *testing.B) {
 	},
 	}
 
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		testMsg := tests[i%len(tests)]
-		ret := mux.Serve(testMsg)
-		if ret != testMsg.Command {
-			b.Errorf("Incorrect response for %s got %s", testMsg.Command, ret)
-		}
+		mux.ServeMessage(io.Discard, testMsg)
 	}
-
-}
-
-type MapMux struct {
-	mapping map[string]HandleFunc
-}
-
-func (m *MapMux) Handle(command string, f HandleFunc) {
-	m.mapping[command] = f
-}
-
-func (m *MapMux) Serve(msg proto.Message) string {
-	return m.mapping[msg.Command](msg)
 }

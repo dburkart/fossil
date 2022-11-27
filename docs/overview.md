@@ -25,29 +25,62 @@ Fossil server uses a TCP socket to listen for client connections. Clients can ac
 - **Fire and Forget** for data collection
 - **Active** for data collection and querying
 
-Connections are handled using goroutines and a message stream channel. Once the wire messages are parsed and sent over the stream the server beings to processed queued messages against the database.
-
-```mermaid
-graph TB;
-	server
-	processMessageStream[go processMessageStream]
-	listen --> accept
-	accept --> accept
-	accept -. collector.New .-> handle[go handle];
-	server --> listen
-	server --> processMessageStream
-	processMessageStream --> processMessageStream
-	handle -.msgStream .-> server
-
-	processMessageStream --> database
-```
-
 #### Fire and Forget
 Clients in Fire and Forget mode connected to the server are limited to write only commands from the command list to ensure performant writes.
 
 #### Active
 Clients connected in active mode are open to use all commands, read and write, on the database.
 
+#### Design
+
+Attempting to not reinvent the wheel usage of the net/http patterns help create a familiar pattern that can be easily used and expanded on. The following diagram is a simple representation of the Server, Mux, and handler pattern. The Application Server creates a MessageServer, and MessageMux and uses the MessageMux to register handler functions for a given message type. The MessageServer handles connections by spinning up a connection handler to parse the wire messages and then handing that message off to the correct message handler via the Mux.
+
+```mermaid
+flowchart LR
+
+	Server --> MessageServer
+
+  subgraph MessageServer
+  
+		ListenAndServe
+		Mux
+		ListenAndServe --> ListenAndServe
+
+  end
+
+  ListenAndServe -. accpet .-> conn.Handle
+
+  subgraph conn.Handle
+
+		scan
+		parse
+		func["go mux.ServeMessage(wr, msg)"]
+
+		scan --> parse
+		parse --> func
+
+  end
+```
+
+##### Message Mux
+Attempting to find the middle ground between an easy to use and expand solution and a performant solution three different mux types were tested and benchmarked. Slice, Map, and Switch based Muxes were tested using a benchmark with the following results.
+
+```shell
+❯ go test -benchmem -benchtime=5s -v -bench=.
+goos: darwin
+goarch: arm64
+pkg: github.com/dburkart/fossil/pkg/server
+BenchmarkSliceCommandParse
+BenchmarkSliceCommandParse-10     	1000000000	         5.807 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSwitchCommandParse
+BenchmarkSwitchCommandParse-10    	1000000000	         4.578 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMapCommandParse
+BenchmarkMapCommandParse-10       	603785710	         9.879 ns/op	       0 B/op	       0 allocs/op
+PASS
+ok  	github.com/dburkart/fossil/pkg/server	19.132s
+```
+
+With the above results in mind we went with the MapBased mux for now in-order to allow for quick changes and low memory usage at the minor cost of some CPU performance.
 ## Data Types (WIP)
 
 By default, data sent to fossil is stored as an opaque blob of bytes in the database. This unstructured data can not 
