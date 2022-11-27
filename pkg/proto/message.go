@@ -9,6 +9,7 @@ package proto
 import (
 	"bytes"
 	"fmt"
+	"strings"
 
 	"github.com/rs/zerolog"
 )
@@ -27,7 +28,7 @@ func ParseMessage(b []byte) (Message, error) {
 	if ind == -1 {
 		return ret, fmt.Errorf("malformed message")
 	}
-	ret.Command = string(b[0:ind])
+	ret.Command = strings.ToUpper(string(b[0:ind]))
 	if ind < len(b) {
 		ret.Data = b[ind+1:]
 	}

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strings"
 
 	"github.com/dburkart/fossil/pkg/collector"
 	"github.com/dburkart/fossil/pkg/database"
@@ -30,6 +31,18 @@ type Server struct {
 	msgStream chan proto.Message
 
 	collectors []collector.Collector
+}
+
+type commandHandler func(s *Server, message proto.Message) error
+
+var commandMap = map[string]commandHandler{
+	"APPEND": appendToDB,
+}
+
+func appendToDB(s *Server, message proto.Message) error {
+	// TODO: Support topics
+	s.database.Append(message.Data, "")
+	return nil
 }
 
 func New(log zerolog.Logger, path string, collectionPort, databasePort, metricsPort int) Server {
@@ -79,6 +92,13 @@ func (s *Server) listenCollection() {
 func (s *Server) processMessages() {
 	for m := range s.msgStream {
 		s.log.Info().Str("command", m.Command).Msg("handle")
+
+		if handler, exists := commandMap[strings.ToUpper(m.Command)]; exists {
+			err := handler(s, m)
+			if err != nil {
+				s.log.Error().Err(err)
+			}
+		}
 	}
 }
 
