@@ -67,6 +67,12 @@ func (s *Scanner) Emit() Token {
 		case unicode.IsSpace(r):
 			skip = width
 			found = false
+		case r == '(':
+			t.Type = TOK_PAREN_L
+			skip = width
+		case r == ')':
+			t.Type = TOK_PAREN_R
+			skip = width
 		case r >= '0' && r <= '9':
 			t.Type = TOK_NUMBER
 			skip = s.MatchNumber()
@@ -74,6 +80,13 @@ func (s *Scanner) Emit() Token {
 			if strings.HasPrefix(s.Input[s.Pos:], "all") {
 				t.Type = TOK_KEYWORD
 				skip = len("all")
+				break
+			}
+			identifierFallthrough()
+		case r == 'i':
+			if strings.HasPrefix(s.Input[s.Pos:], "in") {
+				t.Type = TOK_KEYWORD
+				skip = len("in")
 				break
 			}
 			identifierFallthrough()

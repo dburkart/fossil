@@ -20,16 +20,22 @@ func TestEmitNumber(t *testing.T) {
 }
 
 func TestEmitKeyword(t *testing.T) {
-	s := lang.Scanner{Input: "  all of"}
-	tok := s.Emit()
+	s := lang.Scanner{Input: "   all in"}
 
-	if tok.Type != lang.TOK_KEYWORD {
-		t.Error("wanted TOK_KEYWORD, got", tok.Type)
+	expectedKeywordLexemes := []string{"all", "in"}
+
+	for i := 0; i < 2; i++ {
+		tok := s.Emit()
+
+		if tok.Type != lang.TOK_KEYWORD {
+			t.Error("wanted TOK_KEYWORD, got", tok.Type)
+		}
+
+		if tok.Lexeme != expectedKeywordLexemes[i] {
+			t.Errorf("wanted '%s', got '%s'", expectedKeywordLexemes[i], tok.Lexeme)
+		}
 	}
 
-	if tok.Lexeme != "all" {
-		t.Error("wanted all, got", tok.Lexeme)
-	}
 }
 
 func TestEmitIdentifier(t *testing.T) {
