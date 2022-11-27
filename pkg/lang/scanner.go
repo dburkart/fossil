@@ -73,7 +73,7 @@ func (s *Scanner) Emit() Token {
 		case r == ')':
 			t.Type = TOK_PAREN_R
 			skip = width
-		case r >= '0' && r <= '9':
+		case unicode.IsDigit(r):
 			t.Type = TOK_NUMBER
 			skip = s.MatchNumber()
 		case r == 'a':
