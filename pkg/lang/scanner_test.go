@@ -11,7 +11,7 @@ func TestEmitNumber(t *testing.T) {
 	tok := s.Emit()
 
 	if tok.Type != lang.TOK_NUMBER {
-		t.Error("wanted TOK_NUMBER, got", tok.Type)
+		t.Error("wanted TOK_NUMBER, got", tok.Type.ToString())
 	}
 
 	if tok.Lexeme != "12345" {
@@ -28,7 +28,7 @@ func TestEmitKeyword(t *testing.T) {
 		tok := s.Emit()
 
 		if tok.Type != lang.TOK_KEYWORD {
-			t.Error("wanted TOK_KEYWORD, got", tok.Type)
+			t.Error("wanted TOK_KEYWORD, got", tok.Type.ToString())
 		}
 
 		if tok.Lexeme != expectedKeywordLexemes[i] {
@@ -43,7 +43,7 @@ func TestEmitIdentifier(t *testing.T) {
 	tok := s.Emit()
 
 	if tok.Type != lang.TOK_IDENTIFIER {
-		t.Error("wanted TOK_IDENTIFIER, got", tok.Type)
+		t.Error("wanted TOK_IDENTIFIER, got", tok.Type.ToString())
 	}
 
 	if tok.Lexeme != "variable" {
@@ -53,7 +53,7 @@ func TestEmitIdentifier(t *testing.T) {
 	tok = s.Emit()
 
 	if tok.Type != lang.TOK_IDENTIFIER {
-		t.Error("wanted TOK_IDENTIFIER, got", tok.Type)
+		t.Error("wanted TOK_IDENTIFIER, got", tok.Type.ToString())
 	}
 
 	if tok.Lexeme != "a3" {
@@ -69,7 +69,7 @@ func TestEmitTopic(t *testing.T) {
 		tok := s.Emit()
 
 		if tok.Type != lang.TOK_TOPIC {
-			t.Error("wanted TOK_TOPIC, got", tok.Type)
+			t.Error("wanted TOK_TOPIC, got", tok.Type.ToString())
 		}
 
 		if tok.Lexeme != expectedTopicLexemes[i] {
