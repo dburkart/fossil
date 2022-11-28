@@ -13,7 +13,7 @@ identifier      = 1*(ALPHA / DIGIT)
 ; Topic selection
 topic-selector  = "in" (topic / "(" topic-list ")" )
 topic-list      = topic ["," topic-list]
-topic           = "#" 1*(ALPHA / DIGIT)
+topic           = "/" 1*(ALPHA / DIGIT / "/")
 
 ; Time
 time-predicate  = ( "since" time-expression ) / ( "until" time-expression ) / 

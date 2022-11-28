@@ -180,7 +180,7 @@ func (d *Database) Retrieve(q Query) []Datum {
 	}
 
 	startSubIndex := 0
-	endSubIndex := d.Segments[endIndex].Size - 1
+	endSubIndex := d.Segments[endIndex].Size
 
 	if q.Range != nil {
 		startSubIndex, _ = d.Segments[startIndex].FindApproximateDatum(q.Range.Start)
