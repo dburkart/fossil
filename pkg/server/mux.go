@@ -18,18 +18,18 @@ import (
 
 type MessageMux interface {
 	ServeMessage(w io.Writer, msg proto.Message)
-	Handle(s string, f HandleMessage)
+	Handle(s string, f MessageHandler)
 }
 
-type HandleMessage func(io.Writer, proto.Message)
+type MessageHandler func(io.Writer, proto.Message)
 
 type MapMux struct {
-	handlers map[string]HandleMessage
+	handlers map[string]MessageHandler
 }
 
 func NewMapMux() MessageMux {
 	return &MapMux{
-		handlers: make(map[string]HandleMessage),
+		handlers: make(map[string]MessageHandler),
 	}
 }
 
@@ -42,7 +42,7 @@ func (mm *MapMux) ServeMessage(w io.Writer, msg proto.Message) {
 	f(w, msg)
 }
 
-func (mm *MapMux) Handle(s string, f HandleMessage) {
+func (mm *MapMux) Handle(s string, f MessageHandler) {
 	mm.handlers[s] = f
 }
 
