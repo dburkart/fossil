@@ -27,7 +27,7 @@ var Command = &cobra.Command{
 
 		reader := bufio.NewReader(os.Stdin)
 		for {
-			fmt.Print("> ")
+			fmt.Print("\n> ")
 			line, err := reader.ReadString('\n')
 			if err != nil {
 				log.Fatal().Err(err)

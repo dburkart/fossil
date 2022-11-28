@@ -17,6 +17,10 @@ func Prepare(d *database.Database, statement string) []database.Filter {
 
 	ast := p.Parse()
 
+	if ast == nil {
+		return []database.Filter{}
+	}
+
 	// Walk the tree
 	filters := ast.Walk(d)
 

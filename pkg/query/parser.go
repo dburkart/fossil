@@ -13,6 +13,12 @@ type Parser struct {
 }
 
 func (p *Parser) Parse() ASTNode {
+	defer func() {
+		if e := recover(); e != nil {
+			// Print the error
+			fmt.Print(e)
+		}
+	}()
 	return p.query()
 }
 
@@ -32,7 +38,7 @@ func (p *Parser) quantifier() ASTNode {
 	tok := p.Scanner.Emit()
 
 	if tok.Type != TOK_KEYWORD || tok.Lexeme != "all" {
-		panic(fmt.Sprintf("Found '%s', expected quantifier (all, sample, etc.)", tok.Lexeme))
+		panic(fmt.Sprintf("Error: unexpected token '%s', expected quantifier (all, sample, etc.)", tok.Lexeme))
 	}
 
 	q := QuantifierNode{BaseNode{
