@@ -73,7 +73,7 @@ func (p *Parser) quantifier() ASTNode {
 //
 // Grammar:
 //
-//	topic-selector  = "in" (topic / "(" topic-list ")" )
+//	topic-selector  = "in" topic
 func (p *Parser) topicSelector() ASTNode {
 	// Pull off the next token
 	tok := p.Scanner.Emit()
