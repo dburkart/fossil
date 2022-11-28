@@ -37,6 +37,7 @@ func (mm *MapMux) ServeMessage(w io.Writer, msg proto.Message) {
 	f, ok := mm.handlers[msg.Command]
 	if !ok {
 		// NO OP for commands that do not exist
+		w.Write([]byte("command not found\n"))
 		return
 	}
 	f(w, msg)
@@ -111,6 +112,7 @@ func (c *conn) Handle(conn *net.TCPConn) {
 		buf := bytes.NewBuffer(line)
 		msg, err := proto.ParseMessage(buf.Bytes())
 		if err != nil {
+			c.c.Write([]byte("malformed message\n"))
 			c.log.Trace().Bytes("buf", line).Send()
 			c.log.Error().Err(err).Msg("error parsing message from buffer")
 			continue

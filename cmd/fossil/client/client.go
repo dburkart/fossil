@@ -63,11 +63,17 @@ func prompt(c net.Conn) {
 		}
 
 		respRdr := bufio.NewReader(c)
-		resp, err := respRdr.ReadBytes('\n')
-		if err != nil {
-			fmt.Printf("Err: unable to read response\n\t'%s'\n", string(resp))
+		for {
+
+			resp, err := respRdr.ReadBytes('\n')
+			if err != nil {
+				fmt.Printf("Err: unable to read response\n\t'%s'\n", string(resp))
+			}
+			fmt.Print(string(resp))
+			if respRdr.Buffered() <= 0 {
+				break
+			}
 		}
-		fmt.Print(string(resp))
 	}
 }
 
