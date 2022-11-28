@@ -13,3 +13,5 @@ type Datum struct {
 	TopicID int
 	Data    []byte
 }
+
+type Filter func([]Datum) []Datum
