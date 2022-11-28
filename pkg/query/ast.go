@@ -6,7 +6,10 @@
 
 package query
 
-import "github.com/dburkart/fossil/pkg/database"
+import (
+	"github.com/dburkart/fossil/pkg/database"
+	"strings"
+)
 
 type ASTNode interface {
 	Children() []ASTNode
@@ -79,4 +82,40 @@ func (q QuantifierNode) GenerateFilter(db *database.Database) database.Filter {
 		// TODO: What's the right thing to return here? Maybe we should panic?
 		return []database.Datum{}
 	}
+}
+
+type TopicSelectorNode struct {
+	BaseNode
+}
+
+func (q TopicSelectorNode) GenerateFilter(db *database.Database) database.Filter {
+	topic, ok := q.Children()[0].(*TopicNode)
+	if !ok {
+		panic("Expected child to be of type *TopicNode")
+	}
+	topicName := topic.Value
+
+	// Capture the desired topics in our closure
+	var topicFilter []int
+
+	// Since topics are hierarchical, we want any topic which has the desired prefix
+	for key, element := range db.Topics {
+		if strings.HasPrefix(key, topicName) {
+			topicFilter = append(topicFilter, element)
+		}
+	}
+
+	return func(data []database.Datum) []database.Datum {
+		filtered := make([]database.Datum, cap(data))
+
+		for _, val := range data {
+			filtered = append(filtered, val)
+		}
+
+		return filtered
+	}
+}
+
+type TopicNode struct {
+	BaseNode
 }

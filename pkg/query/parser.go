@@ -22,6 +22,11 @@ func (p *Parser) Parse() ASTNode {
 	return p.query()
 }
 
+// query returns a QueryNode
+//
+// Grammar:
+//
+//	query           = quantifier [ identifier ] [ topic-selector ] [ time-predicate ] [ data-predicate ]
 func (p *Parser) query() ASTNode {
 	q := QueryNode{BaseNode{
 		Value: p.Scanner.Input,
@@ -30,9 +35,25 @@ func (p *Parser) query() ASTNode {
 	// Queries must start with a Quantifier
 	q.AddChild(p.quantifier())
 
+	// TODO: Check for identifier
+
+	// Check for topic-selector
+	topicSelector := p.topicSelector()
+	if topicSelector != nil {
+		q.AddChild(topicSelector)
+	}
+
+	// TODO: Check for time-predicate
+	// TODO: Check for data-predicate
+
 	return &q
 }
 
+// quantifier returns a QuantifierNode
+//
+// Grammar:
+//
+//	quantifier      = "all" / sample
 func (p *Parser) quantifier() ASTNode {
 	// Pull off the next token
 	tok := p.Scanner.Emit()
@@ -46,4 +67,49 @@ func (p *Parser) quantifier() ASTNode {
 	}}
 
 	return &q
+}
+
+// topicSelector returns a TopicSelectorNode
+//
+// Grammar:
+//
+//	topic-selector  = "in" (topic / "(" topic-list ")" )
+func (p *Parser) topicSelector() ASTNode {
+	// Pull off the next token
+	tok := p.Scanner.Emit()
+
+	// Ensure it is the "in" keyword
+	if tok.Type != TOK_KEYWORD || tok.Lexeme != "in" {
+		// topic-selector is optional, so don't error out
+		p.Scanner.Rewind()
+		return nil
+	}
+
+	topic := p.topic()
+	t := TopicSelectorNode{BaseNode{
+		// TODO: this should be the full in ... selection statement
+		Value: "in",
+	}}
+	t.AddChild(topic)
+
+	return &t
+}
+
+// topic returns a TopicNode
+//
+// Grammar:
+//
+//	topic           = "/" 1*(ALPHA / DIGIT / "/")
+func (p *Parser) topic() ASTNode {
+	tok := p.Scanner.Emit()
+
+	if tok.Type != TOK_TOPIC {
+		panic(fmt.Sprintf("Error: unexpected token '%s', expected a topic after 'in' keyword", tok.Lexeme))
+	}
+
+	t := TopicNode{BaseNode{
+		Value: tok.Lexeme,
+	}}
+
+	return &t
 }

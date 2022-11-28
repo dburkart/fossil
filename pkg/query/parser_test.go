@@ -36,3 +36,21 @@ func TestParseAllQuantifier(t *testing.T) {
 		t.Errorf("wanted 1 filter, got %d instead", len(filters))
 	}
 }
+
+func TestParseTopicSelector(t *testing.T) {
+	p := Parser{
+		Scanner: Scanner{
+			Input: "in /foo/bar/baz",
+		},
+	}
+
+	ast := p.topicSelector()
+	if fmt.Sprint(reflect.TypeOf(ast)) != "*query.TopicSelectorNode" {
+		t.Errorf("wanted root node to be *query.TopicSelectorNode, found %s", reflect.TypeOf(ast))
+	}
+
+	child := ast.Children()[0]
+	if fmt.Sprint(reflect.TypeOf(child)) != "*query.TopicNode" {
+		t.Errorf("wanted first child to be *query.TopicNode, found %s", reflect.TypeOf(child))
+	}
+}
