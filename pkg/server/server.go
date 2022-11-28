@@ -8,9 +8,8 @@ package server
 
 import (
 	"fmt"
-	"net"
+	"io"
 	"net/http"
-	"strings"
 
 	"github.com/dburkart/fossil/pkg/collector"
 	"github.com/dburkart/fossil/pkg/database"
@@ -28,21 +27,7 @@ type Server struct {
 	databasePort   int
 	metricsPort    int
 
-	msgStream chan proto.Message
-
 	collectors []collector.Collector
-}
-
-type commandHandler func(s *Server, message proto.Message) error
-
-var commandMap = map[string]commandHandler{
-	"APPEND": appendToDB,
-}
-
-func appendToDB(s *Server, message proto.Message) error {
-	// TODO: Support topics
-	s.database.Append(message.Data, "")
-	return nil
 }
 
 func New(log zerolog.Logger, path string, collectionPort, databasePort, metricsPort int) Server {
@@ -57,7 +42,6 @@ func New(log zerolog.Logger, path string, collectionPort, databasePort, metricsP
 		collectionPort,
 		databasePort,
 		metricsPort,
-		make(chan proto.Message),
 		[]collector.Collector{},
 	}
 }
@@ -65,40 +49,20 @@ func New(log zerolog.Logger, path string, collectionPort, databasePort, metricsP
 func (s *Server) ServeDatabase() {
 	s.log.Info().Int("database-port", s.databasePort).Msg("listening for client connections")
 
-	go s.listenCollection()
+	srv := NewMessageServer(s.log)
+	mux := NewMapMux()
 
-	s.processMessages()
-}
+	mux.Handle(proto.CommandAppend, func(w io.Writer, msg proto.Message) {
+		s.database.Append(msg.Data, "")
+	})
 
-func (s *Server) listenCollection() {
-	sock, err := net.ListenTCP("tcp4", &net.TCPAddr{Port: s.collectionPort})
+	mux.Handle(proto.CommandInfo, func(w io.Writer, msg proto.Message) {
+		s.log.Info().Msg("INFO command")
+	})
+
+	err := srv.ListenAndServe(s.collectionPort, mux)
 	if err != nil {
-		s.log.Error().Err(err).Int("port", s.collectionPort).Msg("unable to listen on collection port")
-		return
-	}
-	s.log.Info().Int("collection-port", s.collectionPort).Msg("listening for metrics")
-
-	for {
-		conn, err := sock.AcceptTCP()
-		if err != nil {
-			s.log.Error().Err(err).Msg("unable to accept connection on collection socket")
-		}
-
-		col := collector.New(s.log, conn, s.msgStream)
-		go col.Handle()
-	}
-}
-
-func (s *Server) processMessages() {
-	for m := range s.msgStream {
-		s.log.Info().Str("command", m.Command).Msg("handle")
-
-		if handler, exists := commandMap[strings.ToUpper(m.Command)]; exists {
-			err := handler(s, m)
-			if err != nil {
-				s.log.Error().Err(err)
-			}
-		}
+		s.log.Error().Err(err).Msg("error listening and serving")
 	}
 }
 
