@@ -61,6 +61,13 @@ func prompt(c net.Conn) {
 		if err != nil {
 			fmt.Printf("Err: unable to send command\n\t'%s'\n", err)
 		}
+
+		respRdr := bufio.NewReader(c)
+		resp, err := respRdr.ReadBytes('\n')
+		if err != nil {
+			fmt.Printf("Err: unable to read response\n\t'%s'\n", string(resp))
+		}
+		fmt.Print(string(resp))
 	}
 }
 
