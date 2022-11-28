@@ -4,14 +4,13 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-package server_test
+package server
 
 import (
 	"io"
 	"testing"
 
 	"github.com/dburkart/fossil/pkg/proto"
-	"github.com/dburkart/fossil/pkg/server"
 )
 
 func stub2(rw io.Writer, msg proto.Message) {
@@ -19,7 +18,7 @@ func stub2(rw io.Writer, msg proto.Message) {
 }
 
 func BenchmarkMapCommandParse(b *testing.B) {
-	mux := server.NewMapMux()
+	mux := NewMapMux()
 
 	mux.Handle("A", stub2)
 	mux.Handle("B", stub2)

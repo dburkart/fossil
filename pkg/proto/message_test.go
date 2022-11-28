@@ -4,13 +4,9 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-package proto_test
+package proto
 
-import (
-	"testing"
-
-	"github.com/dburkart/fossil/pkg/proto"
-)
+import "testing"
 
 func TestParseMessage(t *testing.T) {
 	tt := []struct {
@@ -37,7 +33,7 @@ func TestParseMessage(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.test, func(t *testing.T) {
-			_, err := proto.ParseMessage(tc.buf)
+			_, err := ParseMessage(tc.buf)
 			if err != nil && !tc.err {
 				t.Error(err)
 			}

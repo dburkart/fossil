@@ -4,18 +4,17 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-package query_test
+package query
 
 import (
 	"fmt"
-	"github.com/dburkart/fossil/pkg/query"
 	"reflect"
 	"testing"
 )
 
 func TestParseAllQuantifier(t *testing.T) {
-	p := query.Parser{
-		Scanner: query.Scanner{
+	p := Parser{
+		Scanner: Scanner{
 			Input: "all",
 		},
 	}
