@@ -31,4 +31,9 @@ func TestParseAllQuantifier(t *testing.T) {
 	if fmt.Sprint(reflect.TypeOf(child)) != "*query.QuantifierNode" {
 		t.Errorf("wanted first child to be *query.QuantifierNode, found %s", reflect.TypeOf(child))
 	}
+
+	filters := ast.Walk(nil)
+	if len(filters) != 1 {
+		t.Errorf("wanted 1 filter, got %d instead", len(filters))
+	}
 }
