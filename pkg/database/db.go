@@ -40,6 +40,14 @@ func (d *Database) appendInternal(data Datum) {
 }
 
 func (d *Database) addTopic(topicName string) int {
+	if topicName == "" {
+		topicName = "/"
+	}
+
+	if topicName[0] != '/' {
+		topicName = "/" + topicName
+	}
+
 	if index, exists := d.Topics[topicName]; exists {
 		return index
 	}
@@ -234,12 +242,12 @@ func NewDatabase(location string) *Database {
 		db = Database{
 			Version:    1,
 			Path:       location,
-			Segments:   []Segment{Segment{}},
+			Segments:   []Segment{{}},
 			Current:    0,
 			Topics:     make(map[string]int),
 			TopicCount: 0,
 		}
-		db.addTopic("default")
+		db.addTopic("/")
 	}
 	wal := WriteAheadLog{filepath.Join(db.Path, "wal.log")}
 	wal.ApplyToDB(&db)

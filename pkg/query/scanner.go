@@ -17,8 +17,15 @@ type Scanner struct {
 	Start     int
 	Pos       int
 	RuneWidth int
+	LastWidth int
 }
 
+// MatchIdentifier returns the length of the next token, assuming it is an
+// identifier.
+//
+// Grammar:
+//
+//	identifier      = 1*(ALPHA / DIGIT)
 func (s *Scanner) MatchIdentifier() int {
 	i := s.Pos
 	r, width := utf8.DecodeRuneInString(s.Input[i:])
@@ -33,6 +40,12 @@ func (s *Scanner) MatchIdentifier() int {
 	return size
 }
 
+// MatchTopic returns the length of the next token, assuming it is a topic
+// string.
+//
+// Grammar:
+//
+//	topic           = "/" 1*(ALPHA / DIGIT / "/")
 func (s *Scanner) MatchTopic() int {
 	i := s.Pos
 	r, width := utf8.DecodeRuneInString(s.Input[i:])
@@ -47,6 +60,12 @@ func (s *Scanner) MatchTopic() int {
 	return size
 }
 
+// MatchNumber returns the length of the next token, assuming it is a
+// number
+//
+// Grammar:
+//
+//	number          = 1*DIGIT
 func (s *Scanner) MatchNumber() int {
 	r, width := utf8.DecodeRuneInString(s.Input[s.Pos:])
 	size := 0
@@ -60,8 +79,11 @@ func (s *Scanner) MatchNumber() int {
 	return size
 }
 
+// Emit the next Token found on Scanner.Input
 func (s *Scanner) Emit() Token {
 	var t Token
+
+	oldStart := s.Start
 
 	for {
 		r, width := utf8.DecodeRuneInString(s.Input[s.Pos:])
@@ -120,5 +142,14 @@ func (s *Scanner) Emit() Token {
 	t.Lexeme = s.Input[s.Start:s.Pos]
 	s.Start = s.Pos
 
+	s.LastWidth = s.Start - oldStart
+
 	return t
+}
+
+// Rewind the last read token
+func (s *Scanner) Rewind() {
+	s.Start -= s.LastWidth
+	s.Pos = s.Start
+	s.LastWidth = 0
 }

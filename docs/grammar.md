@@ -11,8 +11,7 @@ sample          = "sample(" timespan ")"
 identifier      = 1*(ALPHA / DIGIT)
 
 ; Topic selection
-topic-selector  = "in" (topic / "(" topic-list ")" )
-topic-list      = topic ["," topic-list]
+topic-selector  = "in" topic
 topic           = "/" 1*(ALPHA / DIGIT / "/")
 
 ; Time
