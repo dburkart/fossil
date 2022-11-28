@@ -54,10 +54,12 @@ func (s *Server) ServeDatabase() {
 
 	mux.Handle(proto.CommandAppend, func(w io.Writer, msg proto.Message) {
 		s.database.Append(msg.Data, "")
+		w.Write([]byte("Ok!\n"))
 	})
 
 	mux.Handle(proto.CommandInfo, func(w io.Writer, msg proto.Message) {
 		s.log.Info().Msg("INFO command")
+		w.Write([]byte("hello world\n"))
 	})
 
 	err := srv.ListenAndServe(s.collectionPort, mux)
