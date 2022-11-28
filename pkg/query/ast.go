@@ -35,8 +35,9 @@ func (b *BaseNode) AddChild(child ASTNode) {
 }
 
 func (b *BaseNode) descend(d *database.Database, n ASTNode) []database.Filter {
+	f := n.GenerateFilter(d)
+
 	if len(n.Children()) == 0 {
-		f := n.GenerateFilter(d)
 		if f == nil {
 			return []database.Filter{}
 		} else {
@@ -45,6 +46,10 @@ func (b *BaseNode) descend(d *database.Database, n ASTNode) []database.Filter {
 	}
 
 	var chain []database.Filter
+
+	if f != nil {
+		chain = append(chain, f)
+	}
 
 	for _, child := range n.Children() {
 		chain = append(chain, b.descend(d, child)...)
@@ -96,20 +101,26 @@ func (q TopicSelectorNode) GenerateFilter(db *database.Database) database.Filter
 	topicName := topic.Value
 
 	// Capture the desired topics in our closure
-	var topicFilter []int
+	var topicFilter = make(map[int]bool)
 
 	// Since topics are hierarchical, we want any topic which has the desired prefix
 	for key, element := range db.Topics {
 		if strings.HasPrefix(key, topicName) {
-			topicFilter = append(topicFilter, element)
+			topicFilter[element] = true
 		}
 	}
 
 	return func(data []database.Datum) []database.Datum {
-		filtered := make([]database.Datum, cap(data))
+		if data == nil {
+			data = db.Retrieve(database.Query{Range: nil})
+		}
+
+		filtered := []database.Datum{}
 
 		for _, val := range data {
-			filtered = append(filtered, val)
+			if _, ok := topicFilter[val.TopicID]; ok {
+				filtered = append(filtered, val)
+			}
 		}
 
 		return filtered
