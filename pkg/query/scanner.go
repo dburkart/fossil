@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-package lang
+package query
 
 import (
 	"strings"
