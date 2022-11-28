@@ -117,9 +117,8 @@ func (c *conn) Handle(conn *net.TCPConn) {
 		}
 		c.log.Info().Object("msg", msg).Msg("parsed message")
 
-		rBuf := new(bytes.Buffer)
-		wr := bufio.NewWriter(rBuf)
-
+		wr := bufio.NewWriter(c.c)
 		go c.mux.ServeMessage(wr, msg)
+
 	}
 }
