@@ -7,6 +7,7 @@
 package fossil
 
 import (
+	"github.com/dburkart/fossil/cmd/fossil/local"
 	"io"
 	"os"
 	"strings"
@@ -49,6 +50,7 @@ func init() {
 	rootCmd.AddCommand(server.Command)
 	rootCmd.AddCommand(test.Command)
 	rootCmd.AddCommand(client.Command)
+	rootCmd.AddCommand(local.Command)
 }
 
 func initConfig() {

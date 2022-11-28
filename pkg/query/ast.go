@@ -66,8 +66,12 @@ type QuantifierNode struct {
 	BaseNode
 }
 
-func (q QuantifierNode) GenerateFilter(*database.Database) database.Filter {
+func (q QuantifierNode) GenerateFilter(db *database.Database) database.Filter {
 	return func(data []database.Datum) []database.Datum {
+		if data == nil {
+			data = db.Retrieve(database.Query{Quantifier: q.Value, Range: nil})
+		}
+
 		switch q.Value {
 		case "all":
 			return data
