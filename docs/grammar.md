@@ -17,7 +17,7 @@ topic           = "/" 1*(ALPHA / DIGIT / "/")
 ; Time
 time-predicate  = ( "since" time-expression ) / ( "until" time-expression ) / 
                   ( "between" time-expression ".." time-expression )
-time-whence     = "+now" / "+begin" / "+" iso8601
+time-whence     = "~now" / "~begin" / "~yesterday"/ "~" iso8601
 time-quantity   = timespan / time-quantity ( "*" / "+" / "-" ) number
 timespan        = "@second" / "@minute" / "@hour" / "@day" / "@week" / "@month" / "@year"
 time-expression = ( time-whence ( "-" / "+" ) time-quantity ) / time-quantity
@@ -37,9 +37,9 @@ string          = DQUOTE *ALPHA DQUOTE
 Examples:
 
 ```
-all in #visits from @yesterday
-all x in #clicks since @day * 30 -> x.target == "window"
-sample(@minute) in #cpu-usage since @week
+all in /visits from ~yesterday
+all x in /clicks since @day * 30 -> x.target == "window"
+sample(@minute) in /cpu-usage since @week
 ```
 
 ## Semantic rules not covered by the grammar

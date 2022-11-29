@@ -8,6 +8,22 @@ package query
 
 import "testing"
 
+func TestMatchTimespan(t *testing.T) {
+	s := Scanner{Input: "@hour"}
+	width := s.MatchTimespan()
+
+	if width != 5 {
+		t.Errorf("@hour should have width of 5, not %d", width)
+	}
+
+	s.Input = "@bogus"
+	width = s.MatchTimespan()
+
+	if width != 0 {
+		t.Error("@bogus should not have a width!")
+	}
+}
+
 func TestEmitNumber(t *testing.T) {
 	s := Scanner{Input: "12345 hi"}
 
@@ -23,9 +39,9 @@ func TestEmitNumber(t *testing.T) {
 }
 
 func TestEmitKeyword(t *testing.T) {
-	s := Scanner{Input: "   all in"}
+	s := Scanner{Input: "   all in sample"}
 
-	expectedKeywordLexemes := []string{"all", "in"}
+	expectedKeywordLexemes := []string{"all", "in", "sample"}
 
 	for i := 0; i < len(expectedKeywordLexemes); i++ {
 		tok := s.Emit()
