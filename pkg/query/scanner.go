@@ -163,7 +163,7 @@ func (s *Scanner) Emit() Token {
 			t.Type = TOK_TOPIC
 			skip = s.MatchTopic()
 		case r == '@':
-			skip = s.MatchIdentifier()
+			skip = s.MatchTimespan()
 			if skip > 0 {
 				t.Type = TOK_TIMESPAN
 			} else {
