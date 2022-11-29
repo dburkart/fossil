@@ -76,7 +76,7 @@ type QuantifierNode struct {
 }
 
 func (q QuantifierNode) GenerateFilter(db *database.Database) database.Filter {
-	return func(data []database.Datum) []database.Datum {
+	return func(data database.Entries) database.Entries {
 		if data == nil {
 			data = db.Retrieve(database.Query{Quantifier: q.Value, Range: nil})
 		}
@@ -90,16 +90,14 @@ func (q QuantifierNode) GenerateFilter(db *database.Database) database.Filter {
 				panic("Expected child to be of type *TimespanNode")
 			}
 
-			// TODO: This is all wrong. See TODO in database/datum.go. The Durations here will reset on every
-			//		 segment boundary, so this is guaranteed to be wrong.
 			sampleDuration := timespan.Duration()
-			nextDuration := time.Duration(0)
-			filtered := []database.Datum{}
+			nextTime := data[0].Time
+			filtered := database.Entries{}
 
 			for _, val := range data {
-				if nextDuration == 0 || val.Delta >= nextDuration {
+				if val.Time.After(nextTime) || val.Time.Equal(nextTime) {
 					filtered = append(filtered, val)
-					nextDuration += sampleDuration
+					nextTime = nextTime.Add(sampleDuration)
 				}
 			}
 
@@ -107,7 +105,7 @@ func (q QuantifierNode) GenerateFilter(db *database.Database) database.Filter {
 
 		}
 		// TODO: What's the right thing to return here? Maybe we should panic?
-		return []database.Datum{}
+		return database.Entries{}
 	}
 }
 
@@ -123,24 +121,24 @@ func (q TopicSelectorNode) GenerateFilter(db *database.Database) database.Filter
 	topicName := topic.Value
 
 	// Capture the desired topics in our closure
-	var topicFilter = make(map[int]bool)
+	var topicFilter = make(map[string]bool)
 
 	// Since topics are hierarchical, we want any topic which has the desired prefix
-	for key, element := range db.Topics {
+	for key := range db.Topics {
 		if strings.HasPrefix(key, topicName) {
-			topicFilter[element] = true
+			topicFilter[key] = true
 		}
 	}
 
-	return func(data []database.Datum) []database.Datum {
+	return func(data database.Entries) database.Entries {
 		if data == nil {
 			data = db.Retrieve(database.Query{Range: nil})
 		}
 
-		filtered := []database.Datum{}
+		filtered := database.Entries{}
 
 		for _, val := range data {
-			if _, ok := topicFilter[val.TopicID]; ok {
+			if _, ok := topicFilter[val.Topic]; ok {
 				filtered = append(filtered, val)
 			}
 		}

@@ -7,7 +7,6 @@
 package database
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -16,11 +15,3 @@ type Datum struct {
 	TopicID int
 	Data    []byte
 }
-
-func (d *Datum) ToString() string {
-	return fmt.Sprintf("%d\t%s", d.TopicID, string(d.Data))
-}
-
-// A Filter that takes a list of Datum and returns a filtered lsit of Datum.
-// TODO: This should operate over some kind of "resolved" Datum object which holds timestamps instead of deltas
-type Filter func([]Datum) []Datum

@@ -8,7 +8,7 @@ package query
 
 import "github.com/dburkart/fossil/pkg/database"
 
-func Prepare(d *database.Database, statement string) []database.Filter {
+func Prepare(d *database.Database, statement string) database.Filters {
 	p := Parser{
 		Scanner{
 			Input: statement,
