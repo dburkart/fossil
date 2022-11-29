@@ -18,6 +18,7 @@ const (
 	TOK_NUMBER
 	TOK_STRING
 	TOK_TOPIC
+	TOK_TIMESPAN
 	TOK_COMMA
 
 	TOK_PAREN_L
@@ -44,6 +45,8 @@ func (t TokenType) ToString() string {
 		return "TOK_STRING"
 	case TOK_TOPIC:
 		return "TOK_TOPIC"
+	case TOK_TIMESPAN:
+		return "TOK_TIMESPAN"
 	case TOK_COMMA:
 		return "TOK_COMMA"
 	case TOK_PAREN_L:

@@ -79,6 +79,56 @@ func (s *Scanner) MatchNumber() int {
 	return size
 }
 
+// MatchTimespan returns the length of the next token, assuming it is a
+// timespan
+//
+// Grammar:
+//
+//	timespan        = "@second" / "@minute" / "@hour" / "@day" / "@week" / "@month" / "@year"
+func (s *Scanner) MatchTimespan() int {
+	r, _ := utf8.DecodeRuneInString(s.Input[s.Pos:])
+
+	if r != '@' {
+		return 0
+	}
+
+	pos := s.Pos + 1
+	r, _ = utf8.DecodeRuneInString(s.Input[pos:])
+
+	switch r {
+	case 'd':
+		if strings.HasPrefix(s.Input[pos:], "day") {
+			return len("@day")
+		}
+	case 'h':
+		if strings.HasPrefix(s.Input[pos:], "hour") {
+			return len("@hour")
+		}
+	case 'm':
+		if strings.HasPrefix(s.Input[pos:], "month") {
+			return len("@month")
+		}
+
+		if strings.HasPrefix(s.Input[pos:], "minute") {
+			return len("@minute")
+		}
+	case 's':
+		if strings.HasPrefix(s.Input[pos:], "second") {
+			return len("@second")
+		}
+	case 'w':
+		if strings.HasPrefix(s.Input[pos:], "week") {
+			return len("@week")
+		}
+	case 'y':
+		if strings.HasPrefix(s.Input[pos:], "year") {
+			return len("@year")
+		}
+	}
+
+	return 0
+}
+
 // Emit the next Token found on Scanner.Input
 func (s *Scanner) Emit() Token {
 	var t Token
@@ -112,6 +162,14 @@ func (s *Scanner) Emit() Token {
 		case r == '/':
 			t.Type = TOK_TOPIC
 			skip = s.MatchTopic()
+		case r == '@':
+			skip = s.MatchIdentifier()
+			if skip > 0 {
+				t.Type = TOK_TIMESPAN
+			} else {
+				t.Type = TOK_INVALID
+				skip = s.SkipToDelimiter()
+			}
 		case unicode.IsDigit(r):
 			t.Type = TOK_NUMBER
 			skip = s.MatchNumber()
@@ -159,4 +217,22 @@ func (s *Scanner) Rewind() {
 	s.Start -= s.LastWidth
 	s.Pos = s.Start
 	s.LastWidth = 0
+}
+
+func isDelimiter(r rune) bool {
+	return unicode.IsSpace(r) || r == '(' || r == ')' || r == ',' || r == '-'
+}
+
+// SkipToDelimiter returns the number of bytes until the next delimiter.
+// This is useful for skipping over invalid tokens.
+func (s *Scanner) SkipToDelimiter() int {
+	r, width := utf8.DecodeRuneInString(s.Input[s.Pos:])
+	size := 0
+
+	for !isDelimiter(r) {
+		size += width
+		r, width = utf8.DecodeRuneInString(s.Input[s.Pos+size:])
+	}
+
+	return size
 }
