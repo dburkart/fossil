@@ -33,14 +33,10 @@ var Command = &cobra.Command{
 				log.Fatal().Err(err)
 			}
 
-			var results []database.Datum = nil
 			stmt := query.Prepare(db, line)
+			result := stmt.Execute()
 
-			for i := len(stmt) - 1; i >= 0; i-- {
-				results = stmt[i](results)
-			}
-
-			for _, val := range results {
+			for _, val := range result.Data {
 				fmt.Println(val.ToString())
 			}
 		}

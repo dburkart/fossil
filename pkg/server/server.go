@@ -55,15 +55,11 @@ func (s *Server) ServeDatabase() {
 	mux := NewMapMux()
 
 	mux.Handle(proto.CommandQuery, func(w io.Writer, msg proto.Message) {
-		var results []database.Datum = nil
 		stmt := query.Prepare(s.database, string(msg.Data))
-
-		for i := len(stmt) - 1; i >= 0; i-- {
-			results = stmt[i](results)
-		}
+		result := stmt.Execute()
 
 		ret := new(bytes.Buffer)
-		for _, val := range results {
+		for _, val := range result.Data {
 			n, err := ret.WriteString(val.ToString() + "\n")
 			if err != nil {
 				s.log.Error().Err(err).Msg("unable to write to results buffer")

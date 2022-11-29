@@ -15,10 +15,10 @@ type TimeRange struct {
 
 // The Query object represents a single query on a database. It contains the
 // 4 main variables of a query:
-// 		* Quantifier
-//		* Topic(s)
-//		* Time Range
-//		* Data Predicate (TODO!)
+//   - Quantifier
+//   - Topic(s)
+//   - Time Range
+//   - Data Predicate (TODO!)
 type Query struct {
 	Quantifier string
 	Topics     []string
