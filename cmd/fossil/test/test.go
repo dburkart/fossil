@@ -38,8 +38,8 @@ var Command = &cobra.Command{
 
 func init() {
 	// Flags for this command
-	Command.Flags().StringP("host", "H", "localhost:8001", "Host to send the messages")
+	// Command.Flags().StringP("host", "H", "localhost:8001", "Host to send the messages")
 
 	// Bind flags to viper
-	viper.BindPFlag("host", Command.Flags().Lookup("host"))
+	// viper.BindPFlag("host", Command.Flags().Lookup("host"))
 }

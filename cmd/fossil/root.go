@@ -7,7 +7,6 @@
 package fossil
 
 import (
-	"github.com/dburkart/fossil/cmd/fossil/local"
 	"io"
 	"os"
 	"strings"
@@ -36,10 +35,12 @@ func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().CountP("verbose", "v", "-v for debug logs (-vv for trace)")
 	rootCmd.PersistentFlags().Bool("local", true, "Configures the logger to print readable logs") //TODO: true until we have a config file format
+	rootCmd.PersistentFlags().StringP("host", "H", "fossil://local/default", "Host to send the messages")
 
 	// Bind viper config to the root flags
 	viper.BindPFlag("local", rootCmd.PersistentFlags().Lookup("local"))
 	viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose"))
+	viper.BindPFlag("host", rootCmd.PersistentFlags().Lookup("host"))
 
 	// Bind viper flags to ENV variables
 	viper.SetEnvPrefix("FOSSIL")
@@ -50,7 +51,6 @@ func init() {
 	rootCmd.AddCommand(server.Command)
 	rootCmd.AddCommand(test.Command)
 	rootCmd.AddCommand(client.Command)
-	rootCmd.AddCommand(local.Command)
 }
 
 func initConfig() {

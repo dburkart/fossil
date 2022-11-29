@@ -46,6 +46,13 @@ func TestParseConnectionString(t *testing.T) {
 			"default",
 		},
 		{
+			"Test no proto local path db",
+			"local/data/db.log",
+			"local",
+			true,
+			"data/db.log",
+		},
+		{
 			"Test no proto local no db",
 			"localhost/",
 			"localhost",

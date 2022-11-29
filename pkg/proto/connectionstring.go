@@ -51,7 +51,7 @@ func ParseConnectionString(connStr string) ConnectionString {
 	}
 
 	// then search for path separator
-	delim := strings.LastIndex(connStr, "/")
+	delim := strings.Index(connStr, "/")
 	if delim == -1 {
 		ret.Address = connStr
 		ret.Database = "default"
