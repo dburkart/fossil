@@ -31,7 +31,7 @@ func (e *Entry) ToString() string {
 
 type Entries []Entry
 
-// A Filter that takes a list of Datum and returns a filtered lsit of Datum.
+// A Filter that takes a list of Datum and returns a filtered list of Datum.
 type Filter func(Entries) Entries
 
 type Filters []Filter
