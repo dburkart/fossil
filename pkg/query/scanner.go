@@ -129,6 +129,13 @@ func (s *Scanner) Emit() Token {
 				break
 			}
 			identifierFallthrough()
+		case r == 's':
+			if strings.HasPrefix(s.Input[s.Pos:], "sample") {
+				t.Type = TOK_KEYWORD
+				skip = len("sample")
+				break
+			}
+			identifierFallthrough()
 		case unicode.IsLetter(r):
 			identifierFallthrough()
 		}
