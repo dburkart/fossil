@@ -32,10 +32,6 @@ func (s *Segment) Append(d Datum) (bool, error) {
 		return false, errors.New("cannot add additional elements, segment at maximum size")
 	}
 
-	if s.Size == 0 {
-		s.HeadTime = time.Now()
-	}
-
 	if d.Delta == -1 {
 		d.Delta = time.Now().Sub(s.HeadTime)
 	}

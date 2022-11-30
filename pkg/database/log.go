@@ -22,6 +22,7 @@ import (
 const (
 	actionAddEvent = 1 << iota
 	actionAddSegment
+	actionAddTopic
 )
 
 type WriteAheadLog struct {
@@ -46,11 +47,11 @@ func (w *WriteAheadLog) ApplyToDB(d *Database) {
 		if err != nil {
 			log.Fatal(err)
 		}
+		dec := gob.NewDecoder(bytes.NewBuffer(valueBytes))
 
 		switch actionType {
 		case actionAddEvent:
 			var datum Datum
-			dec := gob.NewDecoder(bytes.NewBuffer(valueBytes))
 			err := dec.Decode(&datum)
 			if err != nil {
 				log.Fatal(err)
@@ -58,13 +59,21 @@ func (w *WriteAheadLog) ApplyToDB(d *Database) {
 			d.appendInternal(datum)
 		case actionAddSegment:
 			var segment Segment
-			dec := gob.NewDecoder(bytes.NewBuffer(valueBytes))
 			err := dec.Decode(&segment.HeadTime)
 			if err != nil {
 				log.Fatal(err)
 			}
+			if len(d.Segments) > 0 {
+				d.Current += 1
+			}
 			d.Segments = append(d.Segments, segment)
-			d.Current += 1
+		case actionAddTopic:
+			var topic string
+			err := dec.Decode(&topic)
+			if err != nil {
+				log.Fatal(err)
+			}
+			d.addTopicInternal(topic)
 		}
 	}
 }
@@ -106,6 +115,27 @@ func (w *WriteAheadLog) AddSegment(t time.Time) {
 	defer file.Close()
 
 	_, err = file.WriteString(fmt.Sprintf("%d;%s\n", actionAddSegment, base64.StdEncoding.EncodeToString(encoded.Bytes())))
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (w *WriteAheadLog) AddTopic(t string) {
+	var encoded bytes.Buffer
+
+	enc := gob.NewEncoder(&encoded)
+	err := enc.Encode(t)
+	if err != nil {
+		log.Fatal("encode:", err)
+	}
+
+	file, err := os.OpenFile(w.LogPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	_, err = file.WriteString(fmt.Sprintf("%d;%s\n", actionAddTopic, base64.StdEncoding.EncodeToString(encoded.Bytes())))
 	if err != nil {
 		log.Fatal(err)
 	}

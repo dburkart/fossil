@@ -40,7 +40,7 @@ func (d *Database) appendInternal(data Datum) {
 	d.appendCount += 1
 }
 
-func (d *Database) addTopic(topicName string) int {
+func normalizeTopicName(topicName string) string {
 	if topicName == "" {
 		topicName = "/"
 	}
@@ -48,6 +48,12 @@ func (d *Database) addTopic(topicName string) int {
 	if topicName[0] != '/' {
 		topicName = "/" + topicName
 	}
+
+	return topicName
+}
+
+func (d *Database) addTopicInternal(topicName string) int {
+	topicName = normalizeTopicName(topicName)
 
 	if index, exists := d.Topics[topicName]; exists {
 		return index
@@ -105,15 +111,30 @@ func (d *Database) splatToDisk() {
 
 //-- Public Interfaces
 
+func (d *Database) AddTopic(topic string) int {
+	topic = normalizeTopicName(topic)
+
+	if index, exists := d.Topics[topic]; exists {
+		return index
+	}
+
+	// The topic doesn't exist, so add it
+	d.sharedLock.Lock()
+	defer d.sharedLock.Unlock()
+
+	index := d.addTopicInternal(topic)
+	wal := WriteAheadLog{filepath.Join(d.Path, "wal.log")}
+	wal.AddTopic(topic)
+
+	return index
+}
+
 // Append to the end of the database
 func (d *Database) Append(data []byte, topic string) {
 	// Pull our timestamp at the top
 	appendTime := time.Now()
 
-	topicID := d.addTopic(topic)
-
-	// Calculate the delta
-	delta := appendTime.Sub(d.Segments[d.Current].HeadTime)
+	topicID := d.AddTopic(topic)
 
 	if d.appendCount > SegmentSize {
 		d.splatToDisk()
@@ -122,14 +143,18 @@ func (d *Database) Append(data []byte, topic string) {
 	d.sharedLock.Lock()
 	defer d.sharedLock.Unlock()
 
-	log := WriteAheadLog{filepath.Join(d.Path, "wal.log")}
+	wal := WriteAheadLog{filepath.Join(d.Path, "wal.log")}
 	// Add a new segment to the log if needed
-	if d.Segments[d.Current].Size >= SegmentSize {
-		log.AddSegment(appendTime)
-		delta = 0
+	if len(d.Segments) == 0 || d.Segments[d.Current].Size >= SegmentSize {
+		wal.AddSegment(appendTime)
 	}
+	if len(d.Segments) == 0 {
+		d.Segments = append(d.Segments, Segment{HeadTime: appendTime})
+	}
+	// Calculate the delta
+	delta := appendTime.Sub(d.Segments[d.Current].HeadTime)
 	e := Datum{Data: data, TopicID: topicID, Delta: delta}
-	log.AddEvent(&e)
+	wal.AddEvent(&e)
 
 	d.exclusiveLock.Lock()
 	defer d.exclusiveLock.Unlock()
@@ -260,19 +285,28 @@ func NewDatabase(location string) *Database {
 		if err != nil {
 			log.Fatal(err)
 		}
-	} else {
+	} else if _, err := os.Stat(filepath.Join(location, "wal.log")); err == nil {
 		db = Database{
 			Version:    1,
 			Path:       location,
-			Segments:   []Segment{{}},
+			Segments:   []Segment{},
 			Current:    0,
 			Topics:     make(map[string]int),
 			TopicCount: 0,
 		}
-		db.addTopic("/")
+		wal := WriteAheadLog{filepath.Join(db.Path, "wal.log")}
+		wal.ApplyToDB(&db)
+	} else {
+		db = Database{
+			Version:    1,
+			Path:       location,
+			Segments:   []Segment{},
+			Current:    0,
+			Topics:     make(map[string]int),
+			TopicCount: 0,
+		}
+		db.AddTopic("/")
 	}
-	wal := WriteAheadLog{filepath.Join(db.Path, "wal.log")}
-	wal.ApplyToDB(&db)
 	if db.appendCount > SegmentSize {
 		db.splatToDisk()
 	}
