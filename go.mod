@@ -3,6 +3,7 @@ module github.com/dburkart/fossil
 go 1.19
 
 require (
+	github.com/dustin/go-humanize v1.0.0
 	github.com/prometheus/client_golang v1.14.0
 	github.com/rs/zerolog v1.28.0
 	github.com/spf13/cobra v1.6.1

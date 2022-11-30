@@ -8,7 +8,7 @@ package proto
 
 var (
 	CommandError  = "ERR"
-	CommandInfo   = "INFO"
+	CommandStats  = "STATS"
 	CommandQuery  = "QUERY"
 	CommandAppend = "APPEND"
 )

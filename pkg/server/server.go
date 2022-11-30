@@ -11,18 +11,22 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"runtime"
+	"time"
 
 	"github.com/dburkart/fossil/pkg/collector"
 	"github.com/dburkart/fossil/pkg/database"
 	"github.com/dburkart/fossil/pkg/proto"
 	"github.com/dburkart/fossil/pkg/query"
+	"github.com/dustin/go-humanize"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 )
 
 type Server struct {
-	log     zerolog.Logger
-	metrics MetricsStore
+	log         zerolog.Logger
+	metrics     MetricsStore
+	startupTime time.Time
 
 	database       *database.Database
 	collectionPort int
@@ -40,6 +44,7 @@ func New(log zerolog.Logger, path string, collectionPort, databasePort, metricsP
 	return Server{
 		log,
 		NewMetricsStore(),
+		time.Now(),
 		db,
 		collectionPort,
 		databasePort,
@@ -84,9 +89,18 @@ func (s *Server) ServeDatabase() {
 		w.Write([]byte("Ok!\n"))
 	})
 
-	mux.Handle(proto.CommandInfo, func(w io.Writer, msg proto.Message) {
+	mux.Handle(proto.CommandStats, func(w io.Writer, msg proto.Message) {
 		s.log.Info().Msg("INFO command")
-		w.Write([]byte("hello world\n"))
+		// FIXME: This should be updated periodically in it's own runloop, not computed on request
+		var m runtime.MemStats
+		runtime.ReadMemStats(&m)
+		w.Write([]byte(fmt.Sprintf(
+			"Allocated Heap: %v\nTotal Memory: %v\nUptime: %s\nSegments: %d\n",
+			humanize.Bytes(m.Alloc),
+			humanize.Bytes(m.Sys),
+			time.Now().Sub(s.startupTime).String(),
+			len(s.database.Segments),
+		)))
 	})
 
 	err := srv.ListenAndServe(s.collectionPort, mux)
