@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2022, Gideon Williams gideon@gideonw.com
+ * Copyright (c) 2022, Gideon Williams <gideon@gideonw.com>
+ * Copyright (c) 2022, Dana Burkart <dana.burkart@gmail.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -9,9 +10,6 @@ package client
 import (
 	"bufio"
 	"fmt"
-	"net"
-	"os"
-
 	"github.com/dburkart/fossil/pkg/database"
 	"github.com/dburkart/fossil/pkg/proto"
 	"github.com/dburkart/fossil/pkg/query"
@@ -19,6 +17,9 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"net"
+	"os"
+	"strings"
 )
 
 var Command = &cobra.Command{
@@ -75,14 +76,29 @@ func localPrompt(db *database.Database) {
 }
 
 func clientPrompt(c net.Conn) {
+	defer c.Close()
+
+	// Check whether stdin is a pipe, since we'll want to make different choices
+	// in terms of prompt and repl termination.
+	piped := false
+	stdin, _ := os.Stdin.Stat()
+	if (stdin.Mode() & os.ModeCharDevice) == 0 {
+		piped = true
+	}
+
 	exit := false
 	history := []string{}
+	rdr := bufio.NewReader(os.Stdin)
 	for !exit {
-		fmt.Printf("\n> ")
-		rdr := bufio.NewReader(os.Stdin)
+		if !piped {
+			fmt.Printf("\n> ")
+		}
 		line, err := rdr.ReadBytes('\n')
 		history = append(history, string(line))
 		if err != nil {
+			if piped {
+				return
+			}
 			fmt.Printf("Err: unable to read input\n\t'%s'\n", string(line))
 		}
 
