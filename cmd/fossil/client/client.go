@@ -111,10 +111,4 @@ func clientPrompt(c net.Conn) {
 	}
 }
 
-func init() {
-	// Flags for this command
-	// Command.Flags().StringP("host", "H", "fossil://local/default", "Host to send the messages")
-
-	// Bind flags to viper
-	// viper.BindPFlag("host", Command.Flags().Lookup("host"))
-}
+func init() {}
