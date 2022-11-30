@@ -86,6 +86,11 @@ func clientPrompt(c net.Conn) {
 			fmt.Printf("Err: unable to read input\n\t'%s'\n", string(line))
 		}
 
+		if strings.HasPrefix(string(line), "QUIT") {
+			fmt.Println("bye!")
+			return
+		}
+
 		err = send(c, line)
 		if err != nil {
 			fmt.Printf("Err: unable to send command\n\t'%s'\n", err)
