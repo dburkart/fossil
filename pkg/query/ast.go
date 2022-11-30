@@ -97,7 +97,7 @@ func (q QuantifierNode) GenerateFilter(db *database.Database) database.Filter {
 			for _, val := range data {
 				if val.Time.After(nextTime) || val.Time.Equal(nextTime) {
 					filtered = append(filtered, val)
-					nextTime = nextTime.Add(sampleDuration)
+					nextTime = val.Time.Add(sampleDuration)
 				}
 			}
 
