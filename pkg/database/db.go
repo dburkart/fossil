@@ -27,10 +27,8 @@ type Database struct {
 	TopicCount  int
 
 	// Private fields
-	sharedLock      sync.Mutex
-	exclusiveLock   sync.Mutex
-	criticalSection bool
-	appendCount     int
+	writeLock   sync.Mutex
+	appendCount int
 }
 
 func (d *Database) appendInternal(data Datum) {
@@ -69,8 +67,8 @@ func (d *Database) splatToDisk() {
 	var encoded bytes.Buffer
 
 	// Stop all writes
-	d.sharedLock.Lock()
-	defer d.sharedLock.Unlock()
+	d.writeLock.Lock()
+	defer d.writeLock.Unlock()
 
 	enc := gob.NewEncoder(&encoded)
 	err := enc.Encode(d)
@@ -91,10 +89,6 @@ func (d *Database) splatToDisk() {
 	}
 	file.Close()
 
-	// Enter the critical section, since we'll be zeroing out the WriteAheadLog
-	d.exclusiveLock.Lock()
-	defer d.exclusiveLock.Unlock()
-	d.criticalSection = true
 	// First, overwrite the database
 	err = os.Rename(backupDBPath, filepath.Join(d.Path, "database"))
 	if err != nil {
@@ -106,7 +100,6 @@ func (d *Database) splatToDisk() {
 		log.Fatal(err)
 	}
 	d.appendCount = 0
-	d.criticalSection = false
 }
 
 //-- Public Interfaces
@@ -119,8 +112,8 @@ func (d *Database) AddTopic(topic string) int {
 	}
 
 	// The topic doesn't exist, so add it
-	d.sharedLock.Lock()
-	defer d.sharedLock.Unlock()
+	d.writeLock.Lock()
+	defer d.writeLock.Unlock()
 
 	index := d.addTopicInternal(topic)
 	wal := WriteAheadLog{filepath.Join(d.Path, "wal.log")}
@@ -140,8 +133,8 @@ func (d *Database) Append(data []byte, topic string) {
 		d.splatToDisk()
 	}
 
-	d.sharedLock.Lock()
-	defer d.sharedLock.Unlock()
+	d.writeLock.Lock()
+	defer d.writeLock.Unlock()
 
 	wal := WriteAheadLog{filepath.Join(d.Path, "wal.log")}
 	// Add a new segment to the log if needed
@@ -156,18 +149,12 @@ func (d *Database) Append(data []byte, topic string) {
 	e := Datum{Data: data, TopicID: topicID, Delta: delta}
 	wal.AddEvent(&e)
 
-	d.exclusiveLock.Lock()
-	defer d.exclusiveLock.Unlock()
-	// Using this variable seems race-y, but I'm not sure how to check the
-	// state of a mutex in go
-	d.criticalSection = true
 	// Create a new segment if needed
 	if d.Segments[d.Current].Size >= SegmentSize {
 		d.Segments = append(d.Segments, Segment{HeadTime: appendTime})
 		d.Current += 1
 	}
 	d.appendInternal(e)
-	d.criticalSection = false
 }
 
 func (d *Database) entriesFromData(s *Segment, data []Datum) []Entry {
