@@ -12,6 +12,9 @@ import (
 	"net"
 	"os"
 
+	"github.com/dburkart/fossil/pkg/database"
+	"github.com/dburkart/fossil/pkg/proto"
+	"github.com/dburkart/fossil/pkg/query"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -26,12 +29,20 @@ var Command = &cobra.Command{
 		log := viper.Get("logger").(zerolog.Logger)
 
 		host := viper.GetString("host")
-		c, err := net.Dial("tcp4", host)
-		if err != nil {
-			log.Error().Err(err).Str("host", host).Msg("unable to connect to server")
-		}
+		target := proto.ParseConnectionString(host)
 
-		prompt(c)
+		if target.Local {
+			db := database.NewDatabase(target.Database)
+
+			localPrompt(db)
+		} else {
+			c, err := net.Dial("tcp4", target.Address)
+			if err != nil {
+				log.Error().Err(err).Str("address", target.Address).Msg("unable to connect to server")
+			}
+
+			clientPrompt(c)
+		}
 	},
 }
 
@@ -45,7 +56,25 @@ func send(c net.Conn, msg []byte) error {
 	return nil
 }
 
-func prompt(c net.Conn) {
+func localPrompt(db *database.Database) {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Print("\n> ")
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			log.Fatal().Err(err)
+		}
+
+		stmt := query.Prepare(db, line)
+		result := stmt.Execute()
+
+		for _, val := range result.Data {
+			fmt.Println(val.ToString())
+		}
+	}
+}
+
+func clientPrompt(c net.Conn) {
 	exit := false
 	history := []string{}
 	for !exit {
@@ -79,8 +108,8 @@ func prompt(c net.Conn) {
 
 func init() {
 	// Flags for this command
-	Command.Flags().StringP("host", "H", "localhost:8001", "Host to send the messages")
+	// Command.Flags().StringP("host", "H", "fossil://local/default", "Host to send the messages")
 
 	// Bind flags to viper
-	viper.BindPFlag("host", Command.Flags().Lookup("host"))
+	// viper.BindPFlag("host", Command.Flags().Lookup("host"))
 }
