@@ -9,6 +9,7 @@ package query
 import (
 	"github.com/dburkart/fossil/pkg/database"
 	"strings"
+	"time"
 )
 
 type ASTNode interface {
@@ -75,7 +76,7 @@ type QuantifierNode struct {
 }
 
 func (q QuantifierNode) GenerateFilter(db *database.Database) database.Filter {
-	return func(data []database.Datum) []database.Datum {
+	return func(data database.Entries) database.Entries {
 		if data == nil {
 			data = db.Retrieve(database.Query{Quantifier: q.Value, Range: nil})
 		}
@@ -83,9 +84,28 @@ func (q QuantifierNode) GenerateFilter(db *database.Database) database.Filter {
 		switch q.Value {
 		case "all":
 			return data
+		case "sample":
+			timespan, ok := q.Children()[0].(*TimespanNode)
+			if !ok {
+				panic("Expected child to be of type *TimespanNode")
+			}
+
+			sampleDuration := timespan.Duration()
+			nextTime := data[0].Time
+			filtered := database.Entries{}
+
+			for _, val := range data {
+				if val.Time.After(nextTime) || val.Time.Equal(nextTime) {
+					filtered = append(filtered, val)
+					nextTime = nextTime.Add(sampleDuration)
+				}
+			}
+
+			return filtered
+
 		}
 		// TODO: What's the right thing to return here? Maybe we should panic?
-		return []database.Datum{}
+		return database.Entries{}
 	}
 }
 
@@ -101,24 +121,24 @@ func (q TopicSelectorNode) GenerateFilter(db *database.Database) database.Filter
 	topicName := topic.Value
 
 	// Capture the desired topics in our closure
-	var topicFilter = make(map[int]bool)
+	var topicFilter = make(map[string]bool)
 
 	// Since topics are hierarchical, we want any topic which has the desired prefix
-	for key, element := range db.Topics {
+	for key := range db.Topics {
 		if strings.HasPrefix(key, topicName) {
-			topicFilter[element] = true
+			topicFilter[key] = true
 		}
 	}
 
-	return func(data []database.Datum) []database.Datum {
+	return func(data database.Entries) database.Entries {
 		if data == nil {
 			data = db.Retrieve(database.Query{Range: nil})
 		}
 
-		filtered := []database.Datum{}
+		filtered := database.Entries{}
 
 		for _, val := range data {
-			if _, ok := topicFilter[val.TopicID]; ok {
+			if _, ok := topicFilter[val.Topic]; ok {
 				filtered = append(filtered, val)
 			}
 		}
@@ -129,4 +149,26 @@ func (q TopicSelectorNode) GenerateFilter(db *database.Database) database.Filter
 
 type TopicNode struct {
 	BaseNode
+}
+
+type TimespanNode struct {
+	BaseNode
+}
+
+func (t TimespanNode) Duration() time.Duration {
+	switch t.Value {
+	case "@year":
+		return time.Hour * 24 * 365
+	case "@month":
+		return time.Hour * 24 * 30
+	case "@day":
+		return time.Hour * 24
+	case "@hour":
+		return time.Hour
+	case "@minute":
+		return time.Minute
+	case "@second":
+		return time.Second
+	}
+	return 0
 }

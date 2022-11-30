@@ -7,7 +7,6 @@
 package database
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -16,9 +15,3 @@ type Datum struct {
 	TopicID int
 	Data    []byte
 }
-
-func (d *Datum) ToString() string {
-	return fmt.Sprintf("%d\t%s", d.TopicID, string(d.Data))
-}
-
-type Filter func([]Datum) []Datum

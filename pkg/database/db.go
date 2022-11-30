@@ -18,12 +18,13 @@ import (
 )
 
 type Database struct {
-	Version    int
-	Path       string
-	Segments   []Segment
-	Current    int
-	Topics     map[string]int
-	TopicCount int
+	Version     int
+	Path        string
+	Segments    []Segment
+	Current     int
+	Topics      map[string]int
+	TopicLookup []string
+	TopicCount  int
 
 	// Private fields
 	sharedLock      sync.Mutex
@@ -52,6 +53,7 @@ func (d *Database) addTopic(topicName string) int {
 		return index
 	}
 	index := d.TopicCount
+	d.TopicLookup = append(d.TopicLookup, topicName)
 	d.TopicCount += 1
 	d.Topics[topicName] = index
 	return index
@@ -143,10 +145,24 @@ func (d *Database) Append(data []byte, topic string) {
 	d.criticalSection = false
 }
 
+func (d *Database) entriesFromData(s *Segment, data []Datum) []Entry {
+	entries := make([]Entry, len(data), cap(data))
+
+	for index, val := range data {
+		entries[index] = Entry{
+			Time:  s.HeadTime.Add(val.Delta),
+			Topic: d.TopicLookup[val.TopicID],
+			Data:  val.Data,
+		}
+	}
+
+	return entries
+}
+
 // Retrieve a list of datum from the database matching some query
 // TODO: Eventually, this should return a proper result set
-func (d *Database) Retrieve(q Query) []Datum {
-	results := make([]Datum, 0)
+func (d *Database) Retrieve(q Query) []Entry {
+	results := make([]Entry, 0)
 	// First, we deal with the time range
 	startFound := false
 	startIndex := 0
@@ -197,17 +213,23 @@ func (d *Database) Retrieve(q Query) []Datum {
 
 	// Handle the case where all of our datum is in a single segment
 	if startIndex == endIndex {
-		return d.Segments[startIndex].Series[startSubIndex:endSubIndex]
+		segment := d.Segments[startIndex]
+		data := segment.Series[startSubIndex:endSubIndex]
+		return d.entriesFromData(&segment, data)
 	}
 
 	// Since our start and end are different segments, build a result set
 	for i := startIndex; i <= endIndex; i++ {
+		segment := d.Segments[i]
 		if i == startIndex {
-			results = append(results, d.Segments[i].Series[startSubIndex:]...)
+			data := segment.Series[startSubIndex:]
+			results = append(results, d.entriesFromData(&segment, data)...)
 		} else if i == endIndex {
-			results = append(results, d.Segments[i].Series[:endSubIndex]...)
+			data := segment.Series[:endSubIndex]
+			results = append(results, d.entriesFromData(&segment, data)...)
 		} else {
-			results = append(results, d.Segments[i].Series[:]...)
+			data := segment.Series[:]
+			results = append(results, d.entriesFromData(&segment, data)...)
 		}
 	}
 
