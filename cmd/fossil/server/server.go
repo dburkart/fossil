@@ -24,8 +24,8 @@ var Command = &cobra.Command{
 		srv := server.New(
 			logger,
 			viper.GetString("database.path"),
-			viper.GetInt("port"),
-			viper.GetInt("prom-http"),
+			viper.GetInt("fossil.port"),
+			viper.GetInt("fossil.prom-http"),
 		)
 
 		// Serve the database
