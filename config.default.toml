@@ -1,0 +1,15 @@
+[fossil]
+port = 8000
+prom-port = 2112
+
+host = "fossil://local/default"
+local = true
+verbose = 2
+
+[database]
+path = "data/default.log"
+
+[database.test]
+path = "data/test.log"
+
+[database.tester]

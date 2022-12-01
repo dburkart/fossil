@@ -28,15 +28,14 @@ type Server struct {
 	metrics     MetricsStore
 	startupTime time.Time
 
-	database       *database.Database
-	collectionPort int
-	databasePort   int
-	metricsPort    int
+	database    *database.Database
+	port        int
+	metricsPort int
 
 	collectors []collector.Collector
 }
 
-func New(log zerolog.Logger, path string, collectionPort, databasePort, metricsPort int) Server {
+func New(log zerolog.Logger, path string, port, metricsPort int) Server {
 	// TODO: We need a filesystem lock to ensure we don't double run a server on the same database
 	// https://pkg.go.dev/io/fs#FileMode ModeExclusive
 	db := database.NewDatabase(path)
@@ -46,16 +45,13 @@ func New(log zerolog.Logger, path string, collectionPort, databasePort, metricsP
 		NewMetricsStore(),
 		time.Now(),
 		db,
-		collectionPort,
-		databasePort,
+		port,
 		metricsPort,
 		[]collector.Collector{},
 	}
 }
 
 func (s *Server) ServeDatabase() {
-	s.log.Info().Int("database-port", s.databasePort).Msg("listening for client connections")
-
 	srv := NewMessageServer(s.log)
 	mux := NewMapMux()
 
@@ -103,7 +99,7 @@ func (s *Server) ServeDatabase() {
 		)))
 	})
 
-	err := srv.ListenAndServe(s.collectionPort, mux)
+	err := srv.ListenAndServe(s.port, mux)
 	if err != nil {
 		s.log.Error().Err(err).Msg("error listening and serving")
 	}

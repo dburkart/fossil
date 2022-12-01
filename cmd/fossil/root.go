@@ -7,15 +7,11 @@
 package fossil
 
 import (
-	"io"
 	"os"
-	"strings"
-	"time"
 
 	"github.com/dburkart/fossil/cmd/fossil/client"
 	"github.com/dburkart/fossil/cmd/fossil/server"
 	"github.com/dburkart/fossil/cmd/fossil/test"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -26,72 +22,34 @@ var rootCmd = &cobra.Command{
 	Short: "Fossil is a small and fast tsdb",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		initLogging()
-		// TODO: Trace log config and options
+		initConfig(cmd.Root().PersistentFlags().Lookup("config").Value.String())
+		initLogLevel()
+		traceConfig()
 	},
 }
 
 func init() {
-	// Configure the common binary options
-	cobra.OnInitialize(initConfig)
-	rootCmd.PersistentFlags().CountP("verbose", "v", "-v for debug logs (-vv for trace)")
-	rootCmd.PersistentFlags().Bool("local", true, "Configures the logger to print readable logs") //TODO: true until we have a config file format
-	rootCmd.PersistentFlags().StringP("host", "H", "fossil://local/default", "Host to send the messages")
+	// Configure the root binary options
+	rootCmd.PersistentFlags().CountP("fossil.verbose", "v", "-v for debug logs (-vv for trace)")
+	rootCmd.PersistentFlags().Bool("fossil.local", true, "Configures the logger to print readable logs") //TODO: true until we have a config file format
+	rootCmd.PersistentFlags().StringP("fossil.host", "H", "fossil://local/default", "Host to send the messages")
+	rootCmd.PersistentFlags().StringP("config", "c", "./config.toml", "Path to the fossil config file")
 
 	// Bind viper config to the root flags
-	viper.BindPFlag("local", rootCmd.PersistentFlags().Lookup("local"))
-	viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose"))
-	viper.BindPFlag("host", rootCmd.PersistentFlags().Lookup("host"))
+	viper.BindPFlag("fossil.local", rootCmd.PersistentFlags().Lookup("fossil.local"))
+	viper.BindPFlag("fossil.verbose", rootCmd.PersistentFlags().Lookup("fossil.verbose"))
+	viper.BindPFlag("fossil.host", rootCmd.PersistentFlags().Lookup("fossil.host"))
+	viper.BindPFlag("config", rootCmd.PersistentFlags().Lookup("config"))
 
 	// Bind viper flags to ENV variables
-	viper.SetEnvPrefix("FOSSIL")
-	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+	// viper.SetEnvPrefix("FOSSIL")
+	// viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	viper.AutomaticEnv()
 
 	// Register commands on the root binary command
 	rootCmd.AddCommand(server.Command)
 	rootCmd.AddCommand(test.Command)
 	rootCmd.AddCommand(client.Command)
-}
-
-func initConfig() {
-	// config Read
-}
-
-func initLogging() {
-	level := viper.GetInt("verbose")
-	switch clamp(2, level) {
-	case 2:
-		zerolog.SetGlobalLevel(zerolog.TraceLevel)
-	case 1:
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	default:
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	}
-
-	var writer io.Writer
-
-	writer = os.Stderr
-	if viper.GetBool("local") {
-		writer = zerolog.ConsoleWriter{
-			Out:        os.Stdout,
-			TimeFormat: time.RFC3339,
-		}
-	}
-
-	logger := zerolog.New(writer).
-		With().
-		Timestamp().
-		Caller().
-		Logger()
-
-	viper.Set("logger", logger)
-}
-
-func clamp(clamp, a int) int {
-	if a >= clamp {
-		return clamp
-	}
-	return a
 }
 
 func Execute() {

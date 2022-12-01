@@ -10,6 +10,10 @@ package client
 import (
 	"bufio"
 	"fmt"
+	"net"
+	"os"
+	"strings"
+
 	"github.com/dburkart/fossil/pkg/database"
 	"github.com/dburkart/fossil/pkg/proto"
 	"github.com/dburkart/fossil/pkg/query"
@@ -17,9 +21,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"net"
-	"os"
-	"strings"
 )
 
 var Command = &cobra.Command{
@@ -29,7 +30,7 @@ var Command = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		log := viper.Get("logger").(zerolog.Logger)
 
-		host := viper.GetString("host")
+		host := viper.GetString("fossil.host")
 		target := proto.ParseConnectionString(host)
 
 		if target.Local {
