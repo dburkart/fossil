@@ -21,7 +21,7 @@ var Command = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		log := viper.Get("logger").(zerolog.Logger)
 
-		host := viper.GetString("host")
+		host := viper.GetString("fossil.host")
 		c, err := net.Dial("tcp4", host)
 		if err != nil {
 			log.Error().Err(err).Str("host", host).Msg("unable to connect to server")
