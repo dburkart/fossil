@@ -102,6 +102,6 @@ has configured its data directory as `data/mydata`.
 
 **Note:** If the only database directory set in the config file is on the default block, all databases will be created in that directory.
 
-| Option               | Default      | Description                                                       |
-| -------------------- | ------------ | ----------------------------------------------------------------- |
-| `database.directory` | `"./<name>"` | Directory the sever uses to store the data for a logical database |
+| Option               | Default | Description                                                                                   |
+| -------------------- | ------- | --------------------------------------------------------------------------------------------- |
+| `database.directory` | `"./"`  | Directory the sever uses to store the data for a logical database. This directory must exist. |
