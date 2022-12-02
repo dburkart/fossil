@@ -34,7 +34,10 @@ var Command = &cobra.Command{
 		target := proto.ParseConnectionString(host)
 
 		if target.Local {
-			db := database.NewDatabase(target.Database)
+			db, err := database.NewDatabase(log, target.Database, target.Database)
+			if err != nil {
+				log.Fatal().Err(err).Msg("error creating new database")
+			}
 
 			localPrompt(db)
 		} else {

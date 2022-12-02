@@ -7,7 +7,6 @@
 package server
 
 import (
-	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -52,7 +51,7 @@ func buildDatabaseConfigs() (map[string]server.DatabaseConfig, error) {
 		// If this is a non-default db look up the config value for it
 		dbConfig := server.DatabaseConfig{
 			Name:      v,
-			Directory: filepath.Clean(viper.GetString(strings.Join([]string{"database", v, "directory"}, "."))),
+			Directory: viper.GetString(strings.Join([]string{"database", v, "directory"}, ".")),
 		}
 
 		// If this is the default, use the [database] block value
@@ -65,17 +64,13 @@ func buildDatabaseConfigs() (map[string]server.DatabaseConfig, error) {
 
 	// After the config has been loaded, any database block without a value receives the default directory
 	for k, v := range ret {
-		// Do not modify default at this point
-		if k == "default" {
-			continue
-		}
-		// Set the db directory to `defaultpath/name`
+		// Set the db directory to `defaultpath`
 		if v.Directory == "" {
-			v.Directory = filepath.Join(ret["default"].Directory, v.Name)
-			ret[k] = v
+			v.Directory = ret["default"].Directory
 		}
+		v.Directory = filepath.Clean(v.Directory)
+		ret[k] = v
 	}
-	fmt.Printf("%#v\n", ret)
 
 	return ret, nil
 }

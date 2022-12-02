@@ -48,7 +48,12 @@ func New(log zerolog.Logger, dbConfigs map[string]DatabaseConfig, port, metricsP
 	dbMap := make(map[string]*database.Database)
 	for k, v := range dbConfigs {
 		log.Info().Str("name", v.Name).Str("directory", v.Directory).Msg("initializing database")
-		dbMap[k] = database.NewDatabase(v.Directory)
+		dbLogger := log.With().Str("db", v.Name).Logger()
+		db, err := database.NewDatabase(dbLogger, v.Name, v.Directory)
+		if err != nil {
+			dbLogger.Fatal().Err(err).Msg("error initializing database")
+		}
+		dbMap[k] = db
 	}
 
 	return Server{
