@@ -27,7 +27,7 @@ type Segment struct {
 	Size     int
 }
 
-func (s *Segment) Append(d Datum) (bool, error) {
+func (s *Segment) Append(d *Datum) (bool, error) {
 	if s.Size >= SegmentSize {
 		return false, errors.New("cannot add additional elements, segment at maximum size")
 	}
@@ -36,7 +36,7 @@ func (s *Segment) Append(d Datum) (bool, error) {
 		d.Delta = time.Now().Sub(s.HeadTime)
 	}
 
-	s.Series[s.Size] = d
+	s.Series[s.Size] = *d
 	s.Size += 1
 
 	return true, nil
