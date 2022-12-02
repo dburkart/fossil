@@ -74,10 +74,10 @@ local = true
 verbose = 2
 
 [database]
-directory = "data/default"
+directory = "/mnt/e/data"
 
 [database.test]
-directory = "data/mydata"
+directory = "./data"
 
 [database.tester]
 ```
@@ -100,6 +100,8 @@ will automatically have the directory set to `./data/tester` as the location to
 store the data for that logical database, where as the `database.test` block
 has configured its data directory as `data/mydata`.
 
-| Option               | Default           | Description                                                       |
-| -------------------- | ----------------- | ----------------------------------------------------------------- |
-| `database.directory` | `"./data/<name>"` | Directory the sever uses to store the data for a logical database |
+**Note:** If the only database directory set in the config file is on the default block, all databases will be created in that directory.
+
+| Option               | Default      | Description                                                       |
+| -------------------- | ------------ | ----------------------------------------------------------------- |
+| `database.directory` | `"./<name>"` | Directory the sever uses to store the data for a logical database |
