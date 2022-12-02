@@ -16,11 +16,13 @@ topic           = "/" 1*(ALPHA / DIGIT / "/")
 
 ; Time
 time-predicate  = ( "since" time-expression ) / ( "until" time-expression ) / 
-                  ( "between" time-expression ".." time-expression )
-time-whence     = "~now" / "~begin" / "~yesterday"/ "~" iso8601
-time-quantity   = timespan / time-quantity ( "*" / "+" / "-" ) number
+                  ( "between" time-expression "," time-expression )
+time-expression = ( time-whence ( "-" / "+" ) time-quantity ) / time-whence
+time-whence     = "~now" / "~" RFC3339
+time-quantity   = time-term *( ( "-" / "+" ) time-term )
+time-term       = time-atom *( ( "/" / "*" ) time-atom )
+time-atom       = number / timespan
 timespan        = "@second" / "@minute" / "@hour" / "@day" / "@week" / "@month" / "@year"
-time-expression = ( time-whence ( "-" / "+" ) time-quantity ) / time-quantity
 
 ; Data
 data-predicate  = "->" data-expression
