@@ -30,15 +30,15 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	// Configure the root binary options
-	rootCmd.PersistentFlags().CountP("fossil.verbose", "v", "-v for debug logs (-vv for trace)")
-	rootCmd.PersistentFlags().Bool("fossil.local", true, "Configures the logger to print readable logs") //TODO: true until we have a config file format
-	rootCmd.PersistentFlags().StringP("fossil.host", "H", "fossil://local/default", "Host to send the messages")
+	rootCmd.PersistentFlags().CountP("verbose", "v", "-v for debug logs (-vv for trace)")
+	rootCmd.PersistentFlags().Bool("local", true, "Configures the logger to print readable logs") //TODO: true until we have a config file format
+	rootCmd.PersistentFlags().StringP("host", "H", "fossil://local/default", "Host to send the messages")
 	rootCmd.PersistentFlags().StringP("config", "c", "./config.toml", "Path to the fossil config file")
 
 	// Bind viper config to the root flags
-	viper.BindPFlag("fossil.local", rootCmd.PersistentFlags().Lookup("fossil.local"))
-	viper.BindPFlag("fossil.verbose", rootCmd.PersistentFlags().Lookup("fossil.verbose"))
-	viper.BindPFlag("fossil.host", rootCmd.PersistentFlags().Lookup("fossil.host"))
+	viper.BindPFlag("fossil.local", rootCmd.PersistentFlags().Lookup("local"))
+	viper.BindPFlag("fossil.verbose", rootCmd.PersistentFlags().Lookup("verbose"))
+	viper.BindPFlag("fossil.host", rootCmd.PersistentFlags().Lookup("host"))
 	viper.BindPFlag("config", rootCmd.PersistentFlags().Lookup("config"))
 
 	// Bind viper flags to ENV variables
