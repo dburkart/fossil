@@ -8,6 +8,7 @@ package query
 
 import (
 	"strings"
+	"time"
 	"unicode"
 	"unicode/utf8"
 )
@@ -77,6 +78,49 @@ func (s *Scanner) MatchNumber() int {
 	}
 
 	return size
+}
+
+// MatchTimeWhence returns the length of the next token, assuming it is
+// a time-whence
+//
+// Grammar:
+//
+//	time-whence     = "~now" / "~" RFC3339
+func (s *Scanner) MatchTimeWhence() int {
+	r, _ := utf8.DecodeRuneInString(s.Input[s.Pos:])
+
+	if r != '~' {
+		return 0
+	}
+
+	pos := s.Pos + 1
+	r, _ = utf8.DecodeRuneInString(s.Input[pos:])
+
+	// If the next rune is a digit, we will assume that we need to match
+	// an RFC3339 timestamp
+	if unicode.IsDigit(r) {
+		// Find the next boundary
+		var end int
+		for end = pos; !isNonTimeDelimiter(rune(s.Input[end])); end++ {
+			if end == len(s.Input)-1 {
+				break
+			}
+		}
+
+		_, err := time.Parse(time.RFC3339, s.Input[pos:end+1])
+		if err != nil {
+			return 0
+		}
+
+		// Add back one for '~', and another to include "end"
+		return end - pos + 2
+	}
+
+	if strings.HasPrefix(s.Input[pos:], "now") {
+		return len("~now")
+	}
+
+	return 0
 }
 
 // MatchTimespan returns the length of the next token, assuming it is a
@@ -171,13 +215,21 @@ func (s *Scanner) Emit() Token {
 		case r == '/':
 			t.Type = TOK_TOPIC
 			skip = s.MatchTopic()
+		case r == '~':
+			skip = s.MatchTimeWhence()
+			if skip > 0 {
+				t.Type = TOK_WHENCE
+			} else {
+				t.Type = TOK_INVALID
+				skip = s.SkipToBoundary(isNonTimeDelimiter)
+			}
 		case r == '@':
 			skip = s.MatchTimespan()
 			if skip > 0 {
 				t.Type = TOK_TIMESPAN
 			} else {
 				t.Type = TOK_INVALID
-				skip = s.SkipToDelimiter()
+				skip = s.SkipToBoundary(isDelimiter)
 			}
 		case unicode.IsDigit(r):
 			t.Type = TOK_NUMBER
@@ -197,6 +249,11 @@ func (s *Scanner) Emit() Token {
 			}
 			identifierFallthrough()
 		case r == 's':
+			if strings.HasPrefix(s.Input[s.Pos:], "since") {
+				t.Type = TOK_KEYWORD
+				skip = len("since")
+				break
+			}
 			if strings.HasPrefix(s.Input[s.Pos:], "sample") {
 				t.Type = TOK_KEYWORD
 				skip = len("sample")
@@ -228,17 +285,23 @@ func (s *Scanner) Rewind() {
 	s.LastWidth = 0
 }
 
+type boundaryFunc func(rune) bool
+
 func isDelimiter(r rune) bool {
 	return unicode.IsSpace(r) || r == '(' || r == ')' || r == ',' || r == '-'
 }
 
-// SkipToDelimiter returns the number of bytes until the next delimiter.
+func isNonTimeDelimiter(r rune) bool {
+	return unicode.IsSpace(r) || r == '(' || r == ')' || r == ','
+}
+
+// SkipToBoundary returns the number of bytes until the next delimiter.
 // This is useful for skipping over invalid tokens.
-func (s *Scanner) SkipToDelimiter() int {
+func (s *Scanner) SkipToBoundary(boundary boundaryFunc) int {
 	r, width := utf8.DecodeRuneInString(s.Input[s.Pos:])
 	size := 0
 
-	for !isDelimiter(r) {
+	for !boundary(r) {
 		size += width
 		r, width = utf8.DecodeRuneInString(s.Input[s.Pos+size:])
 	}
