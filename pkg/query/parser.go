@@ -143,12 +143,12 @@ func (p *Parser) topic() ASTNode {
 //
 // Grammar:
 //
-//	time-predicate  = ( "since" time-expression ) / ( "until" time-expression ) /
+//	time-predicate  = ( "since" time-expression ) / ( "before" time-expression ) /
 //	                ( "between" time-expression ".." time-expression )
 func (p *Parser) timePredicate() ASTNode {
 	tok := p.Scanner.Emit()
 
-	if tok.Type != TOK_KEYWORD || (tok.Lexeme != "since" && tok.Lexeme != "until" &&
+	if tok.Type != TOK_KEYWORD || (tok.Lexeme != "since" && tok.Lexeme != "before" &&
 		tok.Lexeme != "between") {
 		// time-predicates are optional, so don't error out
 		p.Scanner.Rewind()
