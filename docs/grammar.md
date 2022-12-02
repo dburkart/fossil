@@ -15,7 +15,7 @@ topic-selector  = "in" topic
 topic           = "/" 1*(ALPHA / DIGIT / "/")
 
 ; Time
-time-predicate  = ( "since" time-expression ) / ( "until" time-expression ) / 
+time-predicate  = ( "since" time-expression ) / ( "before" time-expression ) / 
                   ( "between" time-expression "," time-expression )
 time-expression = ( time-whence ( "-" / "+" ) time-quantity ) / time-whence
 time-whence     = "~now" / "~" RFC3339
