@@ -159,6 +159,15 @@ func (s *Scanner) Emit() Token {
 		case r == ')':
 			t.Type = TOK_PAREN_R
 			skip = width
+		case r == '*':
+			t.Type = TOK_STAR
+			skip = width
+		case r == '+':
+			t.Type = TOK_PLUS
+			skip = width
+		case r == '-':
+			t.Type = TOK_MINUS
+			skip = width
 		case r == '/':
 			t.Type = TOK_TOPIC
 			skip = s.MatchTopic()

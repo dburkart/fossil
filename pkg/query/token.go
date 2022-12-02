@@ -21,6 +21,11 @@ const (
 	TOK_TIMESPAN
 	TOK_COMMA
 
+	// Arithmetic
+	TOK_PLUS
+	TOK_MINUS
+	TOK_STAR
+
 	TOK_PAREN_L
 	TOK_PAREN_R
 
@@ -49,6 +54,12 @@ func (t TokenType) ToString() string {
 		return "TOK_TIMESPAN"
 	case TOK_COMMA:
 		return "TOK_COMMA"
+	case TOK_PLUS:
+		return "TOK_PLUS"
+	case TOK_MINUS:
+		return "TOK_MINUS"
+	case TOK_STAR:
+		return "TOK_STAR"
 	case TOK_PAREN_L:
 		return "TOK_PAREN_L"
 	case TOK_PAREN_R:
