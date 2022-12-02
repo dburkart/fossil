@@ -28,23 +28,34 @@ type Server struct {
 	metrics     MetricsStore
 	startupTime time.Time
 
-	database    *database.Database
+	dbMap       map[string]*database.Database
 	port        int
 	metricsPort int
 
 	collectors []collector.Collector
 }
 
-func New(log zerolog.Logger, path string, port, metricsPort int) Server {
+type DatabaseConfig struct {
+	Name      string
+	Directory string
+}
+
+func New(log zerolog.Logger, dbConfigs map[string]DatabaseConfig, port, metricsPort int) Server {
 	// TODO: We need a filesystem lock to ensure we don't double run a server on the same database
 	// https://pkg.go.dev/io/fs#FileMode ModeExclusive
-	db := database.NewDatabase(path)
+
+	// take the db configs and build a map of databases name -> db
+	dbMap := make(map[string]*database.Database)
+	for k, v := range dbConfigs {
+		log.Info().Str("name", v.Name).Str("directory", v.Directory).Msg("initializing database")
+		dbMap[k] = database.NewDatabase(v.Directory)
+	}
 
 	return Server{
 		log,
 		NewMetricsStore(),
 		time.Now(),
-		db,
+		dbMap,
 		port,
 		metricsPort,
 		[]collector.Collector{},
@@ -56,7 +67,8 @@ func (s *Server) ServeDatabase() {
 	mux := NewMapMux()
 
 	mux.Handle(proto.CommandQuery, func(w io.Writer, msg proto.Message) {
-		stmt := query.Prepare(s.database, string(msg.Data))
+		db := "default"
+		stmt := query.Prepare(s.dbMap[db], string(msg.Data))
 		result := stmt.Execute()
 
 		ret := new(bytes.Buffer)
@@ -81,7 +93,7 @@ func (s *Server) ServeDatabase() {
 	})
 
 	mux.Handle(proto.CommandAppend, func(w io.Writer, msg proto.Message) {
-		s.database.Append(msg.Data, "")
+		s.dbMap["default"].Append(msg.Data, "")
 		w.Write([]byte("Ok!\n"))
 	})
 
@@ -95,7 +107,7 @@ func (s *Server) ServeDatabase() {
 			humanize.Bytes(m.Alloc),
 			humanize.Bytes(m.Sys),
 			time.Now().Sub(s.startupTime).String(),
-			len(s.database.Segments),
+			len(s.dbMap["default"].Segments),
 		)))
 	})
 
