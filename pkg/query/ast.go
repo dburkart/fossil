@@ -199,7 +199,7 @@ func (t TimePredicateNode) GenerateFilter(db *database.Database) database.Filter
 
 	return func(data database.Entries) database.Entries {
 		if data == nil {
-			return db.Retrieve(database.Query{Range: &timeRange})
+			return db.Retrieve(database.Query{Range: &timeRange, RangeSemantics: t.Value})
 		}
 
 		// TODO: Handle non-nil case! Let's factor out some of the Retrieve functionality for
