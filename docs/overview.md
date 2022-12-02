@@ -81,6 +81,16 @@ ok  	github.com/dburkart/fossil/pkg/server	19.132s
 ```
 
 With the above results in mind we went with the MapBased mux for now in-order to allow for quick changes and low memory usage at the minor cost of some CPU performance.
+
+##### Server Structure
+Fossil server can be run with many logical databases being served from a single physical server instance. When connecting to the server you may include a database in the connection string selecting the logical database you wish to connect to for operations.
+
+##### Server Startup
+For each `database` config block, a logical database item is created and added to the map of databases available on the server. 
+
+#### Client Connections and Databases
+When a request hits the server the client sets the database it is working with as the initial request which is set on each subsequent message for processing in the handlers. The database defaults to `default` if there is no database negotiated.
+
 ## Data Types (WIP)
 
 By default, data sent to fossil is stored as an opaque blob of bytes in the database. This unstructured data can not 
