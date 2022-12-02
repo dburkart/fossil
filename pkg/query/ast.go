@@ -184,6 +184,15 @@ func (t TimePredicateNode) GenerateFilter(db *database.Database) database.Filter
 	var err error
 
 	switch t.Value {
+	case "before":
+		endTime, err = t.Children()[0].(*TimeExpressionNode).Time()
+		// It shouldn't be possible there to be an error here (we should catch
+		// it earlier when parsing, so panic
+		if err != nil {
+			panic(err)
+		}
+
+		startTime = db.Segments[0].HeadTime
 	case "since":
 		startTime, err = t.Children()[0].(*TimeExpressionNode).Time()
 		// It shouldn't be possible there to be an error here (we should catch
