@@ -98,7 +98,7 @@ func TestTimeWhence(t *testing.T) {
 		t.Errorf("Got an error parsing time: %s", err)
 	}
 
-	if tm != want {
+	if !tm.Equal(want) {
 		t.Errorf("wanted time-whence to parse to %s, got %s", want, tm)
 	}
 }
