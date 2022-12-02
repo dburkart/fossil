@@ -7,9 +7,9 @@ local = true
 verbose = 2
 
 [database]
-path = "data/default.log"
+directory = "data/default"
 
 [database.test]
-path = "data/test.log"
+directory = "data/test"
 
 [database.tester]
