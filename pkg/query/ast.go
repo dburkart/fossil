@@ -18,10 +18,42 @@ type ASTNode interface {
 	Walk(*database.Database) []database.Filter
 }
 
-type BaseNode struct {
-	Value    string
-	children []ASTNode
-}
+type (
+	BaseNode struct {
+		Value    string
+		children []ASTNode
+	}
+
+	QueryNode struct {
+		BaseNode
+	}
+
+	QuantifierNode struct {
+		BaseNode
+	}
+
+	TopicSelectorNode struct {
+		BaseNode
+	}
+
+	TopicNode struct {
+		BaseNode
+	}
+
+	TimePredicateNode struct {
+		BaseNode
+	}
+
+	TimeExpressionNode struct {
+		BaseNode
+	}
+
+	TimespanNode struct {
+		BaseNode
+	}
+)
+
+//-- BaseNode
 
 func (b *BaseNode) Children() []ASTNode {
 	return b.children
@@ -63,17 +95,13 @@ func (b *BaseNode) Walk(d *database.Database) []database.Filter {
 	return b.descend(d, b)
 }
 
-type QueryNode struct {
-	BaseNode
-}
+//-- QueryNode
 
 func (q QueryNode) GenerateFilter(_ *database.Database) database.Filter {
 	return nil
 }
 
-type QuantifierNode struct {
-	BaseNode
-}
+//-- QuantifierNode
 
 func (q QuantifierNode) GenerateFilter(db *database.Database) database.Filter {
 	return func(data database.Entries) database.Entries {
@@ -109,9 +137,7 @@ func (q QuantifierNode) GenerateFilter(db *database.Database) database.Filter {
 	}
 }
 
-type TopicSelectorNode struct {
-	BaseNode
-}
+//-- TopicSelectorNode
 
 func (q TopicSelectorNode) GenerateFilter(db *database.Database) database.Filter {
 	topic, ok := q.Children()[0].(*TopicNode)
@@ -147,13 +173,7 @@ func (q TopicSelectorNode) GenerateFilter(db *database.Database) database.Filter
 	}
 }
 
-type TopicNode struct {
-	BaseNode
-}
-
-type TimespanNode struct {
-	BaseNode
-}
+//-- TimespanNode
 
 func (t TimespanNode) Duration() time.Duration {
 	switch t.Value {
