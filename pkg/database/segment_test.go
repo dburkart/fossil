@@ -25,7 +25,7 @@ func createFullSegment() Segment {
 	}
 
 	for i := 0; i < SegmentSize; i++ {
-		segment.Append(event)
+		segment.Append(&event)
 		event.Delta += 60000000000
 	}
 
