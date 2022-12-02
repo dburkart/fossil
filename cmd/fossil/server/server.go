@@ -23,7 +23,7 @@ var Command = &cobra.Command{
 		// Initialize database server
 		srv := server.New(
 			logger,
-			viper.GetString("database.path"),
+			viper.GetString("database.directory"),
 			viper.GetInt("fossil.port"),
 			viper.GetInt("fossil.prom-http"),
 		)
@@ -45,5 +45,5 @@ func init() {
 	// Bind flags to viper
 	viper.BindPFlag("fossil.port", Command.Flags().Lookup("port"))
 	viper.BindPFlag("fossil.prom-port", Command.Flags().Lookup("prom-http"))
-	viper.BindPFlag("database.path", Command.Flags().Lookup("database"))
+	viper.BindPFlag("database.directory", Command.Flags().Lookup("database"))
 }
