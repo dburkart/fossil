@@ -177,7 +177,38 @@ func (q TopicSelectorNode) GenerateFilter(db *database.Database) database.Filter
 	}
 }
 
-//-- TimeExpression
+//-- TimePredicateNode
+
+func (t TimePredicateNode) GenerateFilter(db *database.Database) database.Filter {
+	var startTime, endTime time.Time
+	var err error
+
+	switch t.Value {
+	case "since":
+		startTime, err = t.Children()[0].(*TimeExpressionNode).Time()
+		// It shouldn't be possible there to be an error here (we should catch
+		// it earlier when parsing, so panic
+		if err != nil {
+			panic(err)
+		}
+
+		endTime = time.Now()
+	}
+
+	timeRange := database.TimeRange{Start: startTime, End: endTime}
+
+	return func(data database.Entries) database.Entries {
+		if data == nil {
+			return db.Retrieve(database.Query{Range: &timeRange})
+		}
+
+		// TODO: Handle non-nil case! Let's factor out some of the Retrieve functionality for
+		//       filtering ranges.
+		return nil
+	}
+}
+
+//-- TimeExpressionNode
 
 func (t TimeExpressionNode) Time() (time.Time, error) {
 	// TODO: Support full time-expression syntax here
@@ -185,10 +216,15 @@ func (t TimeExpressionNode) Time() (time.Time, error) {
 	return child.Time()
 }
 
-//-- TimeWhence
+//-- TimeWhenceNode
 
 func (t TimeWhenceNode) Time() (time.Time, error) {
-	return time.Parse(time.RFC3339, t.Value[1:])
+	switch {
+	case t.Value == "~now":
+		return time.Now(), nil
+	default:
+		return time.Parse(time.RFC3339, t.Value[1:])
+	}
 }
 
 //-- TimespanNode

@@ -45,8 +45,14 @@ func (p *Parser) query() ASTNode {
 		q.AddChild(topicSelector)
 	}
 
-	// TODO: Check for time-predicate
-	// TODO: Check for data-predicate
+	timePredicate := p.timePredicate()
+	if timePredicate != nil {
+		q.AddChild(timePredicate)
+	}
+
+	// TODO: Check for data-predicate.
+	// 		 Note: this will have to be at the beginning of our filters, based
+	//	     on the current design
 
 	return &q
 }
