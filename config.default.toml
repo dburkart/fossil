@@ -7,9 +7,9 @@ local = true
 verbose = 2
 
 [database]
-directory = "data/default"
+directory = "./data"
 
 [database.test]
-directory = "data/test"
+directory = "./data/testme"
 
 [database.tester]
