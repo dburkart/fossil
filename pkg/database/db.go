@@ -229,6 +229,26 @@ func (d *Database) Retrieve(q Query) []Entry {
 		endSubIndex, _ = d.Segments[endIndex].FindApproximateDatum(q.Range.End)
 		// End of the range should be inclusive
 		endSubIndex += 1
+
+		// Our binary search is kind of crude, in that it "fuzzy" matches the start
+		// and end of our range. So we have to do a quick bounds check on both sides
+		// to make sure that q.Range.Start <= startSubIndex <= q.Range.End
+		switch q.RangeSemantics {
+		case "since":
+			// Ensure start is correct
+			startDatum := d.Segments[startIndex].Series[startSubIndex]
+			startTime := d.Segments[startIndex].HeadTime.Add(startDatum.Delta)
+			if startTime.Before(q.Range.Start) {
+				startSubIndex += 1
+			}
+		case "before":
+			// Ensure end is correct
+			endDatum := d.Segments[endIndex].Series[endSubIndex]
+			endTime := d.Segments[startIndex].HeadTime.Add(endDatum.Delta)
+			if endTime.After(q.Range.End) {
+				endSubIndex -= 1
+			}
+		}
 	}
 
 	// Handle the case where all of our datum is in a single segment

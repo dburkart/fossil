@@ -20,7 +20,8 @@ type TimeRange struct {
 //   - Time Range
 //   - Data Predicate (TODO!)
 type Query struct {
-	Quantifier string
-	Topics     []string
-	Range      *TimeRange // nil means entire history (no time range)
+	Quantifier     string
+	Topics         []string
+	Range          *TimeRange // nil means entire history (no time range)
+	RangeSemantics string     // none, before, since, between
 }
