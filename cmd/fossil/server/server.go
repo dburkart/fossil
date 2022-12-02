@@ -38,7 +38,7 @@ var Command = &cobra.Command{
 
 func init() {
 	// Flags for this command
-	Command.Flags().IntP("port", "c", 8001, "Database server port for data collection")
+	Command.Flags().IntP("port", "p", 8001, "Database server port for data collection")
 	Command.Flags().Int("prom-http", 2112, "Set the port for /metrics is bound to")
 	Command.Flags().StringP("database", "d", "./", "Path to store database files")
 
