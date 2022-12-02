@@ -85,7 +85,7 @@ directory = "data/mydata"
 #### Root `fossil` config block
 | Option             | Default                    | Description                                            |
 | ------------------ | -------------------------- | ------------------------------------------------------ |
-| `fossil.port`      | 8000                       | Port fossil server listens on                          |
+| `fossil.port`      | 8001                       | Port fossil server listens on                          |
 | `fossil.prom-port` | 2112                       | Port fossil server servers `/metrics` on               |
 | `fossil.verbose`   | 0                          | Configures the log level [0: info, 1: debug, 2: trace] |
 | `fossil.host`      | `"fossil://local/default"` | Connection string client will connect to               |
