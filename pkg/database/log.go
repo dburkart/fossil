@@ -56,7 +56,7 @@ func (w *WriteAheadLog) ApplyToDB(d *Database) {
 			if err != nil {
 				log.Fatal(err)
 			}
-			d.appendInternal(datum)
+			d.appendInternal(&datum)
 		case actionAddSegment:
 			var segment Segment
 			err := dec.Decode(&segment.HeadTime)

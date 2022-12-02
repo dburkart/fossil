@@ -31,7 +31,7 @@ type Database struct {
 	appendCount int
 }
 
-func (d *Database) appendInternal(data Datum) {
+func (d *Database) appendInternal(data *Datum) {
 	if success, _ := d.Segments[d.Current].Append(data); !success {
 		log.Fatal("We should never not have enough segments, since our write-ahead log creates them")
 	}
@@ -129,6 +129,11 @@ func (d *Database) Append(data []byte, topic string) {
 
 	topicID := d.AddTopic(topic)
 
+	// Explicitly copy the data before taking the lock to minimize resource
+	// contention
+	e := Datum{Data: make([]byte, len(data)), TopicID: topicID}
+	copy(e.Data, data)
+
 	if d.appendCount > SegmentSize {
 		d.splatToDisk()
 	}
@@ -137,24 +142,23 @@ func (d *Database) Append(data []byte, topic string) {
 	defer d.writeLock.Unlock()
 
 	wal := WriteAheadLog{filepath.Join(d.Path, "wal.log")}
-	// Add a new segment to the log if needed
-	if len(d.Segments) == 0 || d.Segments[d.Current].Size >= SegmentSize {
-		wal.AddSegment(appendTime)
-	}
-	if len(d.Segments) == 0 {
-		d.Segments = append(d.Segments, Segment{HeadTime: appendTime})
-	}
-	// Calculate the delta
-	delta := appendTime.Sub(d.Segments[d.Current].HeadTime)
-	e := Datum{Data: data, TopicID: topicID, Delta: delta}
-	wal.AddEvent(&e)
 
-	// Create a new segment if needed
+	// Add a new segment to the log if needed
 	if d.Segments[d.Current].Size >= SegmentSize {
+		wal.AddSegment(appendTime)
 		d.Segments = append(d.Segments, Segment{HeadTime: appendTime})
 		d.Current += 1
 	}
-	d.appendInternal(e)
+	if len(d.Segments) == 0 {
+		wal.AddSegment(appendTime)
+		d.Segments = append(d.Segments, Segment{HeadTime: appendTime})
+	}
+
+	// Calculate the delta
+	delta := appendTime.Sub(d.Segments[d.Current].HeadTime)
+	e.Delta = delta
+	wal.AddEvent(&e)
+	d.appendInternal(&e)
 }
 
 func (d *Database) entriesFromData(s *Segment, data []Datum) []Entry {
