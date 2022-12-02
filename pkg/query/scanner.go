@@ -241,6 +241,13 @@ func (s *Scanner) Emit() Token {
 				break
 			}
 			identifierFallthrough()
+		case r == 'b':
+			if strings.HasPrefix(s.Input[s.Pos:], "before") {
+				t.Type = TOK_KEYWORD
+				skip = len("before")
+				break
+			}
+			identifierFallthrough()
 		case r == 'i':
 			if strings.HasPrefix(s.Input[s.Pos:], "in") {
 				t.Type = TOK_KEYWORD
