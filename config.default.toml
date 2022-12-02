@@ -10,6 +10,5 @@ verbose = 2
 directory = "./data"
 
 [database.test]
-directory = "./data2"
 
 [database.tester]
