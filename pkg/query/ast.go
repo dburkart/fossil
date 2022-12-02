@@ -48,6 +48,10 @@ type (
 		BaseNode
 	}
 
+	TimeWhenceNode struct {
+		BaseNode
+	}
+
 	TimespanNode struct {
 		BaseNode
 	}
@@ -171,6 +175,20 @@ func (q TopicSelectorNode) GenerateFilter(db *database.Database) database.Filter
 
 		return filtered
 	}
+}
+
+//-- TimeExpression
+
+func (t TimeExpressionNode) Time() (time.Time, error) {
+	// TODO: Support full time-expression syntax here
+	child := t.Children()[0].(*TimeWhenceNode)
+	return child.Time()
+}
+
+//-- TimeWhence
+
+func (t TimeWhenceNode) Time() (time.Time, error) {
+	return time.Parse(time.RFC3339, t.Value[1:])
 }
 
 //-- TimespanNode

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestParseAllQuantifier(t *testing.T) {
@@ -52,5 +53,52 @@ func TestParseTopicSelector(t *testing.T) {
 	child := ast.Children()[0]
 	if fmt.Sprint(reflect.TypeOf(child)) != "*query.TopicNode" {
 		t.Errorf("wanted first child to be *query.TopicNode, found %s", reflect.TypeOf(child))
+	}
+}
+
+func TestParseTimePredicate(t *testing.T) {
+	p := Parser{
+		Scanner: Scanner{
+			Input: "since ~now",
+		},
+	}
+
+	ast := p.timePredicate()
+	if fmt.Sprint(reflect.TypeOf(ast)) != "*query.TimePredicateNode" {
+		t.Errorf("wanted root node to be *query.TimePredicateNode, found %s", reflect.TypeOf(ast))
+	}
+
+	child := ast.Children()[0]
+	if fmt.Sprint(reflect.TypeOf(child)) != "*query.TimeExpressionNode" {
+		t.Errorf("wanted first child to be *query.TimeExpressionNode, found %s", reflect.TypeOf(child))
+	}
+
+	child = child.Children()[0]
+	if fmt.Sprint(reflect.TypeOf(child)) != "*query.TimeWhenceNode" {
+		t.Errorf("wanted first child to be *query.TimeWhenceNode, found %s", reflect.TypeOf(child))
+	}
+}
+
+func TestTimeWhence(t *testing.T) {
+	p := Parser{
+		Scanner: Scanner{
+			Input: "~1996-12-19T16:39:57-08:00",
+		},
+	}
+
+	ast := p.timeWhence()
+	if fmt.Sprint(reflect.TypeOf(ast)) != "*query.TimeWhenceNode" {
+		t.Errorf("wanted first child to be *query.TimeWhenceNode, found %s", reflect.TypeOf(ast))
+	}
+
+	want, _ := time.Parse(time.RFC3339, "1996-12-19T16:39:57-08:00")
+
+	tm, err := ast.(*TimeWhenceNode).Time()
+	if err != nil {
+		t.Errorf("Got an error parsing time: %s", err)
+	}
+
+	if tm != want {
+		t.Errorf("wanted time-whence to parse to %s, got %s", want, tm)
 	}
 }

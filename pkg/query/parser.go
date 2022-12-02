@@ -6,7 +6,9 @@
 
 package query
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type Parser struct {
 	Scanner Scanner
@@ -135,4 +137,67 @@ func (p *Parser) topic() ASTNode {
 	}}
 
 	return &t
+}
+
+// timePredicate returns a TimePredicateNode
+//
+// Grammar:
+//
+//	time-predicate  = ( "since" time-expression ) / ( "until" time-expression ) /
+//	                ( "between" time-expression ".." time-expression )
+func (p *Parser) timePredicate() ASTNode {
+	tok := p.Scanner.Emit()
+
+	if tok.Type != TOK_KEYWORD || (tok.Lexeme != "since" && tok.Lexeme != "until" &&
+		tok.Lexeme != "between") {
+		// time-predicates are optional, so don't error out
+		p.Scanner.Rewind()
+		return nil
+	}
+
+	expression := p.timeExpression()
+
+	// TODO: Handle between
+
+	t := TimePredicateNode{BaseNode{
+		Value: tok.Lexeme,
+	}}
+	t.AddChild(expression)
+
+	return &t
+}
+
+// timeExpression returns a TimeExpressionNode
+//
+// Grammar:
+//
+//	time-expression = ( time-whence ( "-" / "+" ) time-quantity ) / time-whence
+func (p *Parser) timeExpression() ASTNode {
+	whence := p.timeWhence()
+
+	// TODO: Implement + / - time-quantity
+
+	t := TimeExpressionNode{BaseNode{
+		Value: "",
+	}}
+	t.AddChild(whence)
+
+	return &t
+}
+
+// timeWhence returns a TimeExpressionNode
+//
+// Grammar:
+//
+//	time-whence     = "~now" / "~" RFC3339
+func (p *Parser) timeWhence() ASTNode {
+	tok := p.Scanner.Emit()
+
+	if tok.Type != TOK_WHENCE {
+		panic(fmt.Sprintf("Error: Unexpected token '%s', expected a time-whence (~now, etc.)", tok.Lexeme))
+	}
+
+	return &TimeWhenceNode{BaseNode{
+		Value: tok.Lexeme,
+	}}
 }
