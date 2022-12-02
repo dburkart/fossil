@@ -1,5 +1,5 @@
 [fossil]
-port = 8000
+port = 8001
 prom-port = 2112
 
 host = "fossil://local/default"
