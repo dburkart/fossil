@@ -7,8 +7,14 @@
 package proto
 
 var (
-	CommandError  = "ERR"
-	CommandStats  = "STATS"
-	CommandQuery  = "QUERY"
+	// CommandUse sets the current database context
+	CommandUse = "USE"
+	// CommandError
+	CommandError = "ERR"
+	// CommandStats retrieves the current database stats
+	CommandStats = "STATS"
+	// CommandQuery executes a query on the current database
+	CommandQuery = "QUERY"
+	// CommandAppend appends data to the current database
 	CommandAppend = "APPEND"
 )
