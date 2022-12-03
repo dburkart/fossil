@@ -18,6 +18,7 @@ import (
 	"github.com/dburkart/fossil/pkg/database"
 	"github.com/dburkart/fossil/pkg/proto"
 	"github.com/dburkart/fossil/pkg/query"
+	"github.com/dustin/go-humanize"
 	"github.com/olekukonko/tablewriter"
 	"github.com/rs/zerolog"
 
@@ -162,6 +163,22 @@ func clientPrompt(c net.Conn) {
 				continue
 			}
 			switch msg.Command {
+			case proto.CommandStats:
+				t := proto.StatsResponse{}
+				fmt.Println(msg.Data)
+				fmt.Println(string(msg.Data))
+				err = t.Unmarshal(msg.Data)
+				if err != nil {
+					log.Error().Err(err).Send()
+					continue
+				}
+				fmt.Printf(
+					"Allocated Heap: %v\nTotal Memory: %v\nUptime: %s\nSegments: %d\n",
+					humanize.Bytes(t.AllocHeap),
+					humanize.Bytes(t.TotalMem),
+					t.Uptime,
+					t.Segments,
+				)
 			case proto.CommandQuery:
 				t := proto.QueryResponse{}
 				err = t.Unmarshal(msg.Data)

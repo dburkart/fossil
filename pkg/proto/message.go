@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/dburkart/fossil/pkg/database"
 	"github.com/rs/zerolog"
@@ -108,6 +109,15 @@ type (
 
 	UseRequest struct {
 		DbName string
+	}
+	StatsRequest struct {
+		Database string
+	}
+	StatsResponse struct {
+		AllocHeap uint64
+		TotalMem  uint64
+		Uptime    time.Duration
+		Segments  int
 	}
 
 	AppendRequest struct {
@@ -335,5 +345,64 @@ func (rq *QueryResponse) Unmarshal(b []byte) error {
 		}
 		rq.Results = append(rq.Results, ent)
 	}
+	return nil
+}
+
+// StatsRequest
+// --------------------------
+
+// Marshal ...
+func (rq StatsRequest) Marshal() ([]byte, error) {
+	return []byte(rq.Database), nil
+}
+
+// Unmarshal ...
+func (rq *StatsRequest) Unmarshal(b []byte) error {
+	rq.Database = string(b)
+
+	return nil
+}
+
+// StatsResponse
+// --------------------------
+
+// Marshal ...
+func (rq StatsResponse) Marshal() ([]byte, error) {
+	b := binary.LittleEndian.AppendUint64([]byte{}, rq.AllocHeap)
+	b = binary.LittleEndian.AppendUint64(b, rq.TotalMem)
+	b = binary.LittleEndian.AppendUint64(b, uint64(rq.Segments))
+	buf := bytes.NewBuffer(b)
+	buf.WriteString(rq.Uptime.String())
+	return buf.Bytes(), nil
+}
+
+// Unmarshal ...
+func (rq *StatsResponse) Unmarshal(b []byte) error {
+	buf := bytes.NewBuffer(b)
+	err := binary.Read(buf, binary.LittleEndian, &rq.AllocHeap)
+	if err != nil {
+		return err
+	}
+	err = binary.Read(buf, binary.LittleEndian, &rq.TotalMem)
+	if err != nil {
+		return err
+	}
+	var segs uint64
+	err = binary.Read(buf, binary.LittleEndian, &segs)
+	if err != nil {
+		return err
+	}
+	rq.Segments = int(segs)
+	up, err := buf.ReadBytes('\n')
+	if err != nil {
+		return err
+	}
+	dur := strings.Trim(string(up), "\n")
+	d, err := time.ParseDuration(dur)
+	if err != nil {
+		return err
+	}
+	rq.Uptime = d
+
 	return nil
 }
