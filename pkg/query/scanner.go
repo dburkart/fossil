@@ -311,7 +311,7 @@ func (s *Scanner) SkipToBoundary(boundary boundaryFunc) int {
 	r, width := utf8.DecodeRuneInString(s.Input[s.Pos:])
 	size := 0
 
-	for !boundary(r) {
+	for !boundary(r) && s.Pos+size < len(s.Input) {
 		size += width
 		r, width = utf8.DecodeRuneInString(s.Input[s.Pos+size:])
 	}
