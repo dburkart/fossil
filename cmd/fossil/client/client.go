@@ -165,8 +165,6 @@ func clientPrompt(c net.Conn) {
 			switch msg.Command {
 			case proto.CommandStats:
 				t := proto.StatsResponse{}
-				fmt.Println(msg.Data)
-				fmt.Println(string(msg.Data))
 				err = t.Unmarshal(msg.Data)
 				if err != nil {
 					log.Error().Err(err).Send()
