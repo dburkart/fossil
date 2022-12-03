@@ -58,6 +58,10 @@ type (
 		BaseNode
 	}
 
+	BinaryOpNode struct {
+		BaseNode
+	}
+
 	TimespanNode struct {
 		BaseNode
 	}
@@ -244,6 +248,23 @@ func (t TimeWhenceNode) Time() (time.Time, error) {
 	default:
 		return time.Parse(time.RFC3339, t.Value[1:])
 	}
+}
+
+//-- BinaryOpNode
+
+func (b BinaryOpNode) DerivedValue() int64 {
+	lh, rh := b.Children()[0].(Numeric), b.Children()[1].(Numeric)
+
+	switch b.Value {
+	case "*":
+		return lh.DerivedValue() * rh.DerivedValue()
+	case "-":
+		return lh.DerivedValue() - rh.DerivedValue()
+	case "+":
+		return lh.DerivedValue() + rh.DerivedValue()
+	}
+
+	panic(fmt.Sprintf("Unknown operator '%s'", b.Value))
 }
 
 //-- TimespanNode
