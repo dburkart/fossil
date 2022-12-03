@@ -27,3 +27,12 @@ func NewResponseWriter(w io.Writer) ResponseWriter {
 func (rw ResponseWriter) Write(b []byte) (int, error) {
 	return rw.w.Write(b)
 }
+
+func (rw ResponseWriter) WriteMessage(t Marshaler) (int, error) {
+	b, err := t.Marshal()
+	if err != nil {
+		return 0, err
+	}
+
+	return rw.w.Write(append(b, '\n'))
+}
