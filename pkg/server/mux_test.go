@@ -13,7 +13,7 @@ import (
 	"github.com/dburkart/fossil/pkg/proto"
 )
 
-func stub2(rw io.Writer, msg proto.Message) {
+func stub2(rw io.Writer, msg *proto.Request) {
 
 }
 
@@ -33,9 +33,10 @@ func BenchmarkMapCommandParse(b *testing.B) {
 	},
 	}
 
+	c := &conn{}
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		testMsg := tests[i%len(tests)]
-		mux.ServeMessage(io.Discard, testMsg)
+		mux.ServeMessage(c, tests[i%len(tests)])
 	}
 }

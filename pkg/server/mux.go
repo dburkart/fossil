@@ -12,39 +12,54 @@ import (
 	"io"
 	"net"
 
+	"github.com/dburkart/fossil/pkg/database"
 	"github.com/dburkart/fossil/pkg/proto"
 	"github.com/rs/zerolog"
 )
 
 type MessageMux interface {
-	ServeMessage(w io.Writer, msg proto.Message)
+	ServeMessage(c *conn, msg proto.Message)
 	Handle(s string, f MessageHandler)
+	HandleState(s string, f MessageStateHandler)
 }
 
-type MessageHandler func(io.Writer, proto.Message)
+type MessageHandler func(io.Writer, *proto.Request)
+type MessageStateHandler func(io.Writer, *conn, *proto.Request)
 
 type MapMux struct {
-	handlers map[string]MessageHandler
+	handlers      map[string]MessageHandler
+	stateHandlers map[string]MessageStateHandler
 }
 
 func NewMapMux() MessageMux {
 	return &MapMux{
-		handlers: make(map[string]MessageHandler),
+		handlers:      make(map[string]MessageHandler),
+		stateHandlers: make(map[string]MessageStateHandler),
 	}
 }
 
-func (mm *MapMux) ServeMessage(w io.Writer, msg proto.Message) {
+func (mm *MapMux) ServeMessage(c *conn, msg proto.Message) {
+	sf, ok := mm.stateHandlers[msg.Command]
+	if ok {
+		sf(c.c, c, proto.NewRequest(msg, c.db))
+		return
+	}
+
 	f, ok := mm.handlers[msg.Command]
 	if !ok {
 		// NO OP for commands that do not exist
-		w.Write([]byte("command not found\n"))
+		c.c.Write([]byte("command not found\n"))
 		return
 	}
-	f(w, msg)
+	f(c.c, proto.NewRequest(msg, c.db))
 }
 
 func (mm *MapMux) Handle(s string, f MessageHandler) {
 	mm.handlers[s] = f
+}
+
+func (mm *MapMux) HandleState(s string, f MessageStateHandler) {
+	mm.stateHandlers[s] = f
 }
 
 type MessageServer struct {
@@ -81,6 +96,10 @@ type conn struct {
 	c   *net.TCPConn
 
 	mux MessageMux
+
+	// state
+	dbName string
+	db     *database.Database
 }
 
 func newConn(log zerolog.Logger, mux MessageMux) *conn {
@@ -88,6 +107,11 @@ func newConn(log zerolog.Logger, mux MessageMux) *conn {
 		log: log,
 		mux: mux,
 	}
+}
+
+func (c *conn) SetDatabase(name string, db *database.Database) {
+	c.dbName = name
+	c.db = db
 }
 
 func (c *conn) Handle(conn *net.TCPConn) {
@@ -108,7 +132,7 @@ func (c *conn) Handle(conn *net.TCPConn) {
 		}
 
 		line := scanner.Bytes()
-		c.log.Info().Int("read", len(line)).Msg("read from conn")
+		c.log.Trace().Int("read", len(line)).Msg("read from conn")
 		buf := bytes.NewBuffer(line)
 		msg, err := proto.ParseMessage(buf.Bytes())
 		if err != nil {
@@ -117,8 +141,8 @@ func (c *conn) Handle(conn *net.TCPConn) {
 			c.log.Error().Err(err).Msg("error parsing message from buffer")
 			continue
 		}
-		c.log.Info().Object("msg", msg).Msg("parsed message")
+		c.log.Trace().Object("msg", msg).Msg("parsed message")
 
-		go c.mux.ServeMessage(c.c, msg)
+		go c.mux.ServeMessage(c, msg)
 	}
 }
