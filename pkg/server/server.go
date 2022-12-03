@@ -71,9 +71,20 @@ func (s *Server) ServeDatabase() {
 	srv := NewMessageServer(s.log)
 	mux := NewMapMux()
 
-	mux.Handle(proto.CommandQuery, func(w io.Writer, msg proto.Message) {
-		db := "default"
-		stmt := query.Prepare(s.dbMap[db], string(msg.Data))
+	mux.HandleState(proto.CommandUse, func(w io.Writer, c *conn, r *proto.Request) {
+		dbName := string(r.Data())
+		db, ok := s.dbMap[dbName]
+		if !ok {
+			w.Write([]byte("ERR unknown db\n"))
+			return
+		}
+		c.SetDatabase(dbName, db)
+
+		w.Write([]byte(fmt.Sprintf("database set to %s\n", dbName)))
+	})
+
+	mux.Handle(proto.CommandQuery, func(w io.Writer, r *proto.Request) {
+		stmt := query.Prepare(r.Database(), string(r.Data()))
 		result := stmt.Execute()
 
 		ret := new(bytes.Buffer)
@@ -97,12 +108,12 @@ func (s *Server) ServeDatabase() {
 		s.log.Trace().Int("wrote", n).Msg("wrote response")
 	})
 
-	mux.Handle(proto.CommandAppend, func(w io.Writer, msg proto.Message) {
-		s.dbMap["default"].Append(msg.Data, "")
+	mux.Handle(proto.CommandAppend, func(w io.Writer, r *proto.Request) {
+		r.Database().Append(r.Data(), "")
 		w.Write([]byte("Ok!\n"))
 	})
 
-	mux.Handle(proto.CommandStats, func(w io.Writer, msg proto.Message) {
+	mux.Handle(proto.CommandStats, func(w io.Writer, r *proto.Request) {
 		s.log.Info().Msg("INFO command")
 		// FIXME: This should be updated periodically in it's own runloop, not computed on request
 		var m runtime.MemStats
@@ -112,7 +123,7 @@ func (s *Server) ServeDatabase() {
 			humanize.Bytes(m.Alloc),
 			humanize.Bytes(m.Sys),
 			time.Now().Sub(s.startupTime).String(),
-			len(s.dbMap["default"].Segments),
+			len(r.Database().Segments),
 		)))
 	})
 
