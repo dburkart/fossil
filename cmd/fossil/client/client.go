@@ -13,15 +13,19 @@ import (
 	"net"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/dburkart/fossil/pkg/database"
 	"github.com/dburkart/fossil/pkg/proto"
 	"github.com/dburkart/fossil/pkg/query"
+	"github.com/olekukonko/tablewriter"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
+
+var log zerolog.Logger
 
 var Command = &cobra.Command{
 	Use:   "client",
@@ -47,17 +51,36 @@ var Command = &cobra.Command{
 			}
 
 			// Always send a use first
-			useMsg := proto.UseRequest{DbName: target.Database}
+			useMsg := proto.NewMessageWithType(proto.CommandUse, proto.UseRequest{DbName: target.Database})
 			b, _ := useMsg.Marshal()
-			c.Write(append([]byte(proto.CommandUse), ' '))
-			c.Write(append(b, '\n'))
+			c.Write(b)
 			buf := make([]byte, 256)
 			c.Read(buf)
-			fmt.Print(string(buf))
+			m, err := proto.ParseMessage(buf)
+			if err != nil {
+				log.Fatal().Err(err).Msg("unable to parse server use response")
+			}
+			ok := proto.OkResponse{}
+			err = ok.Unmarshal(m.Data)
+			if err != nil {
+				log.Fatal().Err(err).Msg("unable to parse server use response")
+			}
+			fmt.Println(ok.Code, ok.Message)
 
 			clientPrompt(c)
 		}
 	},
+}
+
+func init() {
+	log = zerolog.New(zerolog.ConsoleWriter{
+		Out:        os.Stdout,
+		TimeFormat: time.RFC3339,
+	}).
+		With().
+		Timestamp().
+		Caller().
+		Logger()
 }
 
 func send(c net.Conn, msg []byte) error {
@@ -127,17 +150,65 @@ func clientPrompt(c net.Conn) {
 
 		respRdr := bufio.NewReader(c)
 		for {
-
 			resp, err := respRdr.ReadBytes('\n')
 			if err != nil {
 				fmt.Printf("Err: unable to read response\n\t'%s'\n", string(resp))
+				continue
 			}
-			fmt.Print(string(resp))
+			msg, err := proto.ParseMessage(resp)
+			if err != nil {
+				log.Error().Err(err).Msg("malformed message")
+				fmt.Println(resp)
+				continue
+			}
+			switch msg.Command {
+			case proto.CommandQuery:
+				t := proto.QueryResponse{}
+				err = t.Unmarshal(msg.Data)
+				if err != nil {
+					log.Error().Err(err).Send()
+					continue
+				}
+
+				table := tablewriter.NewWriter(os.Stdout)
+				table.SetHeader([]string{"Time", "Topic", "Data"})
+				for i := range t.Results {
+					table.Append([]string{
+						t.Results[i].Time.Format(time.RFC3339Nano),
+						t.Results[i].Topic,
+						string(t.Results[i].Data),
+					})
+				}
+
+				table.Render()
+			case proto.CommandError:
+				t := proto.ErrResponse{}
+				err = t.Unmarshal(msg.Data)
+				if err != nil {
+					log.Error().Err(err).Send()
+					continue
+				}
+				fmt.Println(t.Code, t.Err)
+			case proto.CommandOk:
+				t := proto.OkResponse{}
+				err = t.Unmarshal(msg.Data)
+				if err != nil {
+					log.Error().Err(err).Send()
+					continue
+				}
+				fmt.Println(t.Code, t.Message)
+			case proto.CommandAppend:
+				t := proto.OkResponse{}
+				err = t.Unmarshal(msg.Data)
+				if err != nil {
+					log.Error().Err(err).Send()
+					continue
+				}
+				fmt.Println(t.Code, t.Message)
+			}
 			if respRdr.Buffered() <= 0 {
 				break
 			}
 		}
 	}
 }
-
-func init() {}
