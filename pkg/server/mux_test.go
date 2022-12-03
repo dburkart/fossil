@@ -23,13 +23,13 @@ func BenchmarkMapCommandParse(b *testing.B) {
 	mux.Handle("B", stub2)
 	mux.Handle("C", stub2)
 
-	tests := []proto.Message{{
+	tests := []*proto.Request{proto.NewRequest(proto.Message{
 		Command: "A",
-	}, {
+	}, nil), proto.NewRequest(proto.Message{
 		Command: "B",
-	}, {
+	}, nil), proto.NewRequest(proto.Message{
 		Command: "C",
-	},
+	}, nil),
 	}
 
 	c := &conn{}

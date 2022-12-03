@@ -17,7 +17,7 @@ import (
 )
 
 type MessageMux interface {
-	ServeMessage(c *conn, msg proto.Message)
+	ServeMessage(c *conn, r *proto.Request)
 	Handle(s string, f MessageHandler)
 	HandleState(s string, f MessageStateHandler)
 }
@@ -37,20 +37,20 @@ func NewMapMux() MessageMux {
 	}
 }
 
-func (mm *MapMux) ServeMessage(c *conn, msg proto.Message) {
-	sf, ok := mm.stateHandlers[msg.Command]
+func (mm *MapMux) ServeMessage(c *conn, r *proto.Request) {
+	sf, ok := mm.stateHandlers[r.Command()]
 	if ok {
-		sf(proto.NewResponseWriter(c.c), c, proto.NewRequest(msg, c.db))
+		sf(c.rw, c, r)
 		return
 	}
 
-	f, ok := mm.handlers[msg.Command]
+	f, ok := mm.handlers[r.Command()]
 	if !ok {
 		// NO OP for commands that do not exist
-		c.c.Write([]byte("command not found\n"))
+		c.rw.WriteMessage(proto.MessageErrorCommandNotFound)
 		return
 	}
-	f(proto.NewResponseWriter(c.c), proto.NewRequest(msg, c.db))
+	f(c.rw, r)
 }
 
 func (mm *MapMux) Handle(s string, f MessageHandler) {
@@ -93,6 +93,7 @@ func (ms *MessageServer) ListenAndServe(port int, mux MessageMux) error {
 type conn struct {
 	log zerolog.Logger
 	c   *net.TCPConn
+	rw  proto.ResponseWriter
 
 	mux MessageMux
 
@@ -115,6 +116,7 @@ func (c *conn) SetDatabase(name string, db *database.Database) {
 
 func (c *conn) Handle(conn *net.TCPConn) {
 	c.c = conn
+	c.rw = proto.NewResponseWriter(c.c)
 
 	// connection error states
 	scanner := bufio.NewScanner(c.c)
@@ -142,6 +144,6 @@ func (c *conn) Handle(conn *net.TCPConn) {
 		}
 		c.log.Trace().Object("msg", msg).Msg("parsed message")
 
-		go c.mux.ServeMessage(c, msg)
+		go c.mux.ServeMessage(c, proto.NewRequest(msg, c.db))
 	}
 }
