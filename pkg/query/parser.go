@@ -76,22 +76,13 @@ func (p *Parser) quantifier() ASTNode {
 
 	if tok.Lexeme == "sample" {
 		tok = p.Scanner.Emit()
-
 		if tok.Type != TOK_PAREN_L {
 			panic(fmt.Sprintf("Error: unexpected token '%s', expected '('", tok.Lexeme))
 		}
 
-		tok = p.Scanner.Emit()
-
-		if tok.Type != TOK_TIMESPAN {
-			panic(fmt.Sprintf("Error: unexpected token '%s', expected valid timespan (@hour, @minute, @second, etc.)", tok.Lexeme))
-		}
-		q.AddChild(&TimespanNode{BaseNode{
-			Value: tok.Lexeme,
-		}})
+		q.AddChild(p.timeQuantity())
 
 		tok = p.Scanner.Emit()
-
 		if tok.Type != TOK_PAREN_R {
 			panic(fmt.Sprintf("Error: unexpected token '%s', expected ')'", tok.Lexeme))
 		}
