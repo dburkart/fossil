@@ -9,8 +9,10 @@ package proto
 var (
 	// CommandUse sets the current database context
 	CommandUse = "USE"
-	// CommandError
+	// CommandError sends an error code and a message to the client
 	CommandError = "ERR"
+	// CommandOk is used to respond to generic actions
+	CommandOk = "OK"
 	// CommandStats retrieves the current database stats
 	CommandStats = "STATS"
 	// CommandQuery executes a query on the current database
