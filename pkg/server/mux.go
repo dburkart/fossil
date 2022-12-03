@@ -137,7 +137,7 @@ func (c *conn) Handle(conn *net.TCPConn) {
 		buf := bytes.NewBuffer(line)
 		msg, err := proto.ParseMessage(buf.Bytes())
 		if err != nil {
-			c.c.Write([]byte("malformed message\n"))
+			c.rw.WriteMessage(proto.MessageErrorMalformedMessage)
 			c.log.Trace().Bytes("buf", line).Send()
 			c.log.Error().Err(err).Msg("error parsing message from buffer")
 			continue
