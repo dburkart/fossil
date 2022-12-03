@@ -23,15 +23,10 @@ var Command = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		logger := viper.Get("logger").(zerolog.Logger)
 
-		configs, err := buildDatabaseConfigs()
-		if err != nil {
-			panic(err)
-		}
-
 		// Initialize database server
 		srv := server.New(
 			logger,
-			configs,
+			buildDatabaseConfigs(),
 			viper.GetInt("fossil.port"),
 			viper.GetInt("fossil.prom-http"),
 		)
@@ -44,7 +39,7 @@ var Command = &cobra.Command{
 	},
 }
 
-func buildDatabaseConfigs() (map[string]server.DatabaseConfig, error) {
+func buildDatabaseConfigs() map[string]server.DatabaseConfig {
 	ret := make(map[string]server.DatabaseConfig)
 
 	for _, v := range viper.GetStringSlice("database.names") {
@@ -72,7 +67,7 @@ func buildDatabaseConfigs() (map[string]server.DatabaseConfig, error) {
 		ret[k] = v
 	}
 
-	return ret, nil
+	return ret
 }
 
 func init() {
