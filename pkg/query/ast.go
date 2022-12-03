@@ -7,7 +7,9 @@
 package query
 
 import (
+	"fmt"
 	"github.com/dburkart/fossil/pkg/database"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -57,6 +59,10 @@ type (
 	}
 
 	TimespanNode struct {
+		BaseNode
+	}
+
+	NumberNode struct {
 		BaseNode
 	}
 )
@@ -258,4 +264,14 @@ func (t TimespanNode) DerivedValue() int64 {
 		return int64(time.Second)
 	}
 	return 0
+}
+
+//-- NumberNode
+
+func (n NumberNode) DerivedValue() int64 {
+	i, err := strconv.ParseInt(n.Value, 10, 64)
+	if err != nil {
+		panic(fmt.Sprintf("NumberNode had unexpected non-numerical value: %s", n.Value))
+	}
+	return i
 }
