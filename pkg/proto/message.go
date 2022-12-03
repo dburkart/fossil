@@ -19,12 +19,13 @@ import (
 )
 
 var (
-	MessageOk                   = NewMessageWithType(CommandOk, OkResponse{Code: 200, Message: "Ok"})
-	MessageOkDatabaseChanged    = NewMessageWithType(CommandOk, OkResponse{Code: 201, Message: "database changed"})
-	MessageError                = NewMessageWithType(CommandError, ErrResponse{Code: 500})
-	MessageErrorCommandNotFound = NewMessageWithType(CommandError, ErrResponse{Code: 500, Err: fmt.Errorf("command not found")})
-	MessageErrorUnmarshaling    = NewMessageWithType(CommandError, ErrResponse{Code: 506, Err: fmt.Errorf("error unmarshaling")})
-	MessageErrorUnknownDb       = NewMessageWithType(CommandError, ErrResponse{Code: 505})
+	MessageOk                    = NewMessageWithType(CommandOk, OkResponse{Code: 200, Message: "Ok"})
+	MessageOkDatabaseChanged     = NewMessageWithType(CommandOk, OkResponse{Code: 201, Message: "database changed"})
+	MessageError                 = NewMessageWithType(CommandError, ErrResponse{Code: 500})
+	MessageErrorCommandNotFound  = NewMessageWithType(CommandError, ErrResponse{Code: 501, Err: fmt.Errorf("command not found")})
+	MessageErrorMalformedMessage = NewMessageWithType(CommandError, ErrResponse{Code: 502, Err: fmt.Errorf("malformed message")})
+	MessageErrorUnmarshaling     = NewMessageWithType(CommandError, ErrResponse{Code: 506, Err: fmt.Errorf("error unmarshaling")})
+	MessageErrorUnknownDb        = NewMessageWithType(CommandError, ErrResponse{Code: 505})
 )
 
 type Message struct {
