@@ -234,9 +234,22 @@ func (t TimePredicateNode) GenerateFilter(db *database.Database) database.Filter
 //-- TimeExpressionNode
 
 func (t TimeExpressionNode) Time() (time.Time, error) {
-	// TODO: Support full time-expression syntax here
-	child := t.Children()[0].(*TimeWhenceNode)
-	return child.Time()
+	lh := t.Children()[0].(*TimeWhenceNode)
+	tm, err := lh.Time()
+	if err != nil {
+		return tm, err
+	}
+
+	switch t.Value {
+	case "-":
+		rh := t.Children()[1].(Numeric)
+		return tm.Add(time.Duration(rh.DerivedValue() * -1)), err
+	case "+":
+		rh := t.Children()[1].(Numeric)
+		return tm.Add(time.Duration(rh.DerivedValue())), err
+	}
+
+	return tm, err
 }
 
 //-- TimeWhenceNode
