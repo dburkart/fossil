@@ -17,11 +17,12 @@ import (
 )
 
 var (
-	MessageOk                = OkResponse{Code: 200, Message: "Ok"}
-	MessageOkDatabaseChanged = OkResponse{Code: 201, Message: "database changed"}
-	MessageError             = ErrResponse{Code: 500}
-	MessageErrorUnmarshaling = ErrResponse{Code: 506}
-	MessageErrorUnknownDb    = ErrResponse{Code: 505}
+	MessageOk                   = OkResponse{Code: 200, Message: "Ok"}
+	MessageOkDatabaseChanged    = OkResponse{Code: 201, Message: "database changed"}
+	MessageError                = ErrResponse{Code: 500}
+	MessageErrorCommandNotFound = ErrResponse{Code: 500, Err: fmt.Errorf("command not found")}
+	MessageErrorUnmarshaling    = ErrResponse{Code: 506}
+	MessageErrorUnknownDb       = ErrResponse{Code: 505}
 )
 
 type Message struct {
