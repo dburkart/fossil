@@ -18,6 +18,10 @@ type ASTNode interface {
 	Walk(*database.Database) []database.Filter
 }
 
+type Numeric interface {
+	DerivedValue() int64
+}
+
 type (
 	BaseNode struct {
 		Value    string
@@ -122,14 +126,14 @@ func (q QuantifierNode) GenerateFilter(db *database.Database) database.Filter {
 				panic("Expected child to be of type *TimespanNode")
 			}
 
-			sampleDuration := timespan.Duration()
+			sampleDuration := timespan.DerivedValue()
 			nextTime := data[0].Time
 			filtered := database.Entries{}
 
 			for _, val := range data {
 				if val.Time.After(nextTime) || val.Time.Equal(nextTime) {
 					filtered = append(filtered, val)
-					nextTime = val.Time.Add(sampleDuration)
+					nextTime = val.Time.Add(time.Duration(sampleDuration))
 				}
 			}
 
@@ -238,20 +242,20 @@ func (t TimeWhenceNode) Time() (time.Time, error) {
 
 //-- TimespanNode
 
-func (t TimespanNode) Duration() time.Duration {
+func (t TimespanNode) DerivedValue() int64 {
 	switch t.Value {
 	case "@year":
-		return time.Hour * 24 * 365
+		return int64(time.Hour * 24 * 365)
 	case "@month":
-		return time.Hour * 24 * 30
+		return int64(time.Hour * 24 * 30)
 	case "@day":
-		return time.Hour * 24
+		return int64(time.Hour * 24)
 	case "@hour":
-		return time.Hour
+		return int64(time.Hour)
 	case "@minute":
-		return time.Minute
+		return int64(time.Minute)
 	case "@second":
-		return time.Second
+		return int64(time.Second)
 	}
 	return 0
 }
