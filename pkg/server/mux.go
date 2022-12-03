@@ -9,7 +9,6 @@ package server
 import (
 	"bufio"
 	"bytes"
-	"io"
 	"net"
 
 	"github.com/dburkart/fossil/pkg/database"
@@ -23,8 +22,8 @@ type MessageMux interface {
 	HandleState(s string, f MessageStateHandler)
 }
 
-type MessageHandler func(io.Writer, *proto.Request)
-type MessageStateHandler func(io.Writer, *conn, *proto.Request)
+type MessageHandler func(proto.ResponseWriter, *proto.Request)
+type MessageStateHandler func(proto.ResponseWriter, *conn, *proto.Request)
 
 type MapMux struct {
 	handlers      map[string]MessageHandler
@@ -41,7 +40,7 @@ func NewMapMux() MessageMux {
 func (mm *MapMux) ServeMessage(c *conn, msg proto.Message) {
 	sf, ok := mm.stateHandlers[msg.Command]
 	if ok {
-		sf(c.c, c, proto.NewRequest(msg, c.db))
+		sf(proto.NewResponseWriter(c.c), c, proto.NewRequest(msg, c.db))
 		return
 	}
 
@@ -51,7 +50,7 @@ func (mm *MapMux) ServeMessage(c *conn, msg proto.Message) {
 		c.c.Write([]byte("command not found\n"))
 		return
 	}
-	f(c.c, proto.NewRequest(msg, c.db))
+	f(proto.NewResponseWriter(c.c), proto.NewRequest(msg, c.db))
 }
 
 func (mm *MapMux) Handle(s string, f MessageHandler) {
