@@ -33,6 +33,5 @@ func (rw ResponseWriter) WriteMessage(t Marshaler) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-
-	return rw.w.Write(append(b, '\n'))
+	return rw.w.Write(b)
 }
