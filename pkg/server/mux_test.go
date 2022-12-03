@@ -7,13 +7,12 @@
 package server
 
 import (
-	"io"
 	"testing"
 
 	"github.com/dburkart/fossil/pkg/proto"
 )
 
-func stub2(rw io.Writer, msg *proto.Request) {
+func stub2(rw proto.ResponseWriter, msg *proto.Request) {
 
 }
 

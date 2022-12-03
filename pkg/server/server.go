@@ -7,9 +7,7 @@
 package server
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"net/http"
 	"runtime"
 	"time"
@@ -71,54 +69,69 @@ func (s *Server) ServeDatabase() {
 	srv := NewMessageServer(s.log)
 	mux := NewMapMux()
 
-	mux.HandleState(proto.CommandUse, func(w io.Writer, c *conn, r *proto.Request) {
-		dbName := string(r.Data())
-		db, ok := s.dbMap[dbName]
-		if !ok {
-			w.Write([]byte("ERR unknown db\n"))
+	mux.HandleState(proto.CommandUse, func(rw proto.ResponseWriter, c *conn, r *proto.Request) {
+		use := proto.UseRequest{}
+		err := proto.Unmarshal(r.Data(), &use)
+		if err != nil {
+			s.log.Error().Err(err).Msg("error unmarshaling")
+			rw.WriteMessage(proto.MessageErrorUnmarshaling)
 			return
 		}
-		c.SetDatabase(dbName, db)
+		db, ok := s.dbMap[use.DbName]
+		if !ok {
+			s.log.Error().Err(err).Str("dbName", use.DbName).Msg("error unknown db")
+			rw.WriteMessage(proto.MessageErrorUnknownDb)
+			return
+		}
+		c.SetDatabase(use.DbName, db)
 
-		w.Write([]byte(fmt.Sprintf("database set to %s\n", dbName)))
+		rw.WriteMessage(proto.MessageOkDatabaseChanged)
 	})
 
-	mux.Handle(proto.CommandQuery, func(w io.Writer, r *proto.Request) {
-		stmt := query.Prepare(r.Database(), string(r.Data()))
+	mux.Handle(proto.CommandQuery, func(rw proto.ResponseWriter, r *proto.Request) {
+		q := proto.QueryRequest{}
+
+		err := proto.Unmarshal(r.Data(), &q)
+		if err != nil {
+			s.log.Error().Err(err).Msg("error unmarshaling")
+			rw.WriteMessage(proto.MessageErrorUnmarshaling)
+			return
+		}
+
+		stmt := query.Prepare(r.Database(), q.Query)
 		result := stmt.Execute()
 
-		ret := new(bytes.Buffer)
-		for _, val := range result.Data {
-			n, err := ret.WriteString(val.ToString() + "\n")
-			if err != nil {
-				s.log.Error().Err(err).Msg("unable to write to results buffer")
-			}
-			s.log.Trace().Int("wrote", n).Msg("wrote to results buffer")
-		}
+		resp := proto.QueryResponse{}
+		resp.Results = result.Data
 
-		if ret.Len() == 0 {
-			w.Write([]byte("No Results\n"))
+		_, err = rw.WriteMessage(resp)
+		if err != nil {
+			s.log.Error().Err(err).Msg("unable to write response")
+			rw.WriteMessage(proto.MessageErrorUnmarshaling)
+			return
+		}
+	})
+
+	mux.Handle(proto.CommandAppend, func(rw proto.ResponseWriter, r *proto.Request) {
+		a := proto.AppendRequest{}
+		err := proto.Unmarshal(r.Data(), &a)
+		if err != nil {
+			s.log.Error().Err(err).Msg("error unmarshaling")
+			rw.WriteMessage(proto.MessageErrorUnmarshaling)
 			return
 		}
 
-		n, err := w.Write(append(ret.Bytes(), '\n'))
-		if err != nil {
-			s.log.Error().Err(err).Msg("unable to write response")
-		}
-		s.log.Trace().Int("wrote", n).Msg("wrote response")
+		s.log.Trace().Str("topic", a.Topic).Msg("append")
+		r.Database().Append(a.Data, a.Topic)
+		rw.WriteMessage(proto.MessageOk)
 	})
 
-	mux.Handle(proto.CommandAppend, func(w io.Writer, r *proto.Request) {
-		r.Database().Append(r.Data(), "")
-		w.Write([]byte("Ok!\n"))
-	})
-
-	mux.Handle(proto.CommandStats, func(w io.Writer, r *proto.Request) {
+	mux.Handle(proto.CommandStats, func(rw proto.ResponseWriter, r *proto.Request) {
 		s.log.Info().Msg("INFO command")
 		// FIXME: This should be updated periodically in it's own runloop, not computed on request
 		var m runtime.MemStats
 		runtime.ReadMemStats(&m)
-		w.Write([]byte(fmt.Sprintf(
+		rw.Write([]byte(fmt.Sprintf(
 			"Allocated Heap: %v\nTotal Memory: %v\nUptime: %s\nSegments: %d\n",
 			humanize.Bytes(m.Alloc),
 			humanize.Bytes(m.Sys),
