@@ -131,12 +131,12 @@ func (q QuantifierNode) GenerateFilter(db *database.Database) database.Filter {
 		case "all":
 			return data
 		case "sample":
-			timespan, ok := q.Children()[0].(*TimespanNode)
+			quantity, ok := q.Children()[0].(Numeric)
 			if !ok {
 				panic("Expected child to be of type *TimespanNode")
 			}
 
-			sampleDuration := timespan.DerivedValue()
+			sampleDuration := quantity.DerivedValue()
 			nextTime := data[0].Time
 			filtered := database.Entries{}
 
