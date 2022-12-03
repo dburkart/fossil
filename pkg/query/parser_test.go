@@ -82,7 +82,7 @@ func TestParseTimePredicate(t *testing.T) {
 func TestTimeWhence(t *testing.T) {
 	p := Parser{
 		Scanner: Scanner{
-			Input: "~1996-12-19T16:39:57-08:00",
+			Input: "~(1996-12-19T16:39:57-08:00)",
 		},
 	}
 

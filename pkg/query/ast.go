@@ -246,7 +246,7 @@ func (t TimeWhenceNode) Time() (time.Time, error) {
 	case t.Value == "~now":
 		return time.Now(), nil
 	default:
-		return time.Parse(time.RFC3339, t.Value[1:])
+		return time.Parse(time.RFC3339, t.Value[2:len(t.Value)-1])
 	}
 }
 

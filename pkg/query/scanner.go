@@ -96,24 +96,27 @@ func (s *Scanner) MatchTimeWhence() int {
 	pos := s.Pos + 1
 	r, _ = utf8.DecodeRuneInString(s.Input[pos:])
 
-	// If the next rune is a digit, we will assume that we need to match
+	// If the next rune is an open parenthesis, we will assume that we need to match
 	// an RFC3339 timestamp
-	if unicode.IsDigit(r) {
+	if r == '(' {
+		pos = pos + 1
+		r, _ = utf8.DecodeRuneInString(s.Input[pos:])
+
 		// Find the next boundary
 		var end int
-		for end = pos; !isNonTimeDelimiter(rune(s.Input[end])); end++ {
+		for end = pos; rune(s.Input[end]) != ')'; end++ {
 			if end == len(s.Input)-1 {
 				break
 			}
 		}
 
-		_, err := time.Parse(time.RFC3339, s.Input[pos:end+1])
+		_, err := time.Parse(time.RFC3339, s.Input[pos:end])
 		if err != nil {
 			return 0
 		}
 
 		// Add back one for '~', and another to include "end"
-		return end - pos + 2
+		return end - pos + 3
 	}
 
 	if strings.HasPrefix(s.Input[pos:], "now") {

@@ -18,7 +18,7 @@ topic           = "/" 1*(ALPHA / DIGIT / "/")
 time-predicate  = ( "since" time-expression ) / ( "before" time-expression ) / 
                   ( "between" time-expression "," time-expression )
 time-expression = ( time-whence ( "-" / "+" ) time-quantity ) / time-whence
-time-whence     = "~now" / "~" RFC3339
+time-whence     = "~now" / "~(" RFC3339 ")"
 time-quantity   = time-term *( ( "-" / "+" ) time-term )
 time-term       = time-atom *( ( "/" / "*" ) time-atom )
 time-atom       = number / timespan
