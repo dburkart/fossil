@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/dburkart/fossil/pkg/database"
@@ -17,17 +18,35 @@ import (
 )
 
 var (
-	MessageOk                   = OkResponse{Code: 200, Message: "Ok"}
-	MessageOkDatabaseChanged    = OkResponse{Code: 201, Message: "database changed"}
-	MessageError                = ErrResponse{Code: 500}
-	MessageErrorCommandNotFound = ErrResponse{Code: 500, Err: fmt.Errorf("command not found")}
-	MessageErrorUnmarshaling    = ErrResponse{Code: 506}
-	MessageErrorUnknownDb       = ErrResponse{Code: 505}
+	MessageOk                   = NewMessageWithType(CommandOk, OkResponse{Code: 200, Message: "Ok"})
+	MessageOkDatabaseChanged    = NewMessageWithType(CommandOk, OkResponse{Code: 201, Message: "database changed"})
+	MessageError                = NewMessageWithType(CommandError, ErrResponse{Code: 500})
+	MessageErrorCommandNotFound = NewMessageWithType(CommandError, ErrResponse{Code: 500, Err: fmt.Errorf("command not found")})
+	MessageErrorUnmarshaling    = NewMessageWithType(CommandError, ErrResponse{Code: 506, Err: fmt.Errorf("error unmarshaling")})
+	MessageErrorUnknownDb       = NewMessageWithType(CommandError, ErrResponse{Code: 505})
 )
 
 type Message struct {
 	Command string
 	Data    []byte
+}
+
+func NewMessage(cmd string, data []byte) Message {
+	return Message{
+		cmd,
+		data,
+	}
+}
+
+func NewMessageWithType(cmd string, t Marshaler) Message {
+	d, err := t.Marshal()
+	if err != nil {
+		panic(err)
+	}
+	return Message{
+		cmd,
+		d,
+	}
 }
 
 // ParseMessage searches the byte slice for a message terminator and parses a message from the sequence of bytes
@@ -45,6 +64,15 @@ func ParseMessage(b []byte) (Message, error) {
 	}
 
 	return ret, nil
+}
+
+func (m Message) Marshal() ([]byte, error) {
+	b := new(bytes.Buffer)
+	b.Write([]byte(m.Command))
+	b.WriteByte(' ')
+	b.Write(m.Data)
+	b.WriteByte('\n')
+	return b.Bytes(), nil
 }
 
 func (m Message) MarshalZerologObject(e *zerolog.Event) {
@@ -66,11 +94,6 @@ type Marshaler interface {
 type Unmarshaler interface {
 	Unmarshal([]byte) error
 }
-
-// var (
-// 	_ WireMessage = QueryRequest{}
-// 	_ WireMessage = QueryResponse{}
-// )
 
 type (
 	ErrResponse struct {
@@ -121,9 +144,7 @@ func (rq *UseRequest) Unmarshal(b []byte) error {
 
 // Marshal ...
 func (rq ErrResponse) Marshal() ([]byte, error) {
-	b := []byte{}
-	binary.LittleEndian.AppendUint32(b, rq.Code)
-	buf := bytes.NewBuffer(b)
+	buf := bytes.NewBuffer(binary.LittleEndian.AppendUint32([]byte{}, rq.Code))
 	err := buf.WriteByte(' ')
 	if err != nil {
 		return nil, err
@@ -145,7 +166,7 @@ func (rq ErrResponse) Marshal() ([]byte, error) {
 // Unmarshal ...
 func (rq *ErrResponse) Unmarshal(b []byte) error {
 	buf := bytes.NewBuffer(b)
-	err := binary.Read(buf, binary.LittleEndian, rq.Code)
+	err := binary.Read(buf, binary.LittleEndian, &rq.Code)
 	if err != nil {
 		return err
 	}
@@ -156,8 +177,7 @@ func (rq *ErrResponse) Unmarshal(b []byte) error {
 	if space != ' ' {
 		return fmt.Errorf("expected space, got '%b'", space)
 	}
-	msg := []byte{}
-	_, err = buf.Read(msg)
+	msg, err := io.ReadAll(buf)
 	if err != nil {
 		return err
 	}
@@ -171,8 +191,8 @@ func (rq *ErrResponse) Unmarshal(b []byte) error {
 
 // Marshal ...
 func (rq OkResponse) Marshal() ([]byte, error) {
-	buf := new(bytes.Buffer)
-	binary.LittleEndian.AppendUint32(buf.Bytes(), rq.Code)
+	b := []byte{}
+	buf := bytes.NewBuffer(binary.LittleEndian.AppendUint32(b, rq.Code))
 	err := buf.WriteByte(' ')
 	if err != nil {
 		return nil, err
@@ -187,7 +207,7 @@ func (rq OkResponse) Marshal() ([]byte, error) {
 // Unmarshal ...
 func (rq *OkResponse) Unmarshal(b []byte) error {
 	buf := bytes.NewBuffer(b)
-	err := binary.Read(buf, binary.LittleEndian, rq.Code)
+	err := binary.Read(buf, binary.LittleEndian, &rq.Code)
 	if err != nil {
 		return err
 	}
@@ -195,11 +215,11 @@ func (rq *OkResponse) Unmarshal(b []byte) error {
 	if err != nil {
 		return err
 	}
+
 	if space != ' ' {
 		return fmt.Errorf("expected space, got '%b'", space)
 	}
-	msg := []byte{}
-	_, err = buf.Read(msg)
+	msg, err := io.ReadAll(buf)
 	if err != nil {
 		return err
 	}
@@ -238,10 +258,11 @@ func (rq *AppendRequest) Unmarshal(b []byte) error {
 	}
 	rq.Topic = string(topic[:len(topic)-1])
 
-	_, err = buf.Read(rq.Data)
+	data, err := io.ReadAll(buf)
 	if err != nil {
 		return err
 	}
+	rq.Data = data
 
 	return nil
 }
@@ -265,12 +286,54 @@ func (rq *QueryRequest) Unmarshal(b []byte) error {
 
 // Marshal ...
 func (rq QueryResponse) Marshal() ([]byte, error) {
+	b := []byte{}
+	buf := bytes.NewBuffer(binary.LittleEndian.AppendUint32(b, uint32(len(rq.Results))))
+	buf.WriteByte(' ')
+	for i := range rq.Results {
+		ent := rq.Results[i].ToString()
+		l := binary.LittleEndian.AppendUint32([]byte{}, uint32(len(ent)))
+		buf.Write(l)
+		buf.WriteString(ent)
+	}
 
-	return nil, nil
+	return buf.Bytes(), nil
 }
 
 // Unmarshal ...
 func (rq *QueryResponse) Unmarshal(b []byte) error {
-
+	var count uint32 = 0
+	buf := bytes.NewBuffer(b)
+	err := binary.Read(buf, binary.LittleEndian, &count)
+	if err != nil {
+		return err
+	}
+	space, err := buf.ReadByte()
+	if err != nil {
+		return err
+	}
+	if space != ' ' {
+		return fmt.Errorf("expected space, got '%b'", space)
+	}
+	var i uint32
+	for i = 0; i < count; i++ {
+		var l uint32
+		err := binary.Read(buf, binary.LittleEndian, &l)
+		if err != nil {
+			return err
+		}
+		line := make([]byte, l)
+		n, err := buf.Read(line)
+		if err != nil {
+			return err
+		}
+		if uint32(n) != l {
+			return fmt.Errorf("error entry len not the right len %d != %d", n, l)
+		}
+		ent, err := database.ParseEntry(string(line))
+		if err != nil {
+			return err
+		}
+		rq.Results = append(rq.Results, ent)
+	}
 	return nil
 }
