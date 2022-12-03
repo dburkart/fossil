@@ -104,7 +104,7 @@ func (s *Server) ServeDatabase() {
 		resp := proto.QueryResponse{}
 		resp.Results = result.Data
 
-		_, err = rw.WriteMessage(resp)
+		_, err = rw.WriteMessage(proto.NewMessageWithType(proto.CommandQuery, resp))
 		if err != nil {
 			s.log.Error().Err(err).Msg("unable to write response")
 			rw.WriteMessage(proto.MessageErrorUnmarshaling)
