@@ -16,7 +16,6 @@ import (
 	"github.com/dburkart/fossil/pkg/database"
 	"github.com/dburkart/fossil/pkg/proto"
 	"github.com/dburkart/fossil/pkg/query"
-	"github.com/dustin/go-humanize"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 )
@@ -127,17 +126,16 @@ func (s *Server) ServeDatabase() {
 	})
 
 	mux.Handle(proto.CommandStats, func(rw proto.ResponseWriter, r *proto.Request) {
-		s.log.Info().Msg("INFO command")
 		// FIXME: This should be updated periodically in it's own runloop, not computed on request
 		var m runtime.MemStats
 		runtime.ReadMemStats(&m)
-		rw.Write([]byte(fmt.Sprintf(
-			"Allocated Heap: %v\nTotal Memory: %v\nUptime: %s\nSegments: %d\n",
-			humanize.Bytes(m.Alloc),
-			humanize.Bytes(m.Sys),
-			time.Now().Sub(s.startupTime).String(),
-			len(r.Database().Segments),
-		)))
+		resp := proto.StatsResponse{
+			AllocHeap: m.Alloc,
+			TotalMem:  m.Sys,
+			Uptime:    time.Since(s.startupTime),
+			Segments:  len(r.Database().Segments),
+		}
+		rw.WriteMessage(proto.NewMessageWithType(proto.CommandStats, resp))
 	})
 
 	err := srv.ListenAndServe(s.port, mux)
