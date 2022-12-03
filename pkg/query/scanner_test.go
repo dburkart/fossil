@@ -34,10 +34,10 @@ func TestMatchTimeWhence(t *testing.T) {
 		t.Errorf("~now should have width %d, not %d", len("~now"), width)
 	}
 
-	s.Input = "~2006-01-02T15:04:05-07:00"
+	s.Input = "~(2006-01-02T15:04:05-07:00)"
 	width = s.MatchTimeWhence()
-	if width != len("~1996-12-19T16:39:57-08:00") {
-		t.Errorf("RFC3339 should have length %d, not %d", len("~2006-01-02T15:04:05-07:00"), width)
+	if width != len("~(2006-01-02T15:04:05-07:00)") {
+		t.Errorf("RFC3339 should have length %d, not %d", len("~(2006-01-02T15:04:05-07:00)"), width)
 	}
 }
 
