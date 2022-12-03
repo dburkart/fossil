@@ -46,6 +46,15 @@ var Command = &cobra.Command{
 				log.Error().Err(err).Str("address", target.Address).Msg("unable to connect to server")
 			}
 
+			// Always send a use first
+			useMsg := proto.UseRequest{DbName: target.Database}
+			b, _ := useMsg.Marshal()
+			c.Write(append([]byte(proto.CommandUse), ' '))
+			c.Write(append(b, '\n'))
+			buf := make([]byte, 256)
+			c.Read(buf)
+			fmt.Print(string(buf))
+
 			clientPrompt(c)
 		}
 	},
