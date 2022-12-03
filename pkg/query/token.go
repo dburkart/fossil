@@ -76,6 +76,7 @@ func (t TokenType) ToString() string {
 }
 
 type Token struct {
-	Type   TokenType
-	Lexeme string
+	Type     TokenType
+	Lexeme   string
+	Location [2]int
 }
