@@ -8,6 +8,7 @@ package database
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -26,7 +27,23 @@ type Entry struct {
 }
 
 func (e *Entry) ToString() string {
-	return fmt.Sprintf("%s\t%s\t%s", e.Time, e.Topic, string(e.Data))
+	return fmt.Sprintf("%s\t%s\t%s", e.Time.Format(time.RFC3339Nano), e.Topic, string(e.Data))
+}
+
+func ParseEntry(s string) (Entry, error) {
+	ent := Entry{}
+	parts := strings.Split(s, "\t")
+	if len(parts) < 3 {
+		return ent, fmt.Errorf("malformed entry, expected 3 parts gpt %d", len(parts))
+	}
+	t, err := time.Parse(time.RFC3339Nano, parts[0])
+	if err != nil {
+		return ent, err
+	}
+	ent.Time = t
+	ent.Topic = parts[1]
+	ent.Data = []byte(parts[2])
+	return ent, nil
 }
 
 type Entries []Entry
