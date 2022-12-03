@@ -24,6 +24,7 @@ func initConfig(configFile string) {
 	viper.SetConfigType("toml")
 	viper.AddConfigPath("config")
 	viper.AddConfigPath("/etc/fossil/")
+	viper.AddConfigPath("/usr/local/etc/fossil/")
 	viper.AddConfigPath("$HOME/.fossil")
 	viper.AddConfigPath(".")
 	viper.SetConfigFile(configFile)
