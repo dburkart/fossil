@@ -114,12 +114,15 @@ func (c *conn) SetDatabase(name string, db *database.Database) {
 
 func (c *conn) Handle(conn *net.TCPConn) {
 	c.c = conn
+	defer c.c.Close()
+
 	c.rw = proto.NewResponseWriter(c.c)
 
 	for {
 		message, err := proto.ReadBytes(c.c)
 		if err != nil {
 			c.log.Error().Err(err).Msg("error reading message")
+			return
 		}
 
 		c.log.Trace().Int("read", len(message)).Msg("read from conn")
