@@ -7,8 +7,6 @@
 package server
 
 import (
-	"bufio"
-	"bytes"
 	"net"
 
 	"github.com/dburkart/fossil/pkg/database"
@@ -118,32 +116,21 @@ func (c *conn) Handle(conn *net.TCPConn) {
 	c.c = conn
 	c.rw = proto.NewResponseWriter(c.c)
 
-	// connection error states
-	scanner := bufio.NewScanner(c.c)
 	for {
-		scan := scanner.Scan()
-		if !scan {
-			if scanner.Err() != nil {
-				c.log.Error().Err(scanner.Err()).Msg("error reading from the conn")
-				continue
-			}
-			// io.EOF
-			c.c.Close()
-			return
+		message, err := proto.ReadBytes(c.c)
+		if err != nil {
+			c.log.Error().Err(err).Msg("error reading message")
 		}
 
-		line := scanner.Bytes()
-		c.log.Trace().Int("read", len(line)).Msg("read from conn")
-		buf := bytes.NewBuffer(line)
-		msg, err := proto.ParseMessage(buf.Bytes())
+		c.log.Trace().Int("read", len(message)).Msg("read from conn")
+		msg, err := proto.ParseMessage(message)
 		if err != nil {
 			c.rw.WriteMessage(proto.MessageErrorMalformedMessage)
-			c.log.Trace().Bytes("buf", line).Send()
-			c.log.Error().Err(err).Msg("error parsing message from buffer")
+			c.log.Trace().Bytes("buf", message).Send()
+			c.log.Error().Err(err).Msg("error parsing message from []bytes")
 			continue
 		}
 		c.log.Trace().Object("msg", msg).Msg("parsed message")
-
 		go c.mux.ServeMessage(c, proto.NewRequest(msg, c.db))
 	}
 }

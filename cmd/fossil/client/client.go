@@ -9,6 +9,8 @@ package client
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	"net"
 	"os"
@@ -54,9 +56,11 @@ var Command = &cobra.Command{
 			// Always send a use first
 			useMsg := proto.NewMessageWithType(proto.CommandUse, proto.UseRequest{DbName: target.Database})
 			b, _ := useMsg.Marshal()
-			c.Write(b)
-			buf := make([]byte, 256)
-			c.Read(buf)
+			send(c, b)
+			buf, err := proto.ReadBytes(c)
+			if err != nil {
+				log.Fatal().Err(err)
+			}
 			m, err := proto.ParseMessage(buf)
 			if err != nil {
 				log.Fatal().Err(err).Msg("unable to parse server use response")
@@ -85,7 +89,9 @@ func init() {
 }
 
 func send(c net.Conn, msg []byte) error {
-	n, err := c.Write(msg)
+	buf := bytes.NewBuffer(binary.LittleEndian.AppendUint32([]byte{}, uint32(len(msg))))
+	buf.Write(msg)
+	n, err := c.Write(buf.Bytes())
 	if err != nil {
 		log.Error().Err(err).Msg("unable to write to server")
 		return err
@@ -153,82 +159,77 @@ func clientPrompt(c net.Conn) {
 		if err != nil {
 			fmt.Printf("Err: unable to send command\n\t'%s'\n", err)
 		}
+		
+		resp, err := proto.ReadBytes(c)
+		if err != nil {
+			log.Error().Err(err).Msg("could not read bytes")
+			continue
+		}
 
-		respRdr := bufio.NewReader(c)
-		for {
-			resp, err := respRdr.ReadBytes('\n')
+		msg, err := proto.ParseMessage(resp)
+		if err != nil {
+			log.Error().Err(err).Msg("malformed message")
+			fmt.Println(resp)
+			continue
+		}
+		switch msg.Command {
+		case proto.CommandStats:
+			t := proto.StatsResponse{}
+			err = t.Unmarshal(msg.Data)
 			if err != nil {
-				fmt.Printf("Err: unable to read response\n\t'%s'\n", string(resp))
+				log.Error().Err(err).Send()
 				continue
 			}
-			msg, err := proto.ParseMessage(resp)
+			fmt.Printf(
+				"Allocated Heap: %v\nTotal Memory: %v\nUptime: %s\nSegments: %d\n",
+				humanize.Bytes(t.AllocHeap),
+				humanize.Bytes(t.TotalMem),
+				t.Uptime,
+				t.Segments,
+			)
+		case proto.CommandQuery:
+			t := proto.QueryResponse{}
+			err = t.Unmarshal(msg.Data)
 			if err != nil {
-				log.Error().Err(err).Msg("malformed message")
-				fmt.Println(resp)
+				log.Error().Err(err).Send()
 				continue
 			}
-			switch msg.Command {
-			case proto.CommandStats:
-				t := proto.StatsResponse{}
-				err = t.Unmarshal(msg.Data)
-				if err != nil {
-					log.Error().Err(err).Send()
-					continue
-				}
-				fmt.Printf(
-					"Allocated Heap: %v\nTotal Memory: %v\nUptime: %s\nSegments: %d\n",
-					humanize.Bytes(t.AllocHeap),
-					humanize.Bytes(t.TotalMem),
-					t.Uptime,
-					t.Segments,
-				)
-			case proto.CommandQuery:
-				t := proto.QueryResponse{}
-				err = t.Unmarshal(msg.Data)
-				if err != nil {
-					log.Error().Err(err).Send()
-					continue
-				}
 
-				table := tablewriter.NewWriter(os.Stdout)
-				table.SetHeader([]string{"Time", "Topic", "Data"})
-				for i := range t.Results {
-					table.Append([]string{
-						t.Results[i].Time.Format(time.RFC3339Nano),
-						t.Results[i].Topic,
-						string(t.Results[i].Data),
-					})
-				}
+			table := tablewriter.NewWriter(os.Stdout)
+			table.SetHeader([]string{"Time", "Topic", "Data"})
+			for i := range t.Results {
+				table.Append([]string{
+					t.Results[i].Time.Format(time.RFC3339Nano),
+					t.Results[i].Topic,
+					string(t.Results[i].Data),
+				})
+			}
 
-				table.Render()
-			case proto.CommandError:
-				t := proto.ErrResponse{}
-				err = t.Unmarshal(msg.Data)
-				if err != nil {
-					log.Error().Err(err).Send()
-					continue
-				}
-				fmt.Println(t.Code, t.Err)
-			case proto.CommandOk:
-				t := proto.OkResponse{}
-				err = t.Unmarshal(msg.Data)
-				if err != nil {
-					log.Error().Err(err).Send()
-					continue
-				}
-				fmt.Println(t.Code, t.Message)
-			case proto.CommandAppend:
-				t := proto.OkResponse{}
-				err = t.Unmarshal(msg.Data)
-				if err != nil {
-					log.Error().Err(err).Send()
-					continue
-				}
-				fmt.Println(t.Code, t.Message)
+			table.Render()
+		case proto.CommandError:
+			t := proto.ErrResponse{}
+			err = t.Unmarshal(msg.Data)
+			if err != nil {
+				log.Error().Err(err).Send()
+				continue
 			}
-			if respRdr.Buffered() <= 0 {
-				break
+			fmt.Println(t.Code, t.Err)
+		case proto.CommandOk:
+			t := proto.OkResponse{}
+			err = t.Unmarshal(msg.Data)
+			if err != nil {
+				log.Error().Err(err).Send()
+				continue
 			}
+			fmt.Println(t.Code, t.Message)
+		case proto.CommandAppend:
+			t := proto.OkResponse{}
+			err = t.Unmarshal(msg.Data)
+			if err != nil {
+				log.Error().Err(err).Send()
+				continue
+			}
+			fmt.Println(t.Code, t.Message)
 		}
 	}
 }
