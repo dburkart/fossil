@@ -16,8 +16,7 @@ func Prepare(d *database.Database, statement string) (database.Filters, error) {
 	}
 
 	ast, err := p.Parse()
-
-	if ast == nil {
+	if err != nil {
 		return []database.Filter{}, err
 	}
 
