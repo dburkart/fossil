@@ -8,21 +8,21 @@ package query
 
 import "github.com/dburkart/fossil/pkg/database"
 
-func Prepare(d *database.Database, statement string) database.Filters {
+func Prepare(d *database.Database, statement string) (database.Filters, error) {
 	p := Parser{
 		Scanner{
 			Input: statement,
 		},
 	}
 
-	ast := p.Parse()
+	ast, err := p.Parse()
 
 	if ast == nil {
-		return []database.Filter{}
+		return []database.Filter{}, err
 	}
 
 	// Walk the tree
 	filters := ast.Walk(d)
 
-	return filters
+	return filters, err
 }

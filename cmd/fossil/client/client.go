@@ -103,7 +103,12 @@ func localPrompt(db *database.Database) {
 			log.Fatal().Err(err)
 		}
 
-		stmt := query.Prepare(db, line)
+		stmt, err := query.Prepare(db, line)
+		if err != nil {
+			fmt.Println(err.Error())
+			continue
+		}
+
 		result := stmt.Execute()
 
 		for _, val := range result.Data {
