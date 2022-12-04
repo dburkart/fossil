@@ -20,7 +20,7 @@ func TestParseAllQuantifier(t *testing.T) {
 		},
 	}
 
-	ast := p.Parse()
+	ast, _ := p.Parse()
 
 	if fmt.Sprint(reflect.TypeOf(ast)) != "*query.QueryNode" {
 		t.Errorf("wanted root node to be *query.QueryNode, found %s", reflect.TypeOf(ast))

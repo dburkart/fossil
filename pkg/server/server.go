@@ -97,7 +97,11 @@ func (s *Server) ServeDatabase() {
 			return
 		}
 
-		stmt := query.Prepare(r.Database(), q.Query)
+		stmt, err := query.Prepare(r.Database(), q.Query)
+		if err != nil {
+			rw.WriteMessage(proto.NewMessageWithType(proto.CommandError, proto.ErrResponse{Code: 504, Err: err}))
+			return
+		}
 		result := stmt.Execute()
 
 		resp := proto.QueryResponse{}
