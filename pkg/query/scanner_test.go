@@ -6,7 +6,9 @@
 
 package query
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestMatchTimespan(t *testing.T) {
 	s := Scanner{Input: "@hour"}
@@ -21,6 +23,21 @@ func TestMatchTimespan(t *testing.T) {
 
 	if width != 0 {
 		t.Error("@bogus should not have a width!")
+	}
+}
+
+func TestMatchTimeWhence(t *testing.T) {
+	s := Scanner{Input: "~now"}
+
+	width := s.MatchTimeWhence()
+	if width != len("~now") {
+		t.Errorf("~now should have width %d, not %d", len("~now"), width)
+	}
+
+	s.Input = "~(2006-01-02T15:04:05-07:00)"
+	width = s.MatchTimeWhence()
+	if width != len("~(2006-01-02T15:04:05-07:00)") {
+		t.Errorf("RFC3339 should have length %d, not %d", len("~(2006-01-02T15:04:05-07:00)"), width)
 	}
 }
 

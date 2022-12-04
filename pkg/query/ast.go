@@ -7,7 +7,9 @@
 package query
 
 import (
+	"fmt"
 	"github.com/dburkart/fossil/pkg/database"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -18,10 +20,58 @@ type ASTNode interface {
 	Walk(*database.Database) []database.Filter
 }
 
-type BaseNode struct {
-	Value    string
-	children []ASTNode
+type Numeric interface {
+	DerivedValue() int64
 }
+
+type (
+	BaseNode struct {
+		Value    string
+		children []ASTNode
+	}
+
+	QueryNode struct {
+		BaseNode
+	}
+
+	QuantifierNode struct {
+		BaseNode
+	}
+
+	TopicSelectorNode struct {
+		BaseNode
+	}
+
+	TopicNode struct {
+		BaseNode
+	}
+
+	TimePredicateNode struct {
+		BaseNode
+	}
+
+	TimeExpressionNode struct {
+		BaseNode
+	}
+
+	TimeWhenceNode struct {
+		BaseNode
+	}
+
+	BinaryOpNode struct {
+		BaseNode
+	}
+
+	TimespanNode struct {
+		BaseNode
+	}
+
+	NumberNode struct {
+		BaseNode
+	}
+)
+
+//-- BaseNode
 
 func (b *BaseNode) Children() []ASTNode {
 	return b.children
@@ -63,17 +113,13 @@ func (b *BaseNode) Walk(d *database.Database) []database.Filter {
 	return b.descend(d, b)
 }
 
-type QueryNode struct {
-	BaseNode
-}
+//-- QueryNode
 
 func (q QueryNode) GenerateFilter(_ *database.Database) database.Filter {
 	return nil
 }
 
-type QuantifierNode struct {
-	BaseNode
-}
+//-- QuantifierNode
 
 func (q QuantifierNode) GenerateFilter(db *database.Database) database.Filter {
 	return func(data database.Entries) database.Entries {
@@ -85,19 +131,19 @@ func (q QuantifierNode) GenerateFilter(db *database.Database) database.Filter {
 		case "all":
 			return data
 		case "sample":
-			timespan, ok := q.Children()[0].(*TimespanNode)
+			quantity, ok := q.Children()[0].(Numeric)
 			if !ok {
 				panic("Expected child to be of type *TimespanNode")
 			}
 
-			sampleDuration := timespan.Duration()
+			sampleDuration := quantity.DerivedValue()
 			nextTime := data[0].Time
 			filtered := database.Entries{}
 
 			for _, val := range data {
 				if val.Time.After(nextTime) || val.Time.Equal(nextTime) {
 					filtered = append(filtered, val)
-					nextTime = val.Time.Add(sampleDuration)
+					nextTime = val.Time.Add(time.Duration(sampleDuration))
 				}
 			}
 
@@ -109,9 +155,7 @@ func (q QuantifierNode) GenerateFilter(db *database.Database) database.Filter {
 	}
 }
 
-type TopicSelectorNode struct {
-	BaseNode
-}
+//-- TopicSelectorNode
 
 func (q TopicSelectorNode) GenerateFilter(db *database.Database) database.Filter {
 	topic, ok := q.Children()[0].(*TopicNode)
@@ -147,28 +191,121 @@ func (q TopicSelectorNode) GenerateFilter(db *database.Database) database.Filter
 	}
 }
 
-type TopicNode struct {
-	BaseNode
+//-- TimePredicateNode
+
+func (t TimePredicateNode) GenerateFilter(db *database.Database) database.Filter {
+	var startTime, endTime time.Time
+	var err error
+
+	switch t.Value {
+	case "before":
+		endTime, err = t.Children()[0].(*TimeExpressionNode).Time()
+		// It shouldn't be possible there to be an error here (we should catch
+		// it earlier when parsing, so panic
+		if err != nil {
+			panic(err)
+		}
+
+		startTime = db.Segments[0].HeadTime
+	case "since":
+		startTime, err = t.Children()[0].(*TimeExpressionNode).Time()
+		// It shouldn't be possible there to be an error here (we should catch
+		// it earlier when parsing, so panic
+		if err != nil {
+			panic(err)
+		}
+
+		endTime = time.Now()
+	}
+
+	timeRange := database.TimeRange{Start: startTime, End: endTime}
+
+	return func(data database.Entries) database.Entries {
+		if data == nil {
+			return db.Retrieve(database.Query{Range: &timeRange, RangeSemantics: t.Value})
+		}
+
+		// TODO: Handle non-nil case! Let's factor out some of the Retrieve functionality for
+		//       filtering ranges.
+		return nil
+	}
 }
 
-type TimespanNode struct {
-	BaseNode
+//-- TimeExpressionNode
+
+func (t TimeExpressionNode) Time() (time.Time, error) {
+	lh := t.Children()[0].(*TimeWhenceNode)
+	tm, err := lh.Time()
+	if err != nil {
+		return tm, err
+	}
+
+	switch t.Value {
+	case "-":
+		rh := t.Children()[1].(Numeric)
+		return tm.Add(time.Duration(rh.DerivedValue() * -1)), err
+	case "+":
+		rh := t.Children()[1].(Numeric)
+		return tm.Add(time.Duration(rh.DerivedValue())), err
+	}
+
+	return tm, err
 }
 
-func (t TimespanNode) Duration() time.Duration {
+//-- TimeWhenceNode
+
+func (t TimeWhenceNode) Time() (time.Time, error) {
+	switch {
+	case t.Value == "~now":
+		return time.Now(), nil
+	default:
+		return time.Parse(time.RFC3339, t.Value[2:len(t.Value)-1])
+	}
+}
+
+//-- BinaryOpNode
+
+func (b BinaryOpNode) DerivedValue() int64 {
+	lh, rh := b.Children()[0].(Numeric), b.Children()[1].(Numeric)
+
+	switch b.Value {
+	case "*":
+		return lh.DerivedValue() * rh.DerivedValue()
+	case "-":
+		return lh.DerivedValue() - rh.DerivedValue()
+	case "+":
+		return lh.DerivedValue() + rh.DerivedValue()
+	}
+
+	panic(fmt.Sprintf("Unknown operator '%s'", b.Value))
+}
+
+//-- TimespanNode
+
+func (t TimespanNode) DerivedValue() int64 {
 	switch t.Value {
 	case "@year":
-		return time.Hour * 24 * 365
+		return int64(time.Hour * 24 * 365)
 	case "@month":
-		return time.Hour * 24 * 30
+		return int64(time.Hour * 24 * 30)
 	case "@day":
-		return time.Hour * 24
+		return int64(time.Hour * 24)
 	case "@hour":
-		return time.Hour
+		return int64(time.Hour)
 	case "@minute":
-		return time.Minute
+		return int64(time.Minute)
 	case "@second":
-		return time.Second
+		return int64(time.Second)
 	}
 	return 0
+}
+
+//-- NumberNode
+
+func (n NumberNode) DerivedValue() int64 {
+	i, err := strconv.ParseInt(n.Value, 10, 64)
+	if err != nil {
+		panic(fmt.Sprintf("NumberNode had unexpected non-numerical value: %s", n.Value))
+	}
+	return i
 }

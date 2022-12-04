@@ -6,7 +6,9 @@
 
 package query
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type Parser struct {
 	Scanner Scanner
@@ -43,8 +45,14 @@ func (p *Parser) query() ASTNode {
 		q.AddChild(topicSelector)
 	}
 
-	// TODO: Check for time-predicate
-	// TODO: Check for data-predicate
+	timePredicate := p.timePredicate()
+	if timePredicate != nil {
+		q.AddChild(timePredicate)
+	}
+
+	// TODO: Check for data-predicate.
+	// 		 Note: this will have to be at the beginning of our filters, based
+	//	     on the current design
 
 	return &q
 }
@@ -68,22 +76,13 @@ func (p *Parser) quantifier() ASTNode {
 
 	if tok.Lexeme == "sample" {
 		tok = p.Scanner.Emit()
-
 		if tok.Type != TOK_PAREN_L {
 			panic(fmt.Sprintf("Error: unexpected token '%s', expected '('", tok.Lexeme))
 		}
 
-		tok = p.Scanner.Emit()
-
-		if tok.Type != TOK_TIMESPAN {
-			panic(fmt.Sprintf("Error: unexpected token '%s', expected valid timespan (@hour, @minute, @second, etc.)", tok.Lexeme))
-		}
-		q.AddChild(&TimespanNode{BaseNode{
-			Value: tok.Lexeme,
-		}})
+		q.AddChild(p.timeQuantity())
 
 		tok = p.Scanner.Emit()
-
 		if tok.Type != TOK_PAREN_R {
 			panic(fmt.Sprintf("Error: unexpected token '%s', expected ')'", tok.Lexeme))
 		}
@@ -135,4 +134,145 @@ func (p *Parser) topic() ASTNode {
 	}}
 
 	return &t
+}
+
+// timePredicate returns a TimePredicateNode
+//
+// Grammar:
+//
+//	time-predicate  = ( "since" time-expression ) / ( "before" time-expression ) /
+//	                ( "between" time-expression ".." time-expression )
+func (p *Parser) timePredicate() ASTNode {
+	tok := p.Scanner.Emit()
+
+	if tok.Type != TOK_KEYWORD || (tok.Lexeme != "since" && tok.Lexeme != "before" &&
+		tok.Lexeme != "between") {
+		// time-predicates are optional, so don't error out
+		p.Scanner.Rewind()
+		return nil
+	}
+
+	expression := p.timeExpression()
+
+	// TODO: Handle between
+
+	t := TimePredicateNode{BaseNode{
+		Value: tok.Lexeme,
+	}}
+	t.AddChild(expression)
+
+	return &t
+}
+
+// timeExpression returns a TimeExpressionNode
+//
+// Grammar:
+//
+//	time-expression = ( time-whence ( "-" / "+" ) time-quantity ) / time-whence
+func (p *Parser) timeExpression() ASTNode {
+	whence := p.timeWhence()
+
+	t := TimeExpressionNode{BaseNode{
+		Value: "",
+	}}
+	t.AddChild(whence)
+
+	tok := p.Scanner.Emit()
+	if tok.Lexeme == "-" || tok.Lexeme == "+" {
+		t.Value = tok.Lexeme
+		t.AddChild(p.timeQuantity())
+	} else {
+		p.Scanner.Rewind()
+	}
+
+	return &t
+}
+
+// timeWhence returns a TimeWhenceNode
+//
+// Grammar:
+//
+//	time-whence     = "~now" / "~" RFC3339
+func (p *Parser) timeWhence() ASTNode {
+	tok := p.Scanner.Emit()
+
+	if tok.Type != TOK_WHENCE {
+		panic(fmt.Sprintf("Error: Unexpected token '%s', expected a time-whence (~now, etc.)", tok.Lexeme))
+	}
+
+	return &TimeWhenceNode{BaseNode{
+		Value: tok.Lexeme,
+	}}
+}
+
+// timeQuantity returns either the result of a single timeTerm, or a BinaryOpNode
+//
+// Grammar:
+//
+//	time-quantity   = time-term *( ( "-" / "+" ) time-term )
+func (p *Parser) timeQuantity() ASTNode {
+	lh := p.timeTerm()
+
+	tok := p.Scanner.Emit()
+	if tok.Lexeme != "-" && tok.Lexeme != "+" {
+		p.Scanner.Rewind()
+		return lh
+	}
+
+	node := BinaryOpNode{BaseNode{
+		Value: tok.Lexeme,
+	}}
+
+	rh := p.timeTerm()
+
+	node.AddChild(lh)
+	node.AddChild(rh)
+	return &node
+}
+
+// timeTerm returns the result of a timeAtom, or a BinaryOpNode
+//
+// Grammar:
+//
+//	time-term       = time-atom *( "*" time-atom )
+func (p *Parser) timeTerm() ASTNode {
+	lh := p.timeAtom()
+
+	tok := p.Scanner.Emit()
+	if tok.Lexeme != "*" {
+		p.Scanner.Rewind()
+		return lh
+	}
+
+	node := BinaryOpNode{BaseNode{
+		Value: tok.Lexeme,
+	}}
+
+	rh := p.timeAtom()
+
+	node.AddChild(lh)
+	node.AddChild(rh)
+	return &node
+}
+
+// timeAtom returns a NumberNode, or a TimespanNode
+//
+// Grammar:
+//
+//	time-atom       = number / timespan
+func (p *Parser) timeAtom() ASTNode {
+	tok := p.Scanner.Emit()
+
+	switch tok.Type {
+	case TOK_NUMBER:
+		return &NumberNode{BaseNode{
+			Value: tok.Lexeme,
+		}}
+	case TOK_TIMESPAN:
+		return &TimespanNode{BaseNode{
+			Value: tok.Lexeme,
+		}}
+	}
+
+	panic(fmt.Sprintf("Expected number of timespan, got '%s'", tok.Lexeme))
 }
