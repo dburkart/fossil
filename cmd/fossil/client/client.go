@@ -142,6 +142,7 @@ func clientPrompt(c net.Conn) {
 			fmt.Printf("\n> ")
 		}
 		line, err := rdr.ReadBytes('\n')
+		line = line[:len(line)-1]
 		history = append(history, string(line))
 		if err != nil {
 			if piped {
@@ -159,7 +160,7 @@ func clientPrompt(c net.Conn) {
 		if err != nil {
 			fmt.Printf("Err: unable to send command\n\t'%s'\n", err)
 		}
-		
+
 		resp, err := proto.ReadBytes(c)
 		if err != nil {
 			log.Error().Err(err).Msg("could not read bytes")
