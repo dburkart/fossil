@@ -9,6 +9,7 @@ package proto
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -27,6 +28,21 @@ var (
 	MessageErrorUnmarshaling     = NewMessageWithType(CommandError, ErrResponse{Code: 506, Err: fmt.Errorf("error unmarshaling")})
 	MessageErrorUnknownDb        = NewMessageWithType(CommandError, ErrResponse{Code: 505})
 )
+
+func ReadBytes(r io.Reader) ([]byte, error) {
+	lengthPrefix := make([]byte, 4)
+	_, err := io.ReadFull(r, lengthPrefix)
+	if err != nil {
+		return nil, errors.New("unable to read length prefix")
+	}
+	length := binary.LittleEndian.Uint32(lengthPrefix)
+	b := make([]byte, length)
+	_, err = io.ReadFull(r, b)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("unable to read response\n\t'%s'\n", string(b)))
+	}
+	return b, nil
+}
 
 type Message struct {
 	Command string
@@ -73,7 +89,6 @@ func (m Message) Marshal() ([]byte, error) {
 	b.Write([]byte(m.Command))
 	b.WriteByte(' ')
 	b.Write(m.Data)
-	b.WriteByte('\n')
 	return b.Bytes(), nil
 }
 
