@@ -17,39 +17,6 @@ import (
 
 var result Message
 
-// func TestParseMessage(t *testing.T) {
-// 	tt := []struct {
-// 		test string
-// 		buf  []byte
-// 		err  bool
-// 	}{
-// 		{
-// 			"Test empty message",
-// 			[]byte("\r\n"),
-// 			true,
-// 		},
-// 		{
-// 			"Test simple message",
-// 			[]byte("INFO all\n\n\n"),
-// 			false,
-// 		},
-// 		{
-// 			"Test simple message",
-// 			[]byte("INFO all"),
-// 			false,
-// 		},
-// 	}
-
-// 	for _, tc := range tt {
-// 		t.Run(tc.test, func(t *testing.T) {
-// 			_, err := ParseMessage(tc.buf)
-// 			if err != nil && !tc.err {
-// 				t.Error(err)
-// 			}
-// 		})
-// 	}
-// }
-
 func TestMessageMarshaling(t *testing.T) {
 	m := NewMessageWithType(CommandAppend, AppendRequest{Topic: "", Data: []byte("y2k")})
 	b, err := m.Marshal()
@@ -73,18 +40,6 @@ func TestMessageMarshaling(t *testing.T) {
 		t.Fail()
 	}
 }
-
-// func BenchmarkReadMessage(b *testing.B) {
-// 	buf := new(bytes.Buffer)
-// 	rw := NewResponseWriter(buf)
-// 	rw.WriteMessage(MessageErrorCommandNotFound)
-
-// 	b.ResetTimer()
-// 	for i := 0; i < b.N; i++ {
-// 		ret, _ := ReadMessage(buf)
-// 		result = ret
-// 	}
-// }
 
 func BenchmarkReadMessageFull(b *testing.B) {
 	buf := new(bytes.Buffer)
