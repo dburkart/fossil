@@ -19,7 +19,8 @@ import (
 func ParseREPLCommand(b []byte) proto.Message {
 	// Get the command
 	var msg proto.Message
-	cmd := []byte{}
+	var cmd []byte
+	var data []byte
 
 	// all commands have a space after them, if not then they are command only
 	// like QUIT
@@ -28,29 +29,26 @@ func ParseREPLCommand(b []byte) proto.Message {
 		cmd = b
 	} else {
 		cmd = b[0:ind]
+		data = b[ind+1:]
 	}
 
 	// Marshal message based on the command
-	switch strings.ToUpper(string(cmd)) {
+	command := strings.ToUpper(string(cmd))
+	switch command {
 	case proto.CommandAppend:
 		req := proto.AppendRequest{}
-		data := b[ind+1:]
 
-		// check for topic
-		pathInd := bytes.IndexByte(data, '/')
 		// check for space after topic, no space means the data starts with /
 		spaceInd := bytes.IndexByte(data, ' ')
-		if pathInd != -1 && spaceInd != -1 {
-			req.Topic = string(data[pathInd:spaceInd])
+		if data[0] == '/' && spaceInd != -1 {
+			req.Topic = string(data[:spaceInd])
 			req.Data = data[spaceInd+1:]
 		} else {
 			req.Data = data[:]
 		}
-
 		msg = proto.NewMessageWithType(proto.CommandAppend, req)
 	case proto.CommandUse:
 		req := proto.UseRequest{}
-		data := b[ind+1:]
 
 		req.DbName = string(data)
 
@@ -58,20 +56,18 @@ func ParseREPLCommand(b []byte) proto.Message {
 
 	case proto.CommandStats:
 		req := proto.StatsRequest{}
-		data := b[ind+1:]
 
 		req.Database = string(data)
 
 		msg = proto.NewMessageWithType(proto.CommandStats, req)
 	case proto.CommandQuery:
 		req := proto.QueryRequest{}
-		data := b[ind+1:]
 
 		req.Query = string(data)
 
 		msg = proto.NewMessageWithType(proto.CommandQuery, req)
 	default:
-		msg = proto.NewMessage(string(cmd), b)
+		msg = proto.NewMessage(command, b)
 	}
 
 	return msg
