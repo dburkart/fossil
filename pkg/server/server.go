@@ -12,7 +12,6 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/dburkart/fossil/pkg/collector"
 	"github.com/dburkart/fossil/pkg/database"
 	"github.com/dburkart/fossil/pkg/proto"
 	"github.com/dburkart/fossil/pkg/query"
@@ -28,8 +27,6 @@ type Server struct {
 	dbMap       map[string]*database.Database
 	port        int
 	metricsPort int
-
-	collectors []collector.Collector
 }
 
 type DatabaseConfig struct {
@@ -60,7 +57,6 @@ func New(log zerolog.Logger, dbConfigs map[string]DatabaseConfig, port, metricsP
 		dbMap,
 		port,
 		metricsPort,
-		[]collector.Collector{},
 	}
 }
 
