@@ -27,10 +27,45 @@ var (
 	MessageErrorMalformedMessage = NewMessageWithType(CommandError, ErrResponse{Code: 502, Err: fmt.Errorf("malformed message")})
 	MessageErrorUnmarshaling     = NewMessageWithType(CommandError, ErrResponse{Code: 506, Err: fmt.Errorf("error unmarshaling")})
 	MessageErrorUnknownDb        = NewMessageWithType(CommandError, ErrResponse{Code: 505})
+
+	lenWidth     = 4
+	commandWidth = 8
 )
 
+func ReadMessage(r io.Reader) (Message, error) {
+	data, err := ReadBytes(r)
+	if err != nil {
+		return Message{}, fmt.Errorf("error reading message")
+	}
+
+	return ParseMessage(data)
+}
+
+func ReadMessageFull(r io.Reader) (Message, error) {
+	msg := Message{}
+	lengthPrefix := make([]byte, lenWidth)
+	_, err := io.ReadFull(r, lengthPrefix)
+	if err != nil {
+		return msg, err
+	}
+	length := binary.LittleEndian.Uint32(lengthPrefix)
+	b := make([]byte, length)
+	n, err := io.ReadFull(r, b)
+	if err != nil {
+		return msg, fmt.Errorf("unable to read response\n\t'%s'", string(b))
+	}
+	if n <= 8 {
+		return msg, errors.New("message format incorrect")
+	}
+
+	// Parse message
+	msg.Command = strings.ToUpper(strings.Trim(string(b[:commandWidth]), "\u0000"))
+	msg.Data = b[commandWidth:]
+	return msg, nil
+}
+
 func ReadBytes(r io.Reader) ([]byte, error) {
-	lengthPrefix := make([]byte, 4)
+	lengthPrefix := make([]byte, lenWidth)
 	_, err := io.ReadFull(r, lengthPrefix)
 	if err != nil {
 		return nil, errors.New("unable to read length prefix")
@@ -39,7 +74,7 @@ func ReadBytes(r io.Reader) ([]byte, error) {
 	b := make([]byte, length)
 	_, err = io.ReadFull(r, b)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("unable to read response\n\t'%s'\n", string(b)))
+		return nil, fmt.Errorf("unable to read response\n\t'%s'", string(b))
 	}
 	return b, nil
 }
@@ -69,6 +104,8 @@ func NewMessageWithType(cmd string, t Marshaler) Message {
 
 // ParseMessage searches the byte slice for a message terminator and parses a message from the sequence of bytes
 // it will return the number of bytes consumed
+//
+// Deprecated: Replaced by ReadMessageFull
 func ParseMessage(b []byte) (Message, error) {
 	ret := Message{}
 
@@ -85,11 +122,10 @@ func ParseMessage(b []byte) (Message, error) {
 }
 
 func (m Message) Marshal() ([]byte, error) {
-	b := new(bytes.Buffer)
-	b.Write([]byte(m.Command))
-	b.WriteByte(' ')
-	b.Write(m.Data)
-	return b.Bytes(), nil
+	b := make([]byte, commandWidth+len(m.Data))
+	copy(b, []byte(m.Command))
+	copy(b[commandWidth:], m.Data)
+	return b, nil
 }
 
 func (m Message) MarshalZerologObject(e *zerolog.Event) {

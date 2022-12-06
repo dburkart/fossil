@@ -17,6 +17,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/dburkart/fossil/pkg/database"
 	"github.com/dburkart/fossil/pkg/proto"
 	"github.com/dburkart/fossil/pkg/query"
@@ -53,25 +55,14 @@ var Command = &cobra.Command{
 				log.Error().Err(err).Str("address", target.Address).Msg("unable to connect to server")
 			}
 
-			// Always send a use first
-			useMsg := proto.NewMessageWithType(proto.CommandUse, proto.UseRequest{DbName: target.Database})
-			b, _ := useMsg.Marshal()
-			send(c, b)
-			buf, err := proto.ReadBytes(c)
+			// Handle onConnect actions
+			ok, err := onConnect(c, target.Database)
 			if err != nil {
-				log.Fatal().Err(err)
-			}
-			m, err := proto.ParseMessage(buf)
-			if err != nil {
-				log.Fatal().Err(err).Msg("unable to parse server use response")
-			}
-			ok := proto.OkResponse{}
-			err = ok.Unmarshal(m.Data)
-			if err != nil {
-				log.Fatal().Err(err).Msg("unable to parse server use response")
+				log.Fatal().Err(err).Msg("error on connect")
 			}
 			fmt.Println(ok.Code, ok.Message)
 
+			// REPL
 			clientPrompt(c)
 		}
 	},
@@ -88,6 +79,24 @@ func init() {
 		Logger()
 }
 
+func onConnect(c net.Conn, dbName string) (proto.OkResponse, error) {
+	// Always send a use first
+	useMsg := proto.NewMessageWithType(proto.CommandUse, proto.UseRequest{DbName: dbName})
+	b, _ := useMsg.Marshal()
+	send(c, b)
+	m, err := proto.ReadMessageFull(c)
+	if err != nil {
+		return proto.OkResponse{}, errors.Wrap(err, "unable to parse server use response")
+	}
+	ok := proto.OkResponse{}
+	err = ok.Unmarshal(m.Data)
+	if err != nil {
+		return proto.OkResponse{}, errors.Wrap(err, "unable to unmarshal ok response")
+	}
+
+	return ok, nil
+}
+
 func send(c net.Conn, msg []byte) error {
 	buf := bytes.NewBuffer(binary.LittleEndian.AppendUint32([]byte{}, uint32(len(msg))))
 	buf.Write(msg)
@@ -98,6 +107,17 @@ func send(c net.Conn, msg []byte) error {
 	}
 	log.Trace().Int("bytes", n).Msg("message sent")
 	return nil
+}
+
+func formatMessage(b []byte) []byte {
+	cmd := make([]byte, 8)
+	ind := bytes.IndexByte(b, ' ')
+	if ind == -1 {
+		return nil
+	}
+	copy(cmd, b[0:ind])
+	ret := append(cmd[0:8], b[ind+1:]...)
+	return ret
 }
 
 func localPrompt(db *database.Database) {
@@ -144,6 +164,7 @@ func clientPrompt(c net.Conn) {
 		line, err := rdr.ReadBytes('\n')
 		line = line[:len(line)-1]
 		history = append(history, string(line))
+		line = formatMessage(line)
 		if err != nil {
 			if piped {
 				return
@@ -155,24 +176,18 @@ func clientPrompt(c net.Conn) {
 			fmt.Println("bye!")
 			return
 		}
-
+		log.Trace().Str("line", string(line)).Bytes("buf", line).Msg("sending")
 		err = send(c, line)
 		if err != nil {
 			fmt.Printf("Err: unable to send command\n\t'%s'\n", err)
 		}
 
-		resp, err := proto.ReadBytes(c)
+		msg, err := proto.ReadMessageFull(c)
 		if err != nil {
-			log.Error().Err(err).Msg("could not read bytes")
+			log.Error().Err(err).Msg("malformed message")
 			continue
 		}
 
-		msg, err := proto.ParseMessage(resp)
-		if err != nil {
-			log.Error().Err(err).Msg("malformed message")
-			fmt.Println(resp)
-			continue
-		}
 		switch msg.Command {
 		case proto.CommandStats:
 			t := proto.StatsResponse{}

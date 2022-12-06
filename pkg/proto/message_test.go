@@ -6,7 +6,12 @@
 
 package proto
 
-import "testing"
+import (
+	"bytes"
+	"testing"
+)
+
+var result Message
 
 func TestParseMessage(t *testing.T) {
 	tt := []struct {
@@ -38,5 +43,29 @@ func TestParseMessage(t *testing.T) {
 				t.Error(err)
 			}
 		})
+	}
+}
+
+func BenchmarkReadMessage(b *testing.B) {
+	buf := new(bytes.Buffer)
+	rw := NewResponseWriter(buf)
+	rw.WriteMessage(MessageErrorCommandNotFound)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ret, _ := ReadMessage(buf)
+		result = ret
+	}
+}
+
+func BenchmarkReadMessageFull(b *testing.B) {
+	buf := new(bytes.Buffer)
+	rw := NewResponseWriter(buf)
+	rw.WriteMessage(MessageErrorCommandNotFound)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ret, _ := ReadMessageFull(buf)
+		result = ret
 	}
 }
