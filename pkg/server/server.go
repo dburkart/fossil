@@ -68,79 +68,11 @@ func (s *Server) ServeDatabase() {
 	srv := NewMessageServer(s.log)
 	mux := NewMapMux()
 
-	mux.HandleState(proto.CommandUse, func(rw proto.ResponseWriter, c *conn, r *proto.Request) {
-		use := proto.UseRequest{}
-		err := proto.Unmarshal(r.Data(), &use)
-		if err != nil {
-			s.log.Error().Err(err).Msg("error unmarshaling")
-			rw.WriteMessage(proto.MessageErrorUnmarshaling)
-			return
-		}
-		db, ok := s.dbMap[use.DbName]
-		if !ok {
-			s.log.Error().Err(err).Str("dbName", use.DbName).Msg("error unknown db")
-			rw.WriteMessage(proto.MessageErrorUnknownDb)
-			return
-		}
-		c.SetDatabase(use.DbName, db)
-
-		rw.WriteMessage(proto.MessageOkDatabaseChanged)
-	})
-
-	mux.Handle(proto.CommandQuery, func(rw proto.ResponseWriter, r *proto.Request) {
-		q := proto.QueryRequest{}
-
-		err := proto.Unmarshal(r.Data(), &q)
-		if err != nil {
-			s.log.Error().Err(err).Msg("error unmarshaling")
-			rw.WriteMessage(proto.MessageErrorUnmarshaling)
-			return
-		}
-
-		stmt, err := query.Prepare(r.Database(), q.Query)
-		if err != nil {
-			rw.WriteMessage(proto.NewMessageWithType(proto.CommandError, proto.ErrResponse{Code: 504, Err: err}))
-			return
-		}
-		result := stmt.Execute()
-
-		resp := proto.QueryResponse{}
-		resp.Results = result.Data
-
-		_, err = rw.WriteMessage(proto.NewMessageWithType(proto.CommandQuery, resp))
-		if err != nil {
-			s.log.Error().Err(err).Msg("unable to write response")
-			rw.WriteMessage(proto.MessageErrorUnmarshaling)
-			return
-		}
-	})
-
-	mux.Handle(proto.CommandAppend, func(rw proto.ResponseWriter, r *proto.Request) {
-		a := proto.AppendRequest{}
-		err := proto.Unmarshal(r.Data(), &a)
-		if err != nil {
-			s.log.Error().Err(err).Msg("error unmarshaling")
-			rw.WriteMessage(proto.MessageErrorUnmarshaling)
-			return
-		}
-
-		s.log.Trace().Str("topic", a.Topic).Msg("append")
-		r.Database().Append(a.Data, a.Topic)
-		rw.WriteMessage(proto.MessageOk)
-	})
-
-	mux.Handle(proto.CommandStats, func(rw proto.ResponseWriter, r *proto.Request) {
-		// FIXME: This should be updated periodically in it's own runloop, not computed on request
-		var m runtime.MemStats
-		runtime.ReadMemStats(&m)
-		resp := proto.StatsResponse{
-			AllocHeap: m.Alloc,
-			TotalMem:  m.Sys,
-			Uptime:    time.Since(s.startupTime),
-			Segments:  len(r.Database().Segments),
-		}
-		rw.WriteMessage(proto.NewMessageWithType(proto.CommandStats, resp))
-	})
+	// Wire up handlers
+	mux.HandleState(proto.CommandUse, s.HandleUse)
+	mux.Handle(proto.CommandQuery, s.HandleQuery)
+	mux.Handle(proto.CommandAppend, s.HandleAppend)
+	mux.Handle(proto.CommandStats, s.HandleStats)
 
 	err := srv.ListenAndServe(s.port, mux)
 	if err != nil {
@@ -152,4 +84,78 @@ func (s *Server) ServeMetrics() {
 	s.log.Info().Int("port", s.metricsPort).Msg("/metrics endpoint started")
 	http.Handle("/metrics", promhttp.Handler())
 	http.ListenAndServe(fmt.Sprintf(":%d", s.metricsPort), nil)
+}
+
+func (s *Server) HandleUse(rw proto.ResponseWriter, c *conn, r *proto.Request) {
+	use := proto.UseRequest{}
+	err := proto.Unmarshal(r.Data(), &use)
+	if err != nil {
+		s.log.Error().Err(err).Msg("error unmarshaling")
+		rw.WriteMessage(proto.MessageErrorUnmarshaling)
+		return
+	}
+	db, ok := s.dbMap[use.DbName]
+	if !ok {
+		s.log.Error().Err(err).Str("dbName", use.DbName).Msg("error unknown db")
+		rw.WriteMessage(proto.MessageErrorUnknownDb)
+		return
+	}
+	c.SetDatabase(use.DbName, db)
+
+	rw.WriteMessage(proto.MessageOkDatabaseChanged)
+}
+
+func (s *Server) HandleAppend(rw proto.ResponseWriter, r *proto.Request) {
+	a := proto.AppendRequest{}
+	err := proto.Unmarshal(r.Data(), &a)
+	if err != nil {
+		s.log.Error().Err(err).Msg("error unmarshaling")
+		rw.WriteMessage(proto.MessageErrorUnmarshaling)
+		return
+	}
+
+	s.log.Trace().Str("topic", a.Topic).Msg("append")
+	r.Database().Append(a.Data, a.Topic)
+	rw.WriteMessage(proto.MessageOk)
+}
+
+func (s *Server) HandleQuery(rw proto.ResponseWriter, r *proto.Request) {
+	q := proto.QueryRequest{}
+
+	err := proto.Unmarshal(r.Data(), &q)
+	if err != nil {
+		s.log.Error().Err(err).Msg("error unmarshaling")
+		rw.WriteMessage(proto.MessageErrorUnmarshaling)
+		return
+	}
+
+	stmt, err := query.Prepare(r.Database(), q.Query)
+	if err != nil {
+		rw.WriteMessage(proto.NewMessageWithType(proto.CommandError, proto.ErrResponse{Code: 504, Err: err}))
+		return
+	}
+	result := stmt.Execute()
+
+	resp := proto.QueryResponse{}
+	resp.Results = result.Data
+
+	_, err = rw.WriteMessage(proto.NewMessageWithType(proto.CommandQuery, resp))
+	if err != nil {
+		s.log.Error().Err(err).Msg("unable to write response")
+		rw.WriteMessage(proto.MessageErrorUnmarshaling)
+		return
+	}
+}
+
+func (s *Server) HandleStats(rw proto.ResponseWriter, r *proto.Request) {
+	// FIXME: This should be updated periodically in it's own runloop, not computed on request
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	resp := proto.StatsResponse{
+		AllocHeap: m.Alloc,
+		TotalMem:  m.Sys,
+		Uptime:    time.Since(s.startupTime),
+		Segments:  len(r.Database().Segments),
+	}
+	rw.WriteMessage(proto.NewMessageWithType(proto.CommandStats, resp))
 }
