@@ -209,6 +209,9 @@ func (s *Scanner) Emit() Token {
 		case r == '-':
 			t.Type = TOK_MINUS
 			skip = width
+		case r == ',':
+			t.Type = TOK_COMMA
+			skip = width
 		case r == '/':
 			t.Type = TOK_TOPIC
 			skip = s.MatchTopic()
@@ -244,6 +247,13 @@ func (s *Scanner) Emit() Token {
 				skip = len("before")
 				break
 			}
+
+			if strings.HasPrefix(s.Input[s.Pos:], "between") {
+				t.Type = TOK_KEYWORD
+				skip = len("between")
+				break
+			}
+
 			identifierFallthrough()
 		case r == 'i':
 			if strings.HasPrefix(s.Input[s.Pos:], "in") {

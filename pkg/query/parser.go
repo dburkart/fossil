@@ -178,14 +178,23 @@ func (p *Parser) timePredicate() ASTNode {
 		return nil
 	}
 
-	expression := p.timeExpression()
-
-	// TODO: Handle between
+	lh := p.timeExpression()
 
 	t := TimePredicateNode{BaseNode{
 		Value: tok.Lexeme,
 	}}
-	t.AddChild(expression)
+	t.AddChild(lh)
+
+	if tok.Lexeme == "between" {
+		comma := p.Scanner.Emit()
+
+		if comma.Lexeme != "," {
+			panic(NewSyntaxError(comma, fmt.Sprintf("Error: unexpected token '%s', expected ','", comma.Lexeme)))
+		}
+
+		rh := p.timeExpression()
+		t.AddChild(rh)
+	}
 
 	return &t
 }
