@@ -32,15 +32,6 @@ var (
 	commandWidth = 8
 )
 
-// func ReadMessage(r io.Reader) (Message, error) {
-// 	data, err := ReadBytes(r)
-// 	if err != nil {
-// 		return Message{}, fmt.Errorf("error reading message")
-// 	}
-
-// 	return ParseMessage(data)
-// }
-
 func ReadMessageFull(r io.Reader) (Message, error) {
 	msg := Message{}
 	err := msg.Unmarshal(r)
@@ -49,21 +40,6 @@ func ReadMessageFull(r io.Reader) (Message, error) {
 	}
 	return msg, nil
 }
-
-// func ReadBytes(r io.Reader) ([]byte, error) {
-// 	lengthPrefix := make([]byte, lenWidth)
-// 	_, err := io.ReadFull(r, lengthPrefix)
-// 	if err != nil {
-// 		return nil, errors.New("unable to read length prefix")
-// 	}
-// 	length := binary.LittleEndian.Uint32(lengthPrefix)
-// 	b := make([]byte, length)
-// 	_, err = io.ReadFull(r, b)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("unable to read response\n\t'%s'", string(b))
-// 	}
-// 	return b, nil
-// }
 
 type Message struct {
 	Command string
@@ -87,25 +63,6 @@ func NewMessageWithType(cmd string, t Marshaler) Message {
 		d,
 	}
 }
-
-// ParseMessage searches the byte slice for a message terminator and parses a message from the sequence of bytes
-// it will return the number of bytes consumed
-//
-// Deprecated: Replaced by ReadMessageFull
-// func ParseMessage(b []byte) (Message, error) {
-// 	ret := Message{}
-
-// 	ind := bytes.IndexByte(b, ' ')
-// 	if ind == -1 {
-// 		return ret, fmt.Errorf("malformed message")
-// 	}
-// 	ret.Command = strings.ToUpper(string(b[0:ind]))
-// 	if ind < len(b) {
-// 		ret.Data = b[ind+1:]
-// 	}
-
-// 	return ret, nil
-// }
 
 func (m Message) Marshal() ([]byte, error) {
 	b := make([]byte, lenWidth+commandWidth+len(m.Data))
