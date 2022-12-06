@@ -93,11 +93,7 @@ func TestTimeWhence(t *testing.T) {
 
 	want, _ := time.Parse(time.RFC3339, "1996-12-19T16:39:57-08:00")
 
-	tm, err := ast.(*TimeWhenceNode).Time()
-	if err != nil {
-		t.Errorf("Got an error parsing time: %s", err)
-	}
-
+	tm := ast.(*TimeWhenceNode).Time()
 	if !tm.Equal(want) {
 		t.Errorf("wanted time-whence to parse to %s, got %s", want, tm)
 	}
