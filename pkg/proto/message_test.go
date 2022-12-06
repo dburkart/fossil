@@ -17,50 +17,74 @@ import (
 
 var result Message
 
-func TestParseMessage(t *testing.T) {
-	tt := []struct {
-		test string
-		buf  []byte
-		err  bool
-	}{
-		{
-			"Test empty message",
-			[]byte("\r\n"),
-			true,
-		},
-		{
-			"Test simple message",
-			[]byte("INFO all\n\n\n"),
-			false,
-		},
-		{
-			"Test simple message",
-			[]byte("INFO all"),
-			false,
-		},
+// func TestParseMessage(t *testing.T) {
+// 	tt := []struct {
+// 		test string
+// 		buf  []byte
+// 		err  bool
+// 	}{
+// 		{
+// 			"Test empty message",
+// 			[]byte("\r\n"),
+// 			true,
+// 		},
+// 		{
+// 			"Test simple message",
+// 			[]byte("INFO all\n\n\n"),
+// 			false,
+// 		},
+// 		{
+// 			"Test simple message",
+// 			[]byte("INFO all"),
+// 			false,
+// 		},
+// 	}
+
+// 	for _, tc := range tt {
+// 		t.Run(tc.test, func(t *testing.T) {
+// 			_, err := ParseMessage(tc.buf)
+// 			if err != nil && !tc.err {
+// 				t.Error(err)
+// 			}
+// 		})
+// 	}
+// }
+
+func TestMessageMarshaling(t *testing.T) {
+	m := NewMessageWithType(CommandAppend, AppendRequest{Topic: "", Data: []byte("y2k")})
+	b, err := m.Marshal()
+	if err != nil {
+		t.Fail()
+	}
+	if len(b) != 4+8+4+3 {
+		t.Fail()
 	}
 
-	for _, tc := range tt {
-		t.Run(tc.test, func(t *testing.T) {
-			_, err := ParseMessage(tc.buf)
-			if err != nil && !tc.err {
-				t.Error(err)
-			}
-		})
+	err = m.Unmarshal(bytes.NewBuffer(b))
+	if err != nil {
+		t.Fail()
+	}
+
+	// Check fields
+	if m.Command != CommandAppend {
+		t.Fail()
+	}
+	if !bytes.Equal(m.Data, []byte("\u0000\u0000\u0000\u0000y2k")) {
+		t.Fail()
 	}
 }
 
-func BenchmarkReadMessage(b *testing.B) {
-	buf := new(bytes.Buffer)
-	rw := NewResponseWriter(buf)
-	rw.WriteMessage(MessageErrorCommandNotFound)
+// func BenchmarkReadMessage(b *testing.B) {
+// 	buf := new(bytes.Buffer)
+// 	rw := NewResponseWriter(buf)
+// 	rw.WriteMessage(MessageErrorCommandNotFound)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		ret, _ := ReadMessage(buf)
-		result = ret
-	}
-}
+// 	b.ResetTimer()
+// 	for i := 0; i < b.N; i++ {
+// 		ret, _ := ReadMessage(buf)
+// 		result = ret
+// 	}
+// }
 
 func BenchmarkReadMessageFull(b *testing.B) {
 	buf := new(bytes.Buffer)
@@ -146,6 +170,22 @@ func TestAppendRequest(t *testing.T) {
 
 	// Check fields
 	if req.Topic != "" {
+		t.Fail()
+	}
+	if !bytes.Equal(req.Data, []byte("woohoo")) {
+		t.Fail()
+	}
+
+	req = AppendRequest{Topic: "/path/of/the/gods", Data: []byte("woohoo")}
+
+	b, _ = req.Marshal()
+	err = req.Unmarshal(b)
+	if err != nil {
+		t.Fail()
+	}
+
+	// Check fields
+	if req.Topic != "/path/of/the/gods" {
 		t.Fail()
 	}
 	if !bytes.Equal(req.Data, []byte("woohoo")) {

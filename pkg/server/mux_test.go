@@ -12,24 +12,61 @@ import (
 	"github.com/dburkart/fossil/pkg/proto"
 )
 
-func stub2(rw proto.ResponseWriter, msg *proto.Request) {
+var resCmd string
 
+func stub1(rw proto.ResponseWriter, c *conn, msg *proto.Request) {
+	resCmd = msg.Command()
 }
 
-func BenchmarkMapCommandParse(b *testing.B) {
+func stub2(rw proto.ResponseWriter, msg *proto.Request) {
+	resCmd = msg.Command()
+}
+
+func stub3(rw proto.ResponseWriter, msg *proto.Request) {
+	resCmd = msg.Command()
+
+	req := proto.AppendRequest{}
+	err := req.Unmarshal(msg.Data())
+	if err != nil {
+		return
+	}
+
+	resCmd = req.Topic
+}
+
+func BenchmarkAllMessageTypes(b *testing.B) {
 	mux := NewMapMux()
 
-	mux.Handle("A", stub2)
-	mux.Handle("B", stub2)
-	mux.Handle("C", stub2)
+	mux.HandleState(proto.CommandUse, stub1)
+	mux.Handle(proto.CommandQuery, stub2)
+	mux.Handle(proto.CommandAppend, stub2)
+	mux.Handle(proto.CommandStats, stub2)
 
-	tests := []*proto.Request{proto.NewRequest(proto.Message{
-		Command: "A",
-	}, nil), proto.NewRequest(proto.Message{
-		Command: "B",
-	}, nil), proto.NewRequest(proto.Message{
-		Command: "C",
-	}, nil),
+	tests := []*proto.Request{
+		proto.NewRequest(proto.NewMessageWithType(proto.CommandUse, proto.UseRequest{DbName: "default"}), nil),
+		proto.NewRequest(proto.NewMessageWithType(proto.CommandAppend, proto.AppendRequest{Topic: "/", Data: []byte("y2k")}), nil),
+		proto.NewRequest(proto.NewMessageWithType(proto.CommandQuery, proto.QueryRequest{Query: "all"}), nil),
+		proto.NewRequest(proto.NewMessageWithType(proto.CommandStats, proto.StatsRequest{Database: "default"}), nil),
+	}
+
+	c := &conn{}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		mux.ServeMessage(c, tests[i%len(tests)])
+	}
+}
+
+func BenchmarkMessageParse(b *testing.B) {
+	mux := NewMapMux()
+
+	mux.Handle("B", stub3)
+
+	tests := []*proto.Request{
+		proto.NewRequest(proto.NewMessageWithType("B", proto.AppendRequest{Topic: "/", Data: []byte("y2k")}), nil),
+		proto.NewRequest(proto.NewMessageWithType("B", proto.AppendRequest{Topic: "/", Data: []byte("y2k")}), nil),
+		proto.NewRequest(proto.NewMessageWithType("B", proto.AppendRequest{Topic: "/", Data: []byte("y2k")}), nil),
+		proto.NewRequest(proto.NewMessageWithType("B", proto.AppendRequest{Topic: "/", Data: []byte("y2k")}), nil),
 	}
 
 	c := &conn{}
