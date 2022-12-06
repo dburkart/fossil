@@ -301,7 +301,6 @@ func (rq *QueryRequest) Unmarshal(b []byte) error {
 func (rq QueryResponse) Marshal() ([]byte, error) {
 	b := []byte{}
 	buf := bytes.NewBuffer(binary.LittleEndian.AppendUint32(b, uint32(len(rq.Results))))
-	buf.WriteByte(' ')
 	for i := range rq.Results {
 		ent := rq.Results[i].ToString()
 		l := binary.LittleEndian.AppendUint32([]byte{}, uint32(len(ent)))
@@ -319,13 +318,6 @@ func (rq *QueryResponse) Unmarshal(b []byte) error {
 	err := binary.Read(buf, binary.LittleEndian, &count)
 	if err != nil {
 		return err
-	}
-	space, err := buf.ReadByte()
-	if err != nil {
-		return err
-	}
-	if space != ' ' {
-		return fmt.Errorf("expected space, got '%b'", space)
 	}
 	var i uint32
 	for i = 0; i < count; i++ {
