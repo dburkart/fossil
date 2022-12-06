@@ -21,6 +21,7 @@ unimplemented and still in the design phase.
 Additional Documentation
 - [Grammar](./grammar.md)
 - [Protocol](./protocol.md)
+- [Deployment](./deployment.md)
 
 
 ## Architecture
