@@ -184,7 +184,6 @@ func clientPrompt(c net.Conn) {
 			continue
 		}
 		_, err = c.Write(msgb)
-		// err = send(c, line)
 		if err != nil {
 			fmt.Printf("Err: unable to send command\n\t'%s'\n", err)
 		}
