@@ -205,19 +205,8 @@ func (t TimePredicateNode) GenerateFilter(db *database.Database) database.Filter
 		startTime = t.Children()[0].(*TimeExpressionNode).Time()
 		endTime = time.Now()
 	case "between":
-		startTime, err = t.Children()[0].(*TimeExpressionNode).Time()
-		// It shouldn't be possible there to be an error here (we should catch
-		// it earlier when parsing, so panic
-		if err != nil {
-			panic(err)
-		}
-
-		endTime, err = t.Children()[1].(*TimeExpressionNode).Time()
-		// It shouldn't be possible there to be an error here (we should catch
-		// it earlier when parsing, so panic
-		if err != nil {
-			panic(err)
-		}
+		startTime = t.Children()[0].(*TimeExpressionNode).Time()
+		endTime = t.Children()[1].(*TimeExpressionNode).Time()
 	}
 
 	timeRange := database.TimeRange{Start: startTime, End: endTime}
