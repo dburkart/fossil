@@ -222,11 +222,8 @@ func (rq *ErrResponse) Unmarshal(b []byte) error {
 // Marshal ...
 func (rq OkResponse) Marshal() ([]byte, error) {
 	buf := bytes.NewBuffer(binary.LittleEndian.AppendUint32([]byte{}, rq.Code))
-	err := buf.WriteByte(' ')
-	if err != nil {
-		return nil, err
-	}
-	_, err = buf.WriteString(rq.Message)
+
+	_, err := buf.WriteString(rq.Message)
 	if err != nil {
 		return nil, err
 	}
@@ -240,14 +237,7 @@ func (rq *OkResponse) Unmarshal(b []byte) error {
 	if err != nil {
 		return err
 	}
-	space, err := buf.ReadByte()
-	if err != nil {
-		return err
-	}
 
-	if space != ' ' {
-		return fmt.Errorf("expected space, got '%b'", space)
-	}
 	msg, err := io.ReadAll(buf)
 	if err != nil {
 		return err
