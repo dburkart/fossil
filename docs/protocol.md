@@ -3,7 +3,11 @@
 ## Wire Message
 
 ```
-COMMAND data
++--------+------------------+----------+
+|   4    |        8         |  N - 12  |
++--------+-----------------------------+
+|  len   |     Command      |   Data   |
++--------+-----------------------------+
 ```
 
 The data portion is what the command handlers work on.
