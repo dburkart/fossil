@@ -22,6 +22,7 @@ import (
 	"github.com/dburkart/fossil/pkg/database"
 	"github.com/dburkart/fossil/pkg/proto"
 	"github.com/dburkart/fossil/pkg/query"
+	"github.com/dburkart/fossil/pkg/repl"
 	"github.com/dustin/go-humanize"
 	"github.com/olekukonko/tablewriter"
 	"github.com/rs/zerolog"
@@ -83,7 +84,7 @@ func onConnect(c net.Conn, dbName string) (proto.OkResponse, error) {
 	// Always send a use first
 	useMsg := proto.NewMessageWithType(proto.CommandUse, proto.UseRequest{DbName: dbName})
 	b, _ := useMsg.Marshal()
-	send(c, b)
+	c.Write(b)
 	m, err := proto.ReadMessageFull(c)
 	if err != nil {
 		return proto.OkResponse{}, errors.Wrap(err, "unable to parse server use response")
@@ -164,7 +165,6 @@ func clientPrompt(c net.Conn) {
 		line, err := rdr.ReadBytes('\n')
 		line = line[:len(line)-1]
 		history = append(history, string(line))
-		line = formatMessage(line)
 		if err != nil {
 			if piped {
 				return
@@ -177,7 +177,14 @@ func clientPrompt(c net.Conn) {
 			return
 		}
 		log.Trace().Str("line", string(line)).Bytes("buf", line).Msg("sending")
-		err = send(c, line)
+		replMsg := repl.ParseREPLCommand(line)
+		msgb, err := replMsg.Marshal()
+		if err != nil {
+			log.Error().Err(err).Msg("error marshaling message into bytes")
+			continue
+		}
+		_, err = c.Write(msgb)
+		// err = send(c, line)
 		if err != nil {
 			fmt.Printf("Err: unable to send command\n\t'%s'\n", err)
 		}
