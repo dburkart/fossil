@@ -7,6 +7,7 @@
 package server
 
 import (
+	"io"
 	"net"
 
 	"github.com/dburkart/fossil/pkg/database"
@@ -119,17 +120,12 @@ func (c *conn) Handle(conn *net.TCPConn) {
 	c.rw = proto.NewResponseWriter(c.c)
 
 	for {
-		message, err := proto.ReadBytes(c.c)
-		if err != nil {
-			c.log.Error().Err(err).Msg("error reading message")
+		msg, err := proto.ReadMessageFull(c.c)
+		if err == io.EOF {
+			c.log.Info().Msg("client disconnected")
 			return
-		}
-
-		c.log.Trace().Int("read", len(message)).Msg("read from conn")
-		msg, err := proto.ParseMessage(message)
-		if err != nil {
+		} else if err != nil {
 			c.rw.WriteMessage(proto.MessageErrorMalformedMessage)
-			c.log.Trace().Bytes("buf", message).Send()
 			c.log.Error().Err(err).Msg("error parsing message from []bytes")
 			continue
 		}
