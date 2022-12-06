@@ -175,17 +175,14 @@ func (rq *UseRequest) Unmarshal(b []byte) error {
 // Marshal ...
 func (rq ErrResponse) Marshal() ([]byte, error) {
 	buf := bytes.NewBuffer(binary.LittleEndian.AppendUint32([]byte{}, rq.Code))
-	err := buf.WriteByte(' ')
-	if err != nil {
-		return nil, err
-	}
+
 	if rq.Err != nil {
-		_, err = buf.Write([]byte(rq.Err.Error()))
+		_, err := buf.Write([]byte(rq.Err.Error()))
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		_, err = buf.Write([]byte("error"))
+		_, err := buf.Write([]byte("error"))
 		if err != nil {
 			return nil, err
 		}
@@ -200,13 +197,7 @@ func (rq *ErrResponse) Unmarshal(b []byte) error {
 	if err != nil {
 		return err
 	}
-	space, err := buf.ReadByte()
-	if err != nil {
-		return err
-	}
-	if space != ' ' {
-		return fmt.Errorf("expected space, got '%b'", space)
-	}
+
 	msg, err := io.ReadAll(buf)
 	if err != nil {
 		return err

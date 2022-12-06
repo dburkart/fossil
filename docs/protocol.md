@@ -28,6 +28,12 @@ Ok can be replaced by a message
 #### ERR
 ```
 code string
+500 error
++--------+----------------+
+|   4    |       N        |
++--------+----------------+
+| uint32 |  Err message   |
++--------+----------------+
 ```
 code is an integer number for the given code. A code of 0 means this is a custom error message.
 
