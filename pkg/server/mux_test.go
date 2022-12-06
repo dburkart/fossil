@@ -57,7 +57,7 @@ func BenchmarkAllMessageTypes(b *testing.B) {
 	}
 }
 
-func BenchmarkMessageParse(b *testing.B) {
+func BenchmarkAppendMessageUnmarshal(b *testing.B) {
 	mux := NewMapMux()
 
 	mux.Handle("B", stub3)
@@ -67,6 +67,26 @@ func BenchmarkMessageParse(b *testing.B) {
 		proto.NewRequest(proto.NewMessageWithType("B", proto.AppendRequest{Topic: "/", Data: []byte("y2k")}), nil),
 		proto.NewRequest(proto.NewMessageWithType("B", proto.AppendRequest{Topic: "/", Data: []byte("y2k")}), nil),
 		proto.NewRequest(proto.NewMessageWithType("B", proto.AppendRequest{Topic: "/", Data: []byte("y2k")}), nil),
+	}
+
+	c := &conn{}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		mux.ServeMessage(c, tests[i%len(tests)])
+	}
+}
+
+func BenchmarkQueryMessageUnmarshal(b *testing.B) {
+	mux := NewMapMux()
+
+	mux.Handle("B", stub3)
+
+	tests := []*proto.Request{
+		proto.NewRequest(proto.NewMessageWithType("B", proto.QueryRequest{Query: "all"}), nil),
+		proto.NewRequest(proto.NewMessageWithType("B", proto.QueryRequest{Query: "all"}), nil),
+		proto.NewRequest(proto.NewMessageWithType("B", proto.QueryRequest{Query: "all"}), nil),
+		proto.NewRequest(proto.NewMessageWithType("B", proto.QueryRequest{Query: "all"}), nil),
 	}
 
 	c := &conn{}
