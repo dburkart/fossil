@@ -32,52 +32,38 @@ var (
 	commandWidth = 8
 )
 
-func ReadMessage(r io.Reader) (Message, error) {
-	data, err := ReadBytes(r)
-	if err != nil {
-		return Message{}, fmt.Errorf("error reading message")
-	}
+// func ReadMessage(r io.Reader) (Message, error) {
+// 	data, err := ReadBytes(r)
+// 	if err != nil {
+// 		return Message{}, fmt.Errorf("error reading message")
+// 	}
 
-	return ParseMessage(data)
-}
+// 	return ParseMessage(data)
+// }
 
 func ReadMessageFull(r io.Reader) (Message, error) {
 	msg := Message{}
-	lengthPrefix := make([]byte, lenWidth)
-	_, err := io.ReadFull(r, lengthPrefix)
+	err := msg.Unmarshal(r)
 	if err != nil {
 		return msg, err
 	}
-	length := binary.LittleEndian.Uint32(lengthPrefix)
-	b := make([]byte, length)
-	n, err := io.ReadFull(r, b)
-	if err != nil {
-		return msg, fmt.Errorf("unable to read response\n\t'%s'", string(b))
-	}
-	if n <= 8 {
-		return msg, errors.New("message format incorrect")
-	}
-
-	// Parse message
-	msg.Command = strings.ToUpper(strings.Trim(string(b[:commandWidth]), "\u0000"))
-	msg.Data = b[commandWidth:]
 	return msg, nil
 }
 
-func ReadBytes(r io.Reader) ([]byte, error) {
-	lengthPrefix := make([]byte, lenWidth)
-	_, err := io.ReadFull(r, lengthPrefix)
-	if err != nil {
-		return nil, errors.New("unable to read length prefix")
-	}
-	length := binary.LittleEndian.Uint32(lengthPrefix)
-	b := make([]byte, length)
-	_, err = io.ReadFull(r, b)
-	if err != nil {
-		return nil, fmt.Errorf("unable to read response\n\t'%s'", string(b))
-	}
-	return b, nil
-}
+// func ReadBytes(r io.Reader) ([]byte, error) {
+// 	lengthPrefix := make([]byte, lenWidth)
+// 	_, err := io.ReadFull(r, lengthPrefix)
+// 	if err != nil {
+// 		return nil, errors.New("unable to read length prefix")
+// 	}
+// 	length := binary.LittleEndian.Uint32(lengthPrefix)
+// 	b := make([]byte, length)
+// 	_, err = io.ReadFull(r, b)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("unable to read response\n\t'%s'", string(b))
+// 	}
+// 	return b, nil
+// }
 
 type Message struct {
 	Command string
@@ -106,26 +92,51 @@ func NewMessageWithType(cmd string, t Marshaler) Message {
 // it will return the number of bytes consumed
 //
 // Deprecated: Replaced by ReadMessageFull
-func ParseMessage(b []byte) (Message, error) {
-	ret := Message{}
+// func ParseMessage(b []byte) (Message, error) {
+// 	ret := Message{}
 
-	ind := bytes.IndexByte(b, ' ')
-	if ind == -1 {
-		return ret, fmt.Errorf("malformed message")
-	}
-	ret.Command = strings.ToUpper(string(b[0:ind]))
-	if ind < len(b) {
-		ret.Data = b[ind+1:]
-	}
+// 	ind := bytes.IndexByte(b, ' ')
+// 	if ind == -1 {
+// 		return ret, fmt.Errorf("malformed message")
+// 	}
+// 	ret.Command = strings.ToUpper(string(b[0:ind]))
+// 	if ind < len(b) {
+// 		ret.Data = b[ind+1:]
+// 	}
 
-	return ret, nil
-}
+// 	return ret, nil
+// }
 
 func (m Message) Marshal() ([]byte, error) {
-	b := make([]byte, commandWidth+len(m.Data))
-	copy(b, []byte(m.Command))
-	copy(b[commandWidth:], m.Data)
+	b := make([]byte, lenWidth+commandWidth+len(m.Data))
+	binary.LittleEndian.PutUint32(b, uint32(commandWidth+len(m.Data)))
+	copy(b[lenWidth:], []byte(m.Command))
+	copy(b[commandWidth+lenWidth:], m.Data)
+
 	return b, nil
+}
+
+func (m *Message) Unmarshal(r io.Reader) error {
+	lengthPrefix := make([]byte, lenWidth)
+	_, err := io.ReadFull(r, lengthPrefix)
+	if err != nil {
+		return err
+	}
+	length := binary.LittleEndian.Uint32(lengthPrefix)
+	b := make([]byte, length)
+	n, err := io.ReadFull(r, b)
+	if err != nil {
+		return fmt.Errorf("unable to read response\n\t'%s'", string(b))
+	}
+	if n <= 8 {
+		return errors.New("message format incorrect")
+	}
+
+	// Parse message
+	m.Command = strings.ToUpper(strings.Trim(string(b[:commandWidth]), "\u0000"))
+	m.Data = b[commandWidth:]
+
+	return nil
 }
 
 func (m Message) MarshalZerologObject(e *zerolog.Event) {
@@ -294,12 +305,8 @@ func (rq *OkResponse) Unmarshal(b []byte) error {
 
 // Marshal ...
 func (rq AppendRequest) Marshal() ([]byte, error) {
-	buf := new(bytes.Buffer)
+	buf := bytes.NewBuffer(binary.LittleEndian.AppendUint32([]byte{}, uint32(len(rq.Topic))))
 	_, err := buf.Write([]byte(rq.Topic))
-	if err != nil {
-		return nil, err
-	}
-	err = buf.WriteByte(' ')
 	if err != nil {
 		return nil, err
 	}
@@ -313,17 +320,24 @@ func (rq AppendRequest) Marshal() ([]byte, error) {
 // Unmarshal ...
 func (rq *AppendRequest) Unmarshal(b []byte) error {
 	buf := bytes.NewBuffer(b)
-	topic, err := buf.ReadBytes(' ')
+	lengthPrefix := make([]byte, lenWidth)
+	n, err := io.ReadFull(buf, lengthPrefix)
 	if err != nil {
 		return err
 	}
-	rq.Topic = string(topic[:len(topic)-1])
+	length := binary.LittleEndian.Uint32(lengthPrefix)
+	topic := make([]byte, length)
+	m, err := io.ReadFull(buf, topic)
+	if err != nil {
+		return err
+	}
+	if length == 0 {
+		rq.Topic = "/"
+	} else {
+		rq.Topic = string(topic[:length])
+	}
 
-	data, err := io.ReadAll(buf)
-	if err != nil {
-		return err
-	}
-	rq.Data = data
+	rq.Data = b[n+m:]
 
 	return nil
 }
