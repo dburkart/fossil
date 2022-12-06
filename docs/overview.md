@@ -3,6 +3,26 @@
 This document tries to detail the current thinking / design behind fossil. Most sections are WIP and are most likely
 unimplemented and still in the design phase.
 
+- [Overview](#overview)
+	- [Architecture](#architecture)
+		- [Database](#database)
+		- [Server](#server)
+			- [Fire and Forget](#fire-and-forget)
+			- [Active](#active)
+			- [Design](#design)
+				- [Message Mux](#message-mux)
+				- [Server Structure](#server-structure)
+				- [Server Startup](#server-startup)
+			- [Client Connections and Databases](#client-connections-and-databases)
+	- [Data Types (WIP)](#data-types-wip)
+		- [Schema Syntax (WIP)](#schema-syntax-wip)
+	- [Queries (WIP)](#queries-wip)
+
+Additional Documentation
+- [Grammar](./grammar.md)
+- [Protocol](./protocol.md)
+
+
 ## Architecture
 
 ### Database
