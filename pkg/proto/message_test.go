@@ -160,37 +160,41 @@ func TestErrResponse(t *testing.T) {
 }
 
 func TestAppendRequest(t *testing.T) {
-	req := AppendRequest{Topic: "", Data: []byte("woohoo")}
+	t.Run("empty topic", func(t *testing.T) {
+		req := AppendRequest{Topic: "", Data: []byte("woohoo")}
+		b, _ := req.Marshal()
+		err := req.Unmarshal(b)
+		if err != nil {
+			t.Fail()
+		}
 
-	b, _ := req.Marshal()
-	err := req.Unmarshal(b)
-	if err != nil {
-		t.Fail()
-	}
+		// Check fields
+		if req.Topic != "" {
+			t.Fail()
+		}
+		if !bytes.Equal(req.Data, []byte("woohoo")) {
+			t.Fail()
+		}
 
-	// Check fields
-	if req.Topic != "" {
-		t.Fail()
-	}
-	if !bytes.Equal(req.Data, []byte("woohoo")) {
-		t.Fail()
-	}
+	})
 
-	req = AppendRequest{Topic: "/path/of/the/gods", Data: []byte("woohoo")}
+	t.Run("topic and data", func(t *testing.T) {
+		req := AppendRequest{Topic: "/path/of/the/gods", Data: []byte("woohoo")}
 
-	b, _ = req.Marshal()
-	err = req.Unmarshal(b)
-	if err != nil {
-		t.Fail()
-	}
+		b, _ := req.Marshal()
+		err := req.Unmarshal(b)
+		if err != nil {
+			t.Fail()
+		}
 
-	// Check fields
-	if req.Topic != "/path/of/the/gods" {
-		t.Fail()
-	}
-	if !bytes.Equal(req.Data, []byte("woohoo")) {
-		t.Fail()
-	}
+		// Check fields
+		if req.Topic != "/path/of/the/gods" {
+			t.Fail()
+		}
+		if !bytes.Equal(req.Data, []byte("woohoo")) {
+			t.Fail()
+		}
+	})
 }
 
 func TestQueryRequest(t *testing.T) {
