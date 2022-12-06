@@ -14,9 +14,14 @@ The data portion is what the command handlers work on.
 
 ### Generic Response Messages
 
-#### OK
+#### OkResponse
 ```
 200 ok
++--------+----------------+
+|   4    |       N        |
++--------+----------------+
+| uint32 |    Message     |
++--------+----------------+
 ```
 Ok can be replaced by a message
 
