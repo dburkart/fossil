@@ -234,9 +234,9 @@ func (p *Parser) timeWhence() ASTNode {
 		when = time.Now()
 	case strings.HasPrefix(tok.Lexeme, "~("):
 		value := tok.Lexeme[2 : len(tok.Lexeme)-1]
-		when, err = time.Parse(time.RFC3339, value)
+		when, err = ParseVagueDateTime(value)
 		if err != nil {
-			panic(NewSyntaxError(tok, fmt.Sprintf("Error: Invalid date-time '%s', expected a valid RFC3339 date", value)))
+			panic(NewSyntaxError(tok, fmt.Sprintf("Error: %s", err.Error())))
 		}
 	}
 
