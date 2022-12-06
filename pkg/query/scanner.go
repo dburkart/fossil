@@ -8,7 +8,6 @@ package query
 
 import (
 	"strings"
-	"time"
 	"unicode"
 	"unicode/utf8"
 )
@@ -108,11 +107,6 @@ func (s *Scanner) MatchTimeWhence() int {
 			if end == len(s.Input)-1 {
 				break
 			}
-		}
-
-		_, err := time.Parse(time.RFC3339, s.Input[pos:end])
-		if err != nil {
-			return 0
 		}
 
 		// Add back one for '~', and another to include "end"

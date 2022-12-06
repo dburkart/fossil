@@ -56,6 +56,7 @@ type (
 
 	TimeWhenceNode struct {
 		BaseNode
+		When time.Time
 	}
 
 	BinaryOpNode struct {
@@ -195,26 +196,13 @@ func (q TopicSelectorNode) GenerateFilter(db *database.Database) database.Filter
 
 func (t TimePredicateNode) GenerateFilter(db *database.Database) database.Filter {
 	var startTime, endTime time.Time
-	var err error
 
 	switch t.Value {
 	case "before":
-		endTime, err = t.Children()[0].(*TimeExpressionNode).Time()
-		// It shouldn't be possible there to be an error here (we should catch
-		// it earlier when parsing, so panic
-		if err != nil {
-			panic(err)
-		}
-
+		endTime = t.Children()[0].(*TimeExpressionNode).Time()
 		startTime = db.Segments[0].HeadTime
 	case "since":
-		startTime, err = t.Children()[0].(*TimeExpressionNode).Time()
-		// It shouldn't be possible there to be an error here (we should catch
-		// it earlier when parsing, so panic
-		if err != nil {
-			panic(err)
-		}
-
+		startTime = t.Children()[0].(*TimeExpressionNode).Time()
 		endTime = time.Now()
 	}
 
@@ -233,34 +221,26 @@ func (t TimePredicateNode) GenerateFilter(db *database.Database) database.Filter
 
 //-- TimeExpressionNode
 
-func (t TimeExpressionNode) Time() (time.Time, error) {
+func (t TimeExpressionNode) Time() time.Time {
 	lh := t.Children()[0].(*TimeWhenceNode)
-	tm, err := lh.Time()
-	if err != nil {
-		return tm, err
-	}
+	tm := lh.Time()
 
 	switch t.Value {
 	case "-":
 		rh := t.Children()[1].(Numeric)
-		return tm.Add(time.Duration(rh.DerivedValue() * -1)), err
+		return tm.Add(time.Duration(rh.DerivedValue() * -1))
 	case "+":
 		rh := t.Children()[1].(Numeric)
-		return tm.Add(time.Duration(rh.DerivedValue())), err
+		return tm.Add(time.Duration(rh.DerivedValue()))
 	}
 
-	return tm, err
+	return tm
 }
 
 //-- TimeWhenceNode
 
-func (t TimeWhenceNode) Time() (time.Time, error) {
-	switch {
-	case t.Value == "~now":
-		return time.Now(), nil
-	default:
-		return time.Parse(time.RFC3339, t.Value[2:len(t.Value)-1])
-	}
+func (t TimeWhenceNode) Time() time.Time {
+	return t.When
 }
 
 //-- BinaryOpNode

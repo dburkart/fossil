@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 )
 
 type SyntaxError struct {
@@ -225,9 +226,26 @@ func (p *Parser) timeWhence() ASTNode {
 		panic(NewSyntaxError(tok, fmt.Sprintf("Error: Unexpected token '%s', expected a time-whence (~now, etc.)", tok.Lexeme)))
 	}
 
-	return &TimeWhenceNode{BaseNode{
-		Value: tok.Lexeme,
-	}}
+	var when time.Time
+	var err error
+
+	switch {
+	case tok.Lexeme == "~now":
+		when = time.Now()
+	case strings.HasPrefix(tok.Lexeme, "~("):
+		value := tok.Lexeme[2 : len(tok.Lexeme)-1]
+		when, err = time.Parse(time.RFC3339, value)
+		if err != nil {
+			panic(NewSyntaxError(tok, fmt.Sprintf("Error: Invalid date-time '%s', expected a valid RFC3339 date", value)))
+		}
+	}
+
+	return &TimeWhenceNode{
+		BaseNode: BaseNode{
+			Value: tok.Lexeme,
+		},
+		When: when,
+	}
 }
 
 // timeQuantity returns either the result of a single timeTerm, or a BinaryOpNode
