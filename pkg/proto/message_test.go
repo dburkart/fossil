@@ -124,7 +124,7 @@ func TestAppendRequest(t *testing.T) {
 		}
 
 		// Check fields
-		if req.Topic != "" {
+		if req.Topic != "/" {
 			t.Fail()
 		}
 		if !bytes.Equal(req.Data, []byte("woohoo")) {
