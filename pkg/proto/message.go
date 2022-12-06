@@ -253,13 +253,12 @@ func (rq *ErrResponse) Unmarshal(b []byte) error {
 
 // Marshal ...
 func (rq OkResponse) Marshal() ([]byte, error) {
-	b := []byte{}
-	buf := bytes.NewBuffer(binary.LittleEndian.AppendUint32(b, rq.Code))
+	buf := bytes.NewBuffer(binary.LittleEndian.AppendUint32([]byte{}, rq.Code))
 	err := buf.WriteByte(' ')
 	if err != nil {
 		return nil, err
 	}
-	_, err = buf.Write([]byte(rq.Message))
+	_, err = buf.WriteString(rq.Message)
 	if err != nil {
 		return nil, err
 	}
@@ -445,12 +444,11 @@ func (rq *StatsResponse) Unmarshal(b []byte) error {
 		return err
 	}
 	rq.Segments = int(segs)
-	up, err := buf.ReadBytes('\n')
+	up, err := io.ReadAll(buf)
 	if err != nil {
 		return err
 	}
-	dur := strings.Trim(string(up), "\n")
-	d, err := time.ParseDuration(dur)
+	d, err := time.ParseDuration(string(up))
 	if err != nil {
 		return err
 	}
