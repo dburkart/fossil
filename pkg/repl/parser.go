@@ -35,6 +35,8 @@ func ParseREPLCommand(b []byte) proto.Message {
 	// Marshal message based on the command
 	command := strings.ToUpper(string(cmd))
 	switch command {
+	case proto.CommandVersion:
+		msg = proto.NewMessageWithType(proto.CommandVersion, proto.VersionRequest{})
 	case proto.CommandAppend:
 		req := proto.AppendRequest{}
 
