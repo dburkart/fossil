@@ -53,6 +53,43 @@ func BenchmarkReadMessageFull(b *testing.B) {
 	}
 }
 
+func TestVersionRequest(t *testing.T) {
+	req := VersionRequest{}
+
+	b, _ := req.Marshal()
+	if !bytes.Equal(b, []byte(Version)) {
+		t.Fail()
+	}
+
+	req = VersionRequest{"v1.2.3"}
+	b, _ = req.Marshal()
+	if !bytes.Equal(b, []byte(Version)) {
+		t.Fail()
+	}
+
+	err := req.UnMarshal(b)
+	if err != nil {
+		t.Fail()
+	}
+}
+
+func TestVersionResponse(t *testing.T) {
+	resp := VersionResponse{Code: 200}
+
+	b, _ := resp.Marshal()
+	err := resp.UnMarshal(b)
+	if err != nil {
+		t.Fail()
+	}
+
+	if resp.Code != 200 {
+		t.Fail()
+	}
+	if resp.Version != Version {
+		t.Fail()
+	}
+}
+
 func TestUseRequest(t *testing.T) {
 	req := UseRequest{}
 

@@ -20,6 +20,7 @@ import (
 )
 
 var (
+	Version                      = "v1.0.0"
 	MessageOk                    = NewMessageWithType(CommandOk, OkResponse{Code: 200, Message: "Ok"})
 	MessageOkDatabaseChanged     = NewMessageWithType(CommandOk, OkResponse{Code: 201, Message: "database changed"})
 	MessageError                 = NewMessageWithType(CommandError, ErrResponse{Code: 500})
@@ -117,6 +118,14 @@ type Unmarshaler interface {
 }
 
 type (
+	VersionRequest struct {
+		Version string
+	}
+	VersionResponse struct {
+		Code    uint32
+		Version string
+	}
+
 	ErrResponse struct {
 		Code uint32
 		Err  error
@@ -153,6 +162,54 @@ type (
 		Results database.Entries
 	}
 )
+
+// VersionRequest
+// --------------------------
+
+// Marshal a VersionRequest. We don't actually use the specified version, and
+// instead rely on the Version variable above
+func (v VersionRequest) Marshal() ([]byte, error) {
+	return []byte(Version), nil
+}
+
+// UnMarshal ...
+func (v VersionRequest) UnMarshal(b []byte) error {
+	v.Version = string(b)
+
+	return nil
+}
+
+// VersionResponse
+// --------------------------
+
+// Marshal a VersionResponse. As with VersionRequest, we override the version
+// specified in the supplied VersionResponse.
+func (v VersionResponse) Marshal() ([]byte, error) {
+	buf := bytes.NewBuffer(binary.LittleEndian.AppendUint32([]byte{}, v.Code))
+	_, err := buf.Write([]byte(Version))
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
+// UnMarshal ...
+func (v *VersionResponse) UnMarshal(b []byte) error {
+	buf := bytes.NewBuffer(b)
+	err := binary.Read(buf, binary.LittleEndian, &v.Code)
+	if err != nil {
+		return err
+	}
+
+	version, err := io.ReadAll(buf)
+	if err != nil {
+		return err
+	}
+
+	v.Version = string(version)
+	return nil
+}
 
 // UseRequest
 // --------------------------
