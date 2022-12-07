@@ -45,8 +45,22 @@ func (p *Parser) Parse() (query ASTNode, err error) {
 		}
 	}()
 
+	// Now that we don't allow valid input after a valid query, make sure to
+	// trim queries of whitespace
+	p.Scanner.Input = strings.Trim(p.Scanner.Input, " \t\n")
+
 	err = nil
 	query = p.query()
+
+	// If we didn't parse all the input, return an error
+	if p.Scanner.Pos != len(p.Scanner.Input) {
+		syntaxError := NewSyntaxError(Token{
+			Type:     TOK_INVALID,
+			Location: [2]int{p.Scanner.Pos, len(p.Scanner.Input) - 1},
+		}, "Error: query is not valid, starting here")
+		err = errors.New(syntaxError.FormatError(p.Scanner.Input))
+	}
+
 	return
 }
 
