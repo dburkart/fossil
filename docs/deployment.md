@@ -52,11 +52,11 @@ kubectl create namespace fossil
 kubectl config set-context --current --namespace=fossil
 ```
 ```shell
-kubectl apply -f ./deploy/kubernetes/
+kubectl apply -f ./deploy/kubernetes/example
 ```
 
 #### Config
-Modify the `deploy/kubernetes/config.yaml` file to update the configuration for the fossil deployment.
+Modify the `deploy/kubernetes/example/config.yaml` file to update the configuration for the fossil deployment.
 
 ## Binary Distributions
 
