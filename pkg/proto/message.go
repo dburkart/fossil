@@ -494,7 +494,6 @@ func (rq ListResponse) Marshal() ([]byte, error) {
 		buf.Write(l)
 		buf.WriteString(rq.DatabaseList[i])
 	}
-
 	return buf.Bytes(), nil
 }
 
@@ -506,6 +505,7 @@ func (rq *ListResponse) Unmarshal(b []byte) error {
 	if err != nil {
 		return err
 	}
+	rq.DatabaseList = []string{}
 	var i uint32
 	for i = 0; i < count; i++ {
 		var l uint32

@@ -288,3 +288,38 @@ func TestStatsResponse(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestListRequest(t *testing.T) {
+	req := ListRequest{}
+
+	b, _ := req.Marshal()
+	err := req.Unmarshal(b)
+	if err != nil {
+		t.Fail()
+	}
+}
+
+func TestListResponse(t *testing.T) {
+	req := ListResponse{DatabaseList: []string{"y", "2", "k"}}
+
+	b, _ := req.Marshal()
+	err := req.Unmarshal(b)
+	if err != nil {
+		t.Log(err)
+		t.Fail()
+	}
+
+	// Check fields
+	if req.DatabaseList[0] != "y" {
+		t.Fail()
+	}
+	if req.DatabaseList[1] != "2" {
+		t.Fail()
+	}
+	if req.DatabaseList[2] != "k" {
+		t.Fail()
+	}
+	if len(req.DatabaseList) != 3 {
+		t.Fail()
+	}
+}
