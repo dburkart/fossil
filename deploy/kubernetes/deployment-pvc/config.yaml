@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fossil-config
+data: 
+  config.toml: |
+    [fossil]
+    port = 8001
+    prom-port = 2112
+
+    [database]
+    directory = "/mnt/data"
