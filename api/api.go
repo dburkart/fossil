@@ -7,6 +7,7 @@
 package fossil
 
 import (
+	"github.com/dburkart/fossil/pkg/database"
 	"github.com/dburkart/fossil/pkg/proto"
 	"github.com/pkg/errors"
 	"net"
@@ -84,7 +85,7 @@ func (c *Client) Send(m proto.Message) (proto.Message, error) {
 }
 
 // Append data to the specified topic.
-func (c *Client) Append(topic string, data []byte) (proto.OkResponse, error) {
+func (c *Client) Append(topic string, data []byte) error {
 	appendMsg := proto.NewMessageWithType(proto.CommandAppend,
 		proto.AppendRequest{
 			Topic: topic,
@@ -93,14 +94,35 @@ func (c *Client) Append(topic string, data []byte) (proto.OkResponse, error) {
 
 	resp, err := c.Send(appendMsg)
 	if err != nil {
-		return proto.OkResponse{}, err
+		return err
 	}
 
 	ok := proto.OkResponse{}
 	err = ok.Unmarshal(resp.Data)
 	if err != nil {
-		return proto.OkResponse{}, err
+		return err
 	}
 
-	return ok, nil
+	return nil
+}
+
+// Query the database for some time-series data.
+func (c *Client) Query(q string) (database.Entries, error) {
+	queryMsg := proto.NewMessageWithType(proto.CommandQuery,
+		proto.QueryRequest{
+			Query: q,
+		})
+
+	resp, err := c.Send(queryMsg)
+	if err != nil {
+		return nil, err
+	}
+
+	queryResponse := proto.QueryResponse{}
+	err = queryResponse.Unmarshal(resp.Data)
+	if err != nil {
+		return nil, err
+	}
+
+	return queryResponse.Results, nil
 }
