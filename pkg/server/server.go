@@ -66,6 +66,7 @@ func (s *Server) ServeDatabase() {
 
 	// Wire up handlers
 	mux.HandleState(proto.CommandUse, s.HandleUse)
+	mux.Handle(proto.CommandVersion, s.HandleVersion)
 	mux.Handle(proto.CommandQuery, s.HandleQuery)
 	mux.Handle(proto.CommandAppend, s.HandleAppend)
 	mux.Handle(proto.CommandStats, s.HandleStats)
@@ -99,6 +100,21 @@ func (s *Server) HandleUse(rw proto.ResponseWriter, c *conn, r *proto.Request) {
 	c.SetDatabase(use.DbName, db)
 
 	rw.WriteMessage(proto.MessageOkDatabaseChanged)
+}
+
+func (s *Server) HandleVersion(rw proto.ResponseWriter, r *proto.Request) {
+	version := proto.VersionRequest{}
+	err := proto.Unmarshal(r.Data(), &version)
+	if err != nil {
+		s.log.Error().Err(err).Msg("error unmarshaling")
+		rw.WriteMessage(proto.MessageErrorUnmarshaling)
+		return
+	}
+	s.log.Trace().Str("client-version", version.Version).Msg("got client version")
+	// We don't currently reject any versions, so proceed to send our own version
+	// announcement with an OK code.
+	versionResponse := proto.VersionResponse{Code: 200}
+	rw.WriteMessage(proto.NewMessageWithType(proto.CommandVersion, versionResponse))
 }
 
 func (s *Server) HandleAppend(rw proto.ResponseWriter, r *proto.Request) {
