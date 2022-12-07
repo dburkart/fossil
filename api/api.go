@@ -88,15 +88,15 @@ func (c *Client) Close() error {
 
 // Send a general message to the fossil server.
 func (c *Client) Send(m proto.Message) (proto.Message, error) {
-	conn := <-c.conn
-	defer func() {
-		c.conn <- conn
-	}()
-
 	data, err := m.Marshal()
 	if err != nil {
 		return proto.Message{}, err
 	}
+
+	conn := <-c.conn
+	defer func() {
+		c.conn <- conn
+	}()
 
 	_, err = conn.Write(data)
 	if err != nil {
