@@ -7,8 +7,7 @@
       - [Deploy](#deploy)
       - [Config](#config)
   - [Binary Distributions](#binary-distributions)
-    - [Build](#build)
-    - [Run](#run)
+    - [FreeBSD](#freebsd)
 
 
 Fossil recommendations
