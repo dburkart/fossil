@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fossil
+spec:
+  selector:
+    matchLabels:
+      app: fossil
+  template:
+    metadata:
+      labels:
+        app: fossil
+    spec:
+      containers:
+      - name: fossil
+        image: gideonw/fossil:v0.1
+        args:
+          - "server"
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: "500Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 8001
+        - containerPort: 2112
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/fossil/
+      volumes:
+      - name: config-volume
+        configMap:
+          name: fossil-config
