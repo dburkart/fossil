@@ -249,6 +249,7 @@ func readlinePrompt(c fossil.Client) {
 				fmt.Println(v)
 			}
 		}
+		fmt.Println()
 	}
 	rl.Clean()
 }
