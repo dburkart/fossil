@@ -1,0 +1,22 @@
+#!/bin/sh
+
+# PROVIDE: fossil
+# REQUIRE: NETWORKING
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name=fossil
+rcvar=fossil_enable
+
+load_rc_config $name
+
+: ${fossil_enable="NO"}
+: ${fossil_home_dir:="<HOME>"}
+
+pidfile="/var/run/${name}.pid"
+procname="${fossil_home_dir}/go/bin/fossil"
+command="/usr/sbin/daemon"
+command_args="-S -p ${pidfile} -u <USER> ${procname} server --config /usr/local/etc/fossil/config.toml"
+
+run_rc_command "$1"

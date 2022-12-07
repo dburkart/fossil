@@ -61,6 +61,48 @@ Modify the `deploy/kubernetes/config.yaml` file to update the configuration for 
 
 ## Binary Distributions
 
-### Build
+We don't provide any binary distributions as of this writing, but you can install the fossil command 
+in the typical way you would install a go package:
 
-### Run
+```shell
+go install github.com/dburkart/fossil
+```
+
+Depending on how and where you are deploying fossil, you may want run the above command as a separate
+fossil-specific user.
+
+### FreeBSD
+Below is an example FreeBSD daemon that you can install under `/usr/local/etc/rc.d/fossil`:
+
+```shell
+#!/bin/sh
+
+# PROVIDE: fossil
+# REQUIRE: NETWORKING
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name=fossil
+rcvar=fossil_enable
+
+load_rc_config $name
+
+: ${fossil_enable="NO"}
+: ${fossil_home_dir:="<HOME>"}
+
+pidfile="/var/run/${name}.pid"
+procname="${fossil_home_dir}/go/bin/fossil"
+command="/usr/sbin/daemon"
+command_args="-S -p ${pidfile} -u <USER> ${procname} server --config /usr/local/etc/fossil/config.toml"
+
+run_rc_command "$1"
+```
+
+Replace `<HOME>` with the location of user you are running the daemon under's home, and `<USER>` with
+the user you'd like to run the fossil server under. You can also find the above script in "./deploy/freebsd/fossil-daemon"
+
+Additionally, this script directs fossil to read `/usr/local/etc/fossil/config.toml`, but you can choose
+to rely on the fossil autoload search path.
+
+Now you can run the fossil database in the typical FreeBSD way, via `service fossil start`.
