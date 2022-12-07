@@ -23,11 +23,14 @@ func initConfig(configFile string) {
 	// config Read
 	viper.SetConfigType("toml")
 	viper.AddConfigPath("config")
-	viper.AddConfigPath("/etc/fossil/")
-	viper.AddConfigPath("/usr/local/etc/fossil/")
+	viper.AddConfigPath("/etc/fossil")
+	viper.AddConfigPath("/usr/local/etc/fossil")
 	viper.AddConfigPath("$HOME/.fossil")
 	viper.AddConfigPath(".")
-	viper.SetConfigFile(configFile)
+
+	if configFile != "" {
+		viper.SetConfigFile(configFile)
+	}
 
 	err := viper.ReadInConfig()
 	if _, ok := err.(viper.ConfigFileNotFoundError); ok {
@@ -35,6 +38,8 @@ func initConfig(configFile string) {
 	} else if err != nil {
 		log.Error().Msg("Error loading config file")
 	}
+
+	log.Info().Str("file", viper.ConfigFileUsed()).Msg("loaded config from file")
 
 	databaseConfigs := viper.GetStringMap("database")
 	databases := []string{}
