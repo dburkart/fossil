@@ -172,8 +172,8 @@ func (v VersionRequest) Marshal() ([]byte, error) {
 	return []byte(Version), nil
 }
 
-// UnMarshal ...
-func (v VersionRequest) UnMarshal(b []byte) error {
+// Unmarshal ...
+func (v *VersionRequest) Unmarshal(b []byte) error {
 	v.Version = string(b)
 
 	return nil
@@ -194,8 +194,8 @@ func (v VersionResponse) Marshal() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// UnMarshal ...
-func (v *VersionResponse) UnMarshal(b []byte) error {
+// Unmarshal ...
+func (v *VersionResponse) Unmarshal(b []byte) error {
 	buf := bytes.NewBuffer(b)
 	err := binary.Read(buf, binary.LittleEndian, &v.Code)
 	if err != nil {
