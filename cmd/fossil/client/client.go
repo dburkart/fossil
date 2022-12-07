@@ -14,7 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dburkart/fossil/api"
+	"github.com/chzyer/readline"
+	fossil "github.com/dburkart/fossil/api"
 	"github.com/dburkart/fossil/pkg/database"
 	"github.com/dburkart/fossil/pkg/proto"
 	"github.com/dburkart/fossil/pkg/query"
@@ -29,35 +30,37 @@ import (
 
 var log zerolog.Logger
 
-var Command = &cobra.Command{
-	Use:   "client",
-	Short: "Interactive terminal for communicating with the server",
+var (
+	Command = &cobra.Command{
+		Use:   "client",
+		Short: "Interactive terminal for communicating with the server",
 
-	Run: func(cmd *cobra.Command, args []string) {
-		log := viper.Get("logger").(zerolog.Logger)
+		Run: func(cmd *cobra.Command, args []string) {
+			log := viper.Get("logger").(zerolog.Logger)
 
-		host := viper.GetString("fossil.host")
-		target := proto.ParseConnectionString(host)
+			host := viper.GetString("fossil.host")
+			target := proto.ParseConnectionString(host)
 
-		if target.Local {
-			db, err := database.NewDatabase(log, target.Database, target.Database)
-			if err != nil {
-				log.Fatal().Err(err).Msg("error creating new database")
+			if target.Local {
+				db, err := database.NewDatabase(log, target.Database, target.Database)
+				if err != nil {
+					log.Fatal().Err(err).Msg("error creating new database")
+				}
+
+				localPrompt(db)
+			} else {
+				client, err := fossil.NewClient(host)
+				if err != nil {
+					log.Error().Err(err).Str("address", target.Address).Msg("unable to connect to server")
+				}
+
+				// REPL
+				readlinePrompt(client)
+				// clientPrompt(client)
 			}
-
-			localPrompt(db)
-		} else {
-			client, err := fossil.NewClient(host)
-			if err != nil {
-				log.Error().Err(err).Str("address", target.Address).Msg("unable to connect to server")
-				os.Exit(1)
-			}
-
-			// REPL
-			clientPrompt(client)
-		}
-	},
-}
+		},
+	}
+)
 
 func init() {
 	log = zerolog.New(zerolog.ConsoleWriter{
@@ -93,40 +96,77 @@ func localPrompt(db *database.Database) {
 	}
 }
 
-func clientPrompt(c fossil.Client) {
-	defer c.Close()
-
-	// Check whether stdin is a pipe, since we'll want to make different choices
-	// in terms of prompt and repl termination.
-	piped := false
-	stdin, _ := os.Stdin.Stat()
-	if (stdin.Mode() & os.ModeCharDevice) == 0 {
-		piped = true
+func listDatabases(c fossil.Client) func(string) []string {
+	msg, err := c.Send(proto.NewMessageWithType(proto.CommandList, proto.ListRequest{}))
+	if err != nil {
+		return func(string) []string { return []string{} }
 	}
+	resp := proto.ListResponse{}
+	err = resp.Unmarshal(msg.Data)
+	if err != nil {
+		return func(string) []string { return []string{} }
+	}
+	return func(line string) []string {
+		return resp.DatabaseList
+	}
+}
 
-	exit := false
-	history := []string{}
-	rdr := bufio.NewReader(os.Stdin)
-	for !exit {
-		if !piped {
-			fmt.Printf("\n> ")
-		}
-		line, err := rdr.ReadBytes('\n')
-		line = line[:len(line)-1]
-		history = append(history, string(line))
-		if err != nil {
-			if piped {
-				return
-			}
-			fmt.Printf("Err: unable to read input\n\t'%s'\n", string(line))
+func filterInput(r rune) (rune, bool) {
+	switch r {
+	// block CtrlZ feature
+	case readline.CharCtrlZ:
+		return r, false
+	}
+	return r, true
+}
+
+func readlinePrompt(c fossil.Client) {
+	// Configure the completer
+	useItem := readline.PcItemDynamic(listDatabases(c))
+	completer := readline.NewPrefixCompleter(
+		readline.PcItem("USE", useItem),
+		readline.PcItem("use", useItem),
+		readline.PcItem("APPEND"),
+		readline.PcItem("append"),
+		readline.PcItem("INSERT"),
+		readline.PcItem("insert"),
+		readline.PcItem("QUERY"),
+		readline.PcItem("query"),
+		readline.PcItem("EXIT"),
+		readline.PcItem("exit"),
+		readline.PcItem("LIST"),
+		readline.PcItem("list"),
+	)
+
+	// Setup the readline executor
+	rl, err := readline.NewEx(&readline.Config{
+		Prompt:          "\033[31m>\033[0m ",
+		AutoComplete:    completer,
+		InterruptPrompt: "^C",
+		EOFPrompt:       "exit",
+
+		HistorySearchFold:   true,
+		FuncFilterInputRune: filterInput,
+	})
+	if err != nil {
+		panic(err)
+	}
+	defer rl.Close()
+
+	// Handle input
+	for {
+		ln := rl.Line()
+		if ln.CanContinue() {
+			continue
+		} else if ln.CanBreak() {
+			break
 		}
 
-		if strings.HasPrefix(string(line), "QUIT") {
-			fmt.Println("bye!")
-			return
+		if strings.ToUpper(ln.Line) == "EXIT" {
+			os.Exit(0)
 		}
-		log.Trace().Str("line", string(line)).Bytes("buf", line).Msg("sending")
-		replMsg := repl.ParseREPLCommand(line)
+
+		replMsg := repl.ParseREPLCommand([]byte(ln.Line))
 		msg, err := c.Send(replMsg)
 		if err != nil {
 			log.Error().Err(err).Msg("error sending message to server")
@@ -198,6 +238,17 @@ func clientPrompt(c fossil.Client) {
 				continue
 			}
 			fmt.Println(t.Code, t.Message)
+		case proto.CommandList:
+			t := proto.ListResponse{}
+			err = t.Unmarshal(msg.Data)
+			if err != nil {
+				log.Error().Err(err).Send()
+				continue
+			}
+			for _, v := range t.DatabaseList {
+				fmt.Println(v)
+			}
 		}
 	}
+	rl.Clean()
 }
