@@ -23,20 +23,34 @@ type Client struct {
 // remote fossil database. The client is thread safe, but only holds one
 // connection at a time. For a client pool, use NewClientPool instead.
 func NewClient(connstr string) (Client, error) {
+	client, err := NewClientPool(connstr, 1)
+	if err != nil {
+		return Client{}, err
+	}
+
+	return client, nil
+}
+
+// NewClientPool creates a new Client struct which holds a pool of net.Conn
+// resources open to a remote fossil database. This is useful for sending large
+// volumes of data to fossil.
+func NewClientPool(connstr string, size uint) (Client, error) {
 	var client Client
 
 	client.target = proto.ParseConnectionString(connstr)
-	c, err := net.Dial("tcp4", client.target.Address)
-	if err != nil {
-		return Client{}, err
+	client.conn = make(chan net.Conn, size)
+
+	for i := uint(0); i < size; i++ {
+		c, err := net.Dial("tcp4", client.target.Address)
+		if err != nil {
+			return Client{}, err
+		}
+		_, err = connect(c, client.target.Database)
+		if err != nil {
+			return Client{}, err
+		}
+		client.conn <- c
 	}
-	// Before we do anything else, send over a "USE" command to switch DBs
-	_, err = connect(c, client.target.Database)
-	if err != nil {
-		return Client{}, err
-	}
-	client.conn = make(chan net.Conn, 1)
-	client.conn <- c
 
 	return client, nil
 }
