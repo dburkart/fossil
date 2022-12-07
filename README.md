@@ -54,7 +54,7 @@ Flags:
   -d, --database string   Path to store database files (default "./")
   -h, --help              help for server
   -p, --port int          Database server port for data collection (default 8001)
-      --prom-http int     Set the port for /metrics is bound to (default 2112)
+      --prom-port int     Set the port for /metrics (default 2112)
 
 Global Flags:
   -c, --config string   Path to the fossil config file (default "./config.toml")
