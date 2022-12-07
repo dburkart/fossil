@@ -9,16 +9,12 @@ package client
 
 import (
 	"bufio"
-	"bytes"
-	"encoding/binary"
 	"fmt"
-	"net"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
-
+	"github.com/dburkart/fossil/api"
 	"github.com/dburkart/fossil/pkg/database"
 	"github.com/dburkart/fossil/pkg/proto"
 	"github.com/dburkart/fossil/pkg/query"
@@ -51,20 +47,13 @@ var Command = &cobra.Command{
 
 			localPrompt(db)
 		} else {
-			c, err := net.Dial("tcp4", target.Address)
+			client, err := fossil.NewClient(host)
 			if err != nil {
 				log.Error().Err(err).Str("address", target.Address).Msg("unable to connect to server")
 			}
 
-			// Handle onConnect actions
-			ok, err := onConnect(c, target.Database)
-			if err != nil {
-				log.Fatal().Err(err).Msg("error on connect")
-			}
-			fmt.Println(ok.Code, ok.Message)
-
 			// REPL
-			clientPrompt(c)
+			clientPrompt(client)
 		}
 	},
 }
@@ -78,47 +67,6 @@ func init() {
 		Timestamp().
 		Caller().
 		Logger()
-}
-
-func onConnect(c net.Conn, dbName string) (proto.OkResponse, error) {
-	// Always send a use first
-	useMsg := proto.NewMessageWithType(proto.CommandUse, proto.UseRequest{DbName: dbName})
-	b, _ := useMsg.Marshal()
-	c.Write(b)
-	m, err := proto.ReadMessageFull(c)
-	if err != nil {
-		return proto.OkResponse{}, errors.Wrap(err, "unable to parse server use response")
-	}
-	ok := proto.OkResponse{}
-	err = ok.Unmarshal(m.Data)
-	if err != nil {
-		return proto.OkResponse{}, errors.Wrap(err, "unable to unmarshal ok response")
-	}
-
-	return ok, nil
-}
-
-func send(c net.Conn, msg []byte) error {
-	buf := bytes.NewBuffer(binary.LittleEndian.AppendUint32([]byte{}, uint32(len(msg))))
-	buf.Write(msg)
-	n, err := c.Write(buf.Bytes())
-	if err != nil {
-		log.Error().Err(err).Msg("unable to write to server")
-		return err
-	}
-	log.Trace().Int("bytes", n).Msg("message sent")
-	return nil
-}
-
-func formatMessage(b []byte) []byte {
-	cmd := make([]byte, 8)
-	ind := bytes.IndexByte(b, ' ')
-	if ind == -1 {
-		return nil
-	}
-	copy(cmd, b[0:ind])
-	ret := append(cmd[0:8], b[ind+1:]...)
-	return ret
 }
 
 func localPrompt(db *database.Database) {
@@ -144,7 +92,7 @@ func localPrompt(db *database.Database) {
 	}
 }
 
-func clientPrompt(c net.Conn) {
+func clientPrompt(c fossil.Client) {
 	defer c.Close()
 
 	// Check whether stdin is a pipe, since we'll want to make different choices
@@ -178,20 +126,9 @@ func clientPrompt(c net.Conn) {
 		}
 		log.Trace().Str("line", string(line)).Bytes("buf", line).Msg("sending")
 		replMsg := repl.ParseREPLCommand(line)
-		msgb, err := replMsg.Marshal()
+		msg, err := c.Send(replMsg)
 		if err != nil {
-			log.Error().Err(err).Msg("error marshaling message into bytes")
-			continue
-		}
-		_, err = c.Write(msgb)
-		if err != nil {
-			fmt.Printf("Err: unable to send command\n\t'%s'\n", err)
-		}
-
-		msg, err := proto.ReadMessageFull(c)
-		if err != nil {
-			log.Error().Err(err).Msg("malformed message")
-			continue
+			log.Error().Err(err).Msg("error sending message to server")
 		}
 
 		switch msg.Command {
