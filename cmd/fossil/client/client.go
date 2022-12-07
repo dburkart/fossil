@@ -132,6 +132,14 @@ func clientPrompt(c fossil.Client) {
 		}
 
 		switch msg.Command {
+		case proto.CommandVersion:
+			v := proto.VersionResponse{}
+			err = v.Unmarshal(msg.Data)
+			if err != nil {
+				log.Error().Err(err).Send()
+				continue
+			}
+			fmt.Printf("%d %s\n", v.Code, v.Version)
 		case proto.CommandStats:
 			t := proto.StatsResponse{}
 			err = t.Unmarshal(msg.Data)
