@@ -13,6 +13,19 @@ import (
 	"time"
 )
 
+func TestGarbageAfterQuery(t *testing.T) {
+	p := Parser{
+		Scanner: Scanner{
+			Input: "all and then some garbage",
+		},
+	}
+
+	_, err := p.Parse()
+	if err == nil {
+		t.Fail()
+	}
+}
+
 func TestParseAllQuantifier(t *testing.T) {
 	p := Parser{
 		Scanner: Scanner{
