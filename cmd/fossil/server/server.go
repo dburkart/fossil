@@ -28,7 +28,7 @@ var Command = &cobra.Command{
 			logger,
 			buildDatabaseConfigs(),
 			viper.GetInt("fossil.port"),
-			viper.GetInt("fossil.prom-http"),
+			viper.GetInt("fossil.prom-port"),
 		)
 
 		// Serve the database
@@ -73,11 +73,11 @@ func buildDatabaseConfigs() map[string]server.DatabaseConfig {
 func init() {
 	// Flags for this command
 	Command.Flags().IntP("port", "p", 8001, "Database server port for data collection")
-	Command.Flags().Int("prom-http", 2112, "Set the port for /metrics is bound to")
+	Command.Flags().Int("prom-port", 2112, "Set the port for /metrics")
 	Command.Flags().StringP("database", "d", "./", "Path to store database files")
 
 	// Bind flags to viper
 	viper.BindPFlag("fossil.port", Command.Flags().Lookup("port"))
-	viper.BindPFlag("fossil.prom-port", Command.Flags().Lookup("prom-http"))
+	viper.BindPFlag("fossil.prom-port", Command.Flags().Lookup("prom-port"))
 	viper.BindPFlag("database.directory", Command.Flags().Lookup("database"))
 }
