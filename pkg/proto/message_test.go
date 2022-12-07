@@ -67,7 +67,7 @@ func TestVersionRequest(t *testing.T) {
 		t.Fail()
 	}
 
-	err := req.UnMarshal(b)
+	err := req.Unmarshal(b)
 	if err != nil {
 		t.Fail()
 	}
@@ -77,7 +77,7 @@ func TestVersionResponse(t *testing.T) {
 	resp := VersionResponse{Code: 200}
 
 	b, _ := resp.Marshal()
-	err := resp.UnMarshal(b)
+	err := resp.Unmarshal(b)
 	if err != nil {
 		t.Fail()
 	}
