@@ -68,6 +68,10 @@ func ParseREPLCommand(b []byte) proto.Message {
 		req.Query = string(data)
 
 		msg = proto.NewMessageWithType(proto.CommandQuery, req)
+	case proto.CommandList:
+		req := proto.ListRequest{}
+
+		msg = proto.NewMessageWithType(proto.CommandQuery, req)
 	default:
 		msg = proto.NewMessage(command, b)
 	}

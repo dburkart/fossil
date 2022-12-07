@@ -9,6 +9,8 @@ package proto
 var (
 	// CommandVersion sends the version of the fossil protocol supported to the server / client
 	CommandVersion = "VERSION"
+	// CommandList sets the current database context
+	CommandList = "LIST"
 	// CommandUse sets the current database context
 	CommandUse = "USE"
 	// CommandError sends an error code and a message to the client

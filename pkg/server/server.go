@@ -70,6 +70,7 @@ func (s *Server) ServeDatabase() {
 	mux.Handle(proto.CommandQuery, s.HandleQuery)
 	mux.Handle(proto.CommandAppend, s.HandleAppend)
 	mux.Handle(proto.CommandStats, s.HandleStats)
+	mux.Handle(proto.CommandList, s.HandleList)
 
 	err := srv.ListenAndServe(s.port, mux)
 	if err != nil {
@@ -168,6 +169,16 @@ func (s *Server) HandleStats(rw proto.ResponseWriter, r *proto.Request) {
 		TotalMem:  m.Sys,
 		Uptime:    time.Since(s.startupTime),
 		Segments:  len(r.Database().Segments),
+	}
+	rw.WriteMessage(proto.NewMessageWithType(proto.CommandStats, resp))
+}
+
+func (s *Server) HandleList(rw proto.ResponseWriter, r *proto.Request) {
+	resp := proto.ListResponse{
+		DatabaseList: []string{},
+	}
+	for k := range s.dbMap {
+		resp.DatabaseList = append(resp.DatabaseList, k)
 	}
 	rw.WriteMessage(proto.NewMessageWithType(proto.CommandStats, resp))
 }
