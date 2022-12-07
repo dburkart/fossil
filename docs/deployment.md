@@ -11,7 +11,7 @@
 
 Fossil recommendations
 - Memory
-  - Usage: 500m
+  - Usage: 500Mi
 - CPU
   - Usage: 500m
 
@@ -29,7 +29,6 @@ or Pull
 ```
 docker pull
 ```
-
 
 ### Kubernetes
 
