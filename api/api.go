@@ -57,11 +57,29 @@ func NewClientPool(connstr string, size uint) (Client, error) {
 
 // FIXME: Refactor this into a common Use() API
 func connect(c net.Conn, dbName string) (proto.OkResponse, error) {
-	// Always send a use first
-	useMsg := proto.NewMessageWithType(proto.CommandUse, proto.UseRequest{DbName: dbName})
-	b, _ := useMsg.Marshal()
+	// First, send a version advertisement
+	versionMsg := proto.NewMessageWithType(proto.CommandVersion, proto.VersionRequest{})
+	b, _ := versionMsg.Marshal()
 	c.Write(b)
 	m, err := proto.ReadMessageFull(c)
+	if err != nil {
+		return proto.OkResponse{}, errors.Wrap(err, "unable to parse server version response")
+	}
+	version := proto.VersionResponse{}
+	err = version.Unmarshal(m.Data)
+	if err != nil {
+		return proto.OkResponse{}, errors.Wrap(err, "unable to unmarshal version response")
+	}
+	if version.Code != 200 {
+		return proto.OkResponse{}, errors.New("server rejected client version")
+	}
+	// We don't have any version logic yet
+
+	// Send the server use message
+	useMsg := proto.NewMessageWithType(proto.CommandUse, proto.UseRequest{DbName: dbName})
+	b, _ = useMsg.Marshal()
+	c.Write(b)
+	m, err = proto.ReadMessageFull(c)
 	if err != nil {
 		return proto.OkResponse{}, errors.Wrap(err, "unable to parse server use response")
 	}
