@@ -24,6 +24,17 @@ func TestGarbageAfterQuery(t *testing.T) {
 	if err == nil {
 		t.Fail()
 	}
+
+	p = Parser{
+		Scanner: Scanner{
+			Input: "all  \t\n",
+		},
+	}
+
+	_, err = p.Parse()
+	if err != nil {
+		t.Fail()
+	}
 }
 
 func TestParseAllQuantifier(t *testing.T) {
