@@ -88,7 +88,7 @@ func (m *Message) Unmarshal(r io.Reader) error {
 	if err != nil {
 		return fmt.Errorf("unable to read response\n\t'%s'", string(b))
 	}
-	if n <= 8 {
+	if n < 8 {
 		return errors.New("message format incorrect")
 	}
 
