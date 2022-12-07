@@ -180,5 +180,5 @@ func (s *Server) HandleList(rw proto.ResponseWriter, r *proto.Request) {
 	for k := range s.dbMap {
 		resp.DatabaseList = append(resp.DatabaseList, k)
 	}
-	rw.WriteMessage(proto.NewMessageWithType(proto.CommandStats, resp))
+	rw.WriteMessage(proto.NewMessageWithType(proto.CommandList, resp))
 }
