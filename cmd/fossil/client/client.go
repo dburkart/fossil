@@ -161,12 +161,13 @@ func readlinePrompt(c fossil.Client) {
 		} else if ln.CanBreak() {
 			break
 		}
+		line := strings.TrimSpace(ln.Line)
 
-		if strings.ToUpper(ln.Line) == "EXIT" {
+		if strings.ToUpper(line) == "EXIT" {
 			os.Exit(0)
 		}
 
-		replMsg := repl.ParseREPLCommand([]byte(ln.Line))
+		replMsg := repl.ParseREPLCommand([]byte(line))
 		msg, err := c.Send(replMsg)
 		if err != nil {
 			log.Error().Err(err).Msg("error sending message to server")
