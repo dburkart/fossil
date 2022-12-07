@@ -56,7 +56,6 @@ var (
 
 				// REPL
 				readlinePrompt(client)
-				// clientPrompt(client)
 			}
 		},
 	}
