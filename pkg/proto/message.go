@@ -27,7 +27,9 @@ var (
 	MessageErrorCommandNotFound  = NewMessageWithType(CommandError, ErrResponse{Code: 501, Err: fmt.Errorf("command not found")})
 	MessageErrorMalformedMessage = NewMessageWithType(CommandError, ErrResponse{Code: 502, Err: fmt.Errorf("malformed message")})
 	MessageErrorUnmarshaling     = NewMessageWithType(CommandError, ErrResponse{Code: 506, Err: fmt.Errorf("error unmarshaling")})
-	MessageErrorUnknownDb        = NewMessageWithType(CommandError, ErrResponse{Code: 505})
+	MessageErrorUnknownDb        = NewMessageWithType(CommandList, ListRequest{})
+
+	MessageList = NewMessageWithType(CommandError, ErrResponse{Code: 505})
 
 	lenWidth     = 4
 	commandWidth = 8
@@ -139,9 +141,18 @@ type (
 	UseRequest struct {
 		DbName string
 	}
+
+	ListRequest struct {
+	}
+
+	ListResponse struct {
+		DatabaseList []string
+	}
+
 	StatsRequest struct {
 		Database string
 	}
+
 	StatsResponse struct {
 		AllocHeap uint64
 		TotalMem  uint64
@@ -455,5 +466,62 @@ func (rq *StatsResponse) Unmarshal(b []byte) error {
 	}
 	rq.Uptime = d
 
+	return nil
+}
+
+// ListRequest
+// --------------------------
+
+// Marshal ...
+func (rq ListRequest) Marshal() ([]byte, error) {
+	return []byte{}, nil
+}
+
+// Unmarshal ...
+func (rq *ListRequest) Unmarshal(b []byte) error {
+	return nil
+}
+
+// ListResponse
+// --------------------------
+
+// Marshal ...
+func (rq ListResponse) Marshal() ([]byte, error) {
+	b := []byte{}
+	buf := bytes.NewBuffer(binary.LittleEndian.AppendUint32(b, uint32(len(rq.DatabaseList))))
+	for i := range rq.DatabaseList {
+		l := binary.LittleEndian.AppendUint32([]byte{}, uint32(len(rq.DatabaseList[i])))
+		buf.Write(l)
+		buf.WriteString(rq.DatabaseList[i])
+	}
+
+	return buf.Bytes(), nil
+}
+
+// Unmarshal ...
+func (rq *ListResponse) Unmarshal(b []byte) error {
+	var count uint32 = 0
+	buf := bytes.NewBuffer(b)
+	err := binary.Read(buf, binary.LittleEndian, &count)
+	if err != nil {
+		return err
+	}
+	var i uint32
+	for i = 0; i < count; i++ {
+		var l uint32
+		err := binary.Read(buf, binary.LittleEndian, &l)
+		if err != nil {
+			return err
+		}
+		line := make([]byte, l)
+		n, err := buf.Read(line)
+		if err != nil {
+			return err
+		}
+		if uint32(n) != l {
+			return fmt.Errorf("error entry len not the right len %d != %d", n, l)
+		}
+		rq.DatabaseList = append(rq.DatabaseList, string(line))
+	}
 	return nil
 }
