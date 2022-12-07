@@ -50,6 +50,7 @@ var Command = &cobra.Command{
 			client, err := fossil.NewClient(host)
 			if err != nil {
 				log.Error().Err(err).Str("address", target.Address).Msg("unable to connect to server")
+				os.Exit(1)
 			}
 
 			// REPL
