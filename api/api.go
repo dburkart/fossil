@@ -60,6 +60,18 @@ func connect(c net.Conn, dbName string) (proto.OkResponse, error) {
 	return ok, nil
 }
 
+func (c *Client) Close() error {
+	for i := 0; i < len(c.conn); i++ {
+		conn := <-c.conn
+		err := conn.Close()
+		if err != nil {
+			return err
+		}
+	}
+	c.conn = nil
+	return nil
+}
+
 // Send a general message to the fossil server.
 func (c *Client) Send(m proto.Message) (proto.Message, error) {
 	conn := <-c.conn
