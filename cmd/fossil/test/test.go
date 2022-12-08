@@ -7,9 +7,13 @@
 package test
 
 import (
-	"net"
+	"fmt"
+	"time"
 
+	fossil "github.com/dburkart/fossil/api"
+	"github.com/dburkart/fossil/pkg/proto"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -22,24 +26,43 @@ var Command = &cobra.Command{
 		log := viper.Get("logger").(zerolog.Logger)
 
 		host := viper.GetString("fossil.host")
-		c, err := net.Dial("tcp4", host)
+		target := proto.ParseConnectionString(host)
+
+		client, err := fossil.NewClient(host)
 		if err != nil {
-			log.Error().Err(err).Str("host", host).Msg("unable to connect to server")
+			log.Error().Err(err).Str("address", target.Address).Msg("unable to connect to server")
 		}
 
-		msg := []byte("INFO all\nINFO all\nINFO all\nINFO all\nAPPEND foo\n")
-		n, err := c.Write(msg)
-		if err != nil {
-			log.Error().Err(err).Str("host", host).Msg("unable to write to server")
-		}
-		log.Info().Int("bytes", n).Msg("message sent")
+		// test
+		timeIt("RandomCountBytesTest", client, RandomCountBytesTest)
 	},
 }
 
 func init() {
 	// Flags for this command
-	// Command.Flags().StringP("host", "H", "localhost:8001", "Host to send the messages")
+	Command.Flags().Int("count", 10, "Number of messages to send")
 
 	// Bind flags to viper
-	// viper.BindPFlag("host", Command.Flags().Lookup("host"))
+	viper.BindPFlag("count", Command.Flags().Lookup("count"))
+}
+
+func timeIt(name string, client fossil.Client, f func(client fossil.Client)) {
+	t := time.Now()
+	defer func() {
+		log.Info().Str("dur", time.Since(t).String()).Str("name", name).Send()
+	}()
+	f(client)
+}
+
+func RandomCountBytesTest(client fossil.Client) {
+	count := viper.GetInt("count")
+	for i := 0; i < count; i++ {
+		client.Send(proto.NewMessageWithType(
+			proto.CommandAppend,
+			proto.AppendRequest{
+				Topic: fmt.Sprintf("/test/%d/%d", count, i),
+				Data:  []byte{},
+			},
+		))
+	}
 }

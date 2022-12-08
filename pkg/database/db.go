@@ -20,6 +20,7 @@ import (
 
 type Database struct {
 	Version     int
+	Name        string
 	Path        string
 	Segments    []Segment
 	Current     int
@@ -309,6 +310,7 @@ func NewDatabase(log zerolog.Logger, name string, location string) (*Database, e
 	} else if _, err := os.Stat(filepath.Join(directory, "wal.log")); err == nil {
 		db = Database{
 			Version:    1,
+			Name:       name,
 			Path:       directory,
 			Segments:   []Segment{},
 			Current:    0,
@@ -320,6 +322,7 @@ func NewDatabase(log zerolog.Logger, name string, location string) (*Database, e
 	} else {
 		db = Database{
 			Version:    1,
+			Name:       name,
 			Path:       directory,
 			Segments:   []Segment{},
 			Current:    0,
