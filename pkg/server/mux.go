@@ -73,10 +73,10 @@ func NewMessageServer(log zerolog.Logger) MessageServer {
 func (ms *MessageServer) ListenAndServe(port int, mux MessageMux) error {
 	sock, err := net.ListenTCP("tcp4", &net.TCPAddr{Port: port})
 	if err != nil {
-		ms.log.Error().Err(err).Int("port", port).Msg("unable to listen on collection port")
+		ms.log.Error().Err(err).Int("port", port).Msg("unable to listen on port")
 		return nil
 	}
-	ms.log.Info().Int("collection-port", port).Msg("listening for metrics")
+	ms.log.Info().Int("port", port).Msg("listening...")
 
 	for {
 		conn, err := sock.AcceptTCP()
@@ -111,6 +111,10 @@ func newConn(log zerolog.Logger, mux MessageMux) *conn {
 func (c *conn) SetDatabase(name string, db *database.Database) {
 	c.dbName = name
 	c.db = db
+}
+
+func (c conn) DatabaseName() string {
+	return c.dbName
 }
 
 func (c *conn) Handle(conn *net.TCPConn) {
