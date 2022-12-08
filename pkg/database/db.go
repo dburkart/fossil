@@ -310,7 +310,6 @@ func NewDatabase(log zerolog.Logger, name string, location string) (*Database, e
 	} else if _, err := os.Stat(filepath.Join(directory, "wal.log")); err == nil {
 		db = Database{
 			Version:    1,
-			Name:       name,
 			Path:       directory,
 			Segments:   []Segment{},
 			Current:    0,
@@ -322,7 +321,6 @@ func NewDatabase(log zerolog.Logger, name string, location string) (*Database, e
 	} else {
 		db = Database{
 			Version:    1,
-			Name:       name,
 			Path:       directory,
 			Segments:   []Segment{},
 			Current:    0,
@@ -336,6 +334,9 @@ func NewDatabase(log zerolog.Logger, name string, location string) (*Database, e
 		wal.AddSegment(sTime)
 		db.Segments = append(db.Segments, Segment{HeadTime: sTime})
 	}
+	// We set the name here so that it's always correct, since the name can
+	// change after we first splat to disk.
+	db.Name = name
 	if db.appendCount > SegmentSize {
 		db.splatToDisk()
 	}
