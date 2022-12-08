@@ -7,7 +7,10 @@ A small, efficient time-series database. See [Overview](./docs/overview.md) for 
     - [Use Cases](#use-cases)
   - [How to](#how-to)
     - [Install](#install)
-    - [Usage](#usage)
+    - [Connect](#connecting-to-a-fossil-server)
+      - [CLI](#using-the-cli)
+      - [Programmatically](#programmatically)
+    - [Server](#running-the-server)
     - [Config](#config)
       - [Root `fossil` config block](#root-fossil-config-block)
       - [`database` config block](#database-config-block)
@@ -42,7 +45,36 @@ cd fossil
 go run main.go
 ```
 
-### Usage
+### Connecting to a fossil server
+
+#### Using the CLI
+
+The below example connects to a local fossil server:
+
+```shell
+> fossil client -H fossil://localhost:8001
+```
+
+The fossil client supports sending commands to the server. For example queries, see [docs/cli.md](./docs/cli.md).
+
+#### Programmatically
+
+The main use-case for connecting to a fossil server programmatically is for appending data. This can
+be done in only a few lines:
+
+```go
+import fossil "github.com/dburkart/fossil/api"
+
+client, err := NewClient("fossil://localhost:8001")
+if err != nil {
+	panic(err)
+}
+// Append the data "Data" to the default topic "/"
+client.Append("/", []byte("Data"))
+```
+
+### Running the server
+
 ```shell
 > fossil server -h
 Database for collecting and querying metrics
@@ -63,7 +95,10 @@ Global Flags:
   -v, --verbose count   -v for debug logs (-vv for trace)
 ```
 
-### Config
+For documentation on deploying Fossil, see [deployment.md](./docs/deployment.md).
+
+### Client / Server Config
+
 ```toml
 [fossil]
 port = 8000
