@@ -8,6 +8,7 @@ package repl
 
 import (
 	"bytes"
+	"errors"
 	"strings"
 
 	"github.com/dburkart/fossil/pkg/proto"
@@ -16,7 +17,7 @@ import (
 // ParseREPLCommand parses input from the command line
 //
 // This function assumes there is no '\n'
-func ParseREPLCommand(b []byte) proto.Message {
+func ParseREPLCommand(b []byte) (proto.Message, error) {
 	// Get the command
 	var msg proto.Message
 	var cmd []byte
@@ -39,6 +40,10 @@ func ParseREPLCommand(b []byte) proto.Message {
 		msg = proto.NewMessageWithType(proto.CommandVersion, proto.VersionRequest{})
 	case proto.CommandAppend:
 		req := proto.AppendRequest{}
+
+		if len(data) == 0 {
+			return proto.Message{}, errors.New("malformed append request: expected data after append keyword")
+		}
 
 		// check for space after topic, no space means the data starts with /
 		spaceInd := bytes.IndexByte(data, ' ')
@@ -76,5 +81,5 @@ func ParseREPLCommand(b []byte) proto.Message {
 		msg = proto.NewMessage(command, b)
 	}
 
-	return msg
+	return msg, nil
 }

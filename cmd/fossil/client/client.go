@@ -166,7 +166,11 @@ func readlinePrompt(c fossil.Client) {
 			os.Exit(0)
 		}
 
-		replMsg := repl.ParseREPLCommand([]byte(line))
+		replMsg, err := repl.ParseREPLCommand([]byte(line))
+		if err != nil {
+			log.Error().Err(err).Send()
+			continue
+		}
 		msg, err := c.Send(replMsg)
 		if err != nil {
 			log.Error().Err(err).Msg("error sending message to server")
