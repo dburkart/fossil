@@ -11,7 +11,6 @@ import (
 
 	"github.com/dburkart/fossil/cmd/fossil/client"
 	"github.com/dburkart/fossil/cmd/fossil/server"
-	"github.com/dburkart/fossil/cmd/fossil/test"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -48,7 +47,6 @@ func init() {
 
 	// Register commands on the root binary command
 	rootCmd.AddCommand(server.Command)
-	rootCmd.AddCommand(test.Command)
 	rootCmd.AddCommand(client.Command)
 }
 
