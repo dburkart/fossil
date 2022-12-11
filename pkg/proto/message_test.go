@@ -300,7 +300,7 @@ func TestListRequest(t *testing.T) {
 }
 
 func TestListResponse(t *testing.T) {
-	req := ListResponse{DatabaseList: []string{"y", "2", "k"}}
+	req := ListResponse{ObjectList: []string{"y", "2", "k"}}
 
 	b, _ := req.Marshal()
 	err := req.Unmarshal(b)
@@ -310,16 +310,16 @@ func TestListResponse(t *testing.T) {
 	}
 
 	// Check fields
-	if req.DatabaseList[0] != "y" {
+	if req.ObjectList[0] != "y" {
 		t.Fail()
 	}
-	if req.DatabaseList[1] != "2" {
+	if req.ObjectList[1] != "2" {
 		t.Fail()
 	}
-	if req.DatabaseList[2] != "k" {
+	if req.ObjectList[2] != "k" {
 		t.Fail()
 	}
-	if len(req.DatabaseList) != 3 {
+	if len(req.ObjectList) != 3 {
 		t.Fail()
 	}
 }

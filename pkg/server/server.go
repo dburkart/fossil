@@ -190,11 +190,28 @@ func (s *Server) HandleStats(rw proto.ResponseWriter, r *proto.Request) {
 }
 
 func (s *Server) HandleList(rw proto.ResponseWriter, r *proto.Request) {
+	l := proto.ListRequest{}
+
+	err := proto.Unmarshal(r.Data(), &l)
+	if err != nil {
+		s.log.Error().Err(err).Msg("error unmarshaling")
+		rw.WriteMessage(proto.MessageErrorUnmarshaling)
+		return
+	}
+
 	resp := proto.ListResponse{
-		DatabaseList: []string{},
+		ObjectList: []string{},
 	}
-	for k := range s.dbMap {
-		resp.DatabaseList = append(resp.DatabaseList, k)
+
+	if l.Object == "databases" {
+		for k := range s.dbMap {
+			resp.ObjectList = append(resp.ObjectList, k)
+		}
+	} else if l.Object == "topics" {
+		for k := range r.Database().Topics {
+			resp.ObjectList = append(resp.ObjectList, k)
+		}
 	}
+
 	rw.WriteMessage(proto.NewMessageWithType(proto.CommandList, resp))
 }

@@ -143,10 +143,11 @@ type (
 	}
 
 	ListRequest struct {
+		Object string
 	}
 
 	ListResponse struct {
-		DatabaseList []string
+		ObjectList []string
 	}
 
 	StatsRequest struct {
@@ -474,11 +475,22 @@ func (rq *StatsResponse) Unmarshal(b []byte) error {
 
 // Marshal ...
 func (rq ListRequest) Marshal() ([]byte, error) {
-	return []byte{}, nil
+	if rq.Object == "" {
+		return []byte{}, nil
+	}
+	buf := bytes.NewBufferString(rq.Object)
+	return buf.Bytes(), nil
 }
 
 // Unmarshal ...
 func (rq *ListRequest) Unmarshal(b []byte) error {
+	obj := string(b)
+	obj = strings.TrimSpace(obj)
+	if len(obj) == 0 {
+		rq.Object = "databases"
+	} else {
+		rq.Object = obj
+	}
 	return nil
 }
 
@@ -488,11 +500,11 @@ func (rq *ListRequest) Unmarshal(b []byte) error {
 // Marshal ...
 func (rq ListResponse) Marshal() ([]byte, error) {
 	b := []byte{}
-	buf := bytes.NewBuffer(binary.LittleEndian.AppendUint32(b, uint32(len(rq.DatabaseList))))
-	for i := range rq.DatabaseList {
-		l := binary.LittleEndian.AppendUint32([]byte{}, uint32(len(rq.DatabaseList[i])))
+	buf := bytes.NewBuffer(binary.LittleEndian.AppendUint32(b, uint32(len(rq.ObjectList))))
+	for i := range rq.ObjectList {
+		l := binary.LittleEndian.AppendUint32([]byte{}, uint32(len(rq.ObjectList[i])))
 		buf.Write(l)
-		buf.WriteString(rq.DatabaseList[i])
+		buf.WriteString(rq.ObjectList[i])
 	}
 	return buf.Bytes(), nil
 }
@@ -505,7 +517,7 @@ func (rq *ListResponse) Unmarshal(b []byte) error {
 	if err != nil {
 		return err
 	}
-	rq.DatabaseList = []string{}
+	rq.ObjectList = []string{}
 	var i uint32
 	for i = 0; i < count; i++ {
 		var l uint32
@@ -521,7 +533,7 @@ func (rq *ListResponse) Unmarshal(b []byte) error {
 		if uint32(n) != l {
 			return fmt.Errorf("error entry len not the right len %d != %d", n, l)
 		}
-		rq.DatabaseList = append(rq.DatabaseList, string(line))
+		rq.ObjectList = append(rq.ObjectList, string(line))
 	}
 	return nil
 }

@@ -106,7 +106,7 @@ func listDatabases(c fossil.Client) func(string) []string {
 		return func(string) []string { return []string{} }
 	}
 	return func(line string) []string {
-		return resp.DatabaseList
+		return resp.ObjectList
 	}
 }
 
@@ -249,7 +249,7 @@ func readlinePrompt(c fossil.Client) {
 				log.Error().Err(err).Send()
 				continue
 			}
-			for _, v := range t.DatabaseList {
+			for _, v := range t.ObjectList {
 				fmt.Println(v)
 			}
 		}
