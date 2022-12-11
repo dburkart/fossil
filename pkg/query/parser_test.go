@@ -37,6 +37,19 @@ func TestGarbageAfterQuery(t *testing.T) {
 	}
 }
 
+func TestEmptyQuery(t *testing.T) {
+	p := Parser{
+		Scanner: Scanner{
+			Input: "",
+		},
+	}
+
+	_, err := p.Parse()
+	if err == nil {
+		t.Fail()
+	}
+}
+
 func TestParseAllQuantifier(t *testing.T) {
 	p := Parser{
 		Scanner: Scanner{
