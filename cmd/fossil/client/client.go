@@ -110,6 +110,21 @@ func listDatabases(c fossil.Client) func(string) []string {
 	}
 }
 
+func listTopics(c fossil.Client) func(string) []string {
+	msg, err := c.Send(proto.NewMessageWithType(proto.CommandList, proto.ListRequest{Object: "topics"}))
+	if err != nil {
+		return func(string) []string { return []string{} }
+	}
+	resp := proto.ListResponse{}
+	err = resp.Unmarshal(msg.Data)
+	if err != nil {
+		return func(string) []string { return []string{} }
+	}
+	return func(line string) []string {
+		return resp.ObjectList
+	}
+}
+
 func filterInput(r rune) (rune, bool) {
 	switch r {
 	// block CtrlZ feature
@@ -122,11 +137,12 @@ func filterInput(r rune) (rune, bool) {
 func readlinePrompt(c fossil.Client) {
 	// Configure the completer
 	useItem := readline.PcItemDynamic(listDatabases(c))
+	appendItem := readline.PcItemDynamic(listTopics(c))
 	completer := readline.NewPrefixCompleter(
 		readline.PcItem("USE", useItem),
 		readline.PcItem("use", useItem),
-		readline.PcItem("APPEND"),
-		readline.PcItem("append"),
+		readline.PcItem("APPEND", appendItem),
+		readline.PcItem("append", appendItem),
 		readline.PcItem("INSERT"),
 		readline.PcItem("insert"),
 		readline.PcItem("QUERY"),
