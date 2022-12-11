@@ -6,13 +6,18 @@ Fossil provides an easy way to interact with fossil databases via the `fossil cl
 
 ### LIST
 
-The `list` command lists available databases.
+The `list` command lists available databases or topics.
 
 Example:
 ```
 > list
 default
 events
+
+> list topics
+/
+/logs
+/measurements
 ```
 
 ### USE
