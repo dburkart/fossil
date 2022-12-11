@@ -65,7 +65,7 @@ be done in only a few lines:
 ```go
 import fossil "github.com/dburkart/fossil/api"
 
-client, err := NewClient("fossil://localhost:8001")
+client, err := fossil.NewClient("fossil://localhost:8001")
 if err != nil {
 	panic(err)
 }
