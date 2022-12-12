@@ -106,7 +106,12 @@ func listDatabases(c fossil.Client) func(string) []string {
 		return func(string) []string { return []string{} }
 	}
 	return func(line string) []string {
-		return resp.ObjectList
+		lineTopic := line
+		if strings.HasPrefix(line, "USE") || strings.HasPrefix(line, "use") {
+			lineTopic = lineTopic[4:]
+		}
+
+		return filterStringSlice(resp.ObjectList, lineTopic)
 	}
 }
 
@@ -121,8 +126,23 @@ func listTopics(c fossil.Client) func(string) []string {
 		return func(string) []string { return []string{} }
 	}
 	return func(line string) []string {
-		return resp.ObjectList
+		lineTopic := line
+		if strings.HasPrefix(line, "APPEND") || strings.HasPrefix(line, "append") {
+			lineTopic = lineTopic[7:]
+		}
+
+		return filterStringSlice(resp.ObjectList, lineTopic)
 	}
+}
+
+func filterStringSlice(s []string, prefix string) []string {
+	retList := []string{}
+	for i := range s {
+		if strings.HasPrefix(s[i], prefix) {
+			retList = append(retList, s[i])
+		}
+	}
+	return retList
 }
 
 func filterInput(r rune) (rune, bool) {
