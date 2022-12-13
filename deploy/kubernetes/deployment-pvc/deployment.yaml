@@ -12,27 +12,27 @@ spec:
         app: fossil
     spec:
       containers:
-      - name: fossil
-        image: gideonw/fossil:v0.1
-        args:
-          - "server"
-        imagePullPolicy: Always
-        resources:
-          limits:
-            memory: "500Mi"
-            cpu: "500m"
-        ports:
-        - containerPort: 8001
-        - containerPort: 2112
-        volumeMounts:
-        - name: config-volume
-          mountPath: /etc/fossil/
-        - name: fossil-data
-          mountPath: /mnt/data
+        - name: fossil
+          image: gideonw/fossil:v0.1.1
+          args:
+            - "server"
+          imagePullPolicy: Always
+          resources:
+            limits:
+              memory: "500Mi"
+              cpu: "500m"
+          ports:
+            - containerPort: 8001
+            - containerPort: 2112
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/fossil/
+            - name: fossil-data
+              mountPath: /mnt/data
       volumes:
-      - name: config-volume
-        configMap:
-          name: fossil-config
-      - name: fossil-data
-        persistentVolumeClaim:
-          claimName: fossil-data-pvc
+        - name: config-volume
+          configMap:
+            name: fossil-config
+        - name: fossil-data
+          persistentVolumeClaim:
+            claimName: fossil-data-pvc

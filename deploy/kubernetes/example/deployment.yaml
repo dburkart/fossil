@@ -13,7 +13,7 @@ spec:
     spec:
       containers:
       - name: fossil
-        image: gideonw/fossil:v0.1
+        image: gideonw/fossil:v0.1.1
         args:
           - "server"
         imagePullPolicy: Always
