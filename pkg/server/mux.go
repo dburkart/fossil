@@ -61,12 +61,14 @@ func (mm *MapMux) HandleState(s string, f MessageStateHandler) {
 }
 
 type MessageServer struct {
-	log zerolog.Logger
+	log          zerolog.Logger
+	metricsStore MetricsStore
 }
 
-func NewMessageServer(log zerolog.Logger) MessageServer {
+func NewMessageServer(log zerolog.Logger, metricsStore MetricsStore) MessageServer {
 	return MessageServer{
 		log,
+		metricsStore,
 	}
 }
 
@@ -86,6 +88,7 @@ func (ms *MessageServer) ListenAndServe(port int, mux MessageMux) error {
 
 		c := newConn(ms.log, mux)
 		go c.Handle(conn)
+		ms.metricsStore.IncClientConnection()
 	}
 }
 

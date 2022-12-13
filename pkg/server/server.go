@@ -60,33 +60,34 @@ func New(log zerolog.Logger, dbConfigs map[string]DatabaseConfig, port, metricsP
 	}
 }
 
-func accessLog(log zerolog.Logger, h MessageHandler) MessageHandler {
+func (s *Server) accessLog(log zerolog.Logger, h MessageHandler) MessageHandler {
 	return func(rw proto.ResponseWriter, r *proto.Request) {
 		t := time.Now()
 		defer func() {
-			e := log.Info().Int64("ns", time.Since(t).Nanoseconds()).Str("cmd", r.Command())
+			dur := time.Since(t).Nanoseconds()
+			db := "unset"
 			if r.Database() != nil {
-				e = e.Str("db", r.Database().Name)
-			} else {
-				e = e.Str("db", "unset")
+				db = r.Database().Name
 			}
-			e.Send()
+			log.Info().Int64("ns", dur).Str("cmd", r.Command()).Str("db", db).Send()
+			s.metrics.IncRequests(db, r.Command())
+			s.metrics.ObserveResponseNS(db, r.Command(), dur)
 		}()
 		h(rw, r)
 	}
 }
 
 func (s *Server) ServeDatabase() {
-	srv := NewMessageServer(s.log)
+	srv := NewMessageServer(s.log, s.metrics)
 	mux := NewMapMux()
 
 	// Wire up handlers
 	mux.HandleState(proto.CommandUse, s.HandleUse)
-	mux.Handle(proto.CommandVersion, accessLog(s.log, s.HandleVersion))
-	mux.Handle(proto.CommandQuery, accessLog(s.log, s.HandleQuery))
-	mux.Handle(proto.CommandAppend, accessLog(s.log, s.HandleAppend))
-	mux.Handle(proto.CommandStats, accessLog(s.log, s.HandleStats))
-	mux.Handle(proto.CommandList, accessLog(s.log, s.HandleList))
+	mux.Handle(proto.CommandVersion, s.accessLog(s.log, s.HandleVersion))
+	mux.Handle(proto.CommandQuery, s.accessLog(s.log, s.HandleQuery))
+	mux.Handle(proto.CommandAppend, s.accessLog(s.log, s.HandleAppend))
+	mux.Handle(proto.CommandStats, s.accessLog(s.log, s.HandleStats))
+	mux.Handle(proto.CommandList, s.accessLog(s.log, s.HandleList))
 
 	err := srv.ListenAndServe(s.port, mux)
 	if err != nil {
