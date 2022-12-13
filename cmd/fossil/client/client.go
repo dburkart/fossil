@@ -229,11 +229,12 @@ func readlinePrompt(c fossil.Client) {
 				continue
 			}
 			fmt.Printf(
-				"Allocated Heap: %v\nTotal Memory: %v\nUptime: %s\nSegments: %d\n",
+				"Allocated Heap: %v\nTotal Memory: %v\nUptime: %s\nSegments: %d\nTopics: %d\n",
 				humanize.Bytes(t.AllocHeap),
 				humanize.Bytes(t.TotalMem),
 				t.Uptime,
 				t.Segments,
+				t.Topics,
 			)
 		case proto.CommandQuery:
 			t := proto.QueryResponse{}
