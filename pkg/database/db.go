@@ -38,6 +38,13 @@ type Database struct {
 	log         zerolog.Logger
 }
 
+func (db *Database) Stats() Stats {
+	return Stats{
+		Segments:   len(db.Segments),
+		TopicCount: db.TopicCount,
+	}
+}
+
 func (d *Database) appendInternal(data *Datum) {
 	if success, _ := d.Segments[d.Current].Append(data); !success {
 		d.log.Fatal().Msg("We should never not have enough segments, since our write-ahead log creates them")
