@@ -15,7 +15,6 @@ import (
 	"github.com/dburkart/fossil/pkg/database"
 	"github.com/dburkart/fossil/pkg/proto"
 	"github.com/dburkart/fossil/pkg/query"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 )
 
@@ -38,6 +37,9 @@ func New(log zerolog.Logger, dbConfigs map[string]DatabaseConfig, port, metricsP
 	// TODO: We need a filesystem lock to ensure we don't double run a server on the same database
 	// https://pkg.go.dev/io/fs#FileMode ModeExclusive
 
+	// Setup metrics store to add collectors to
+	ms := NewMetricsStore()
+
 	// take the db configs and build a map of databases name -> db
 	dbMap := make(map[string]*database.Database)
 	for k, v := range dbConfigs {
@@ -48,11 +50,12 @@ func New(log zerolog.Logger, dbConfigs map[string]DatabaseConfig, port, metricsP
 			dbLogger.Fatal().Err(err).Msg("error initializing database")
 		}
 		dbMap[k] = db
+		ms.RegisterCollector(NewDBStatsCollector(db))
 	}
 
 	return Server{
 		log,
-		NewMetricsStore(),
+		ms,
 		time.Now(),
 		dbMap,
 		port,
@@ -97,7 +100,7 @@ func (s *Server) ServeDatabase() {
 
 func (s *Server) ServeMetrics() {
 	s.log.Info().Int("port", s.metricsPort).Msg("/metrics endpoint started")
-	http.Handle("/metrics", promhttp.Handler())
+	http.Handle("/metrics", s.metrics.Handler())
 	http.ListenAndServe(fmt.Sprintf(":%d", s.metricsPort), nil)
 }
 

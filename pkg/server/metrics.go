@@ -7,17 +7,27 @@
 package server
 
 import (
+	"net/http"
+
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type MetricsStore interface {
+	Registry() *prometheus.Registry
+	RegisterCollector(c prometheus.Collector)
+	Handler() http.Handler
+
+	// Collection
 	IncClientConnection()
 	IncRequests(db, cmd string)
 	ObserveResponseNS(db, cmd string, t int64)
 }
 
 type metricsStore struct {
+	registry          *prometheus.Registry
 	ClientConnections prometheus.Counter
 	Requests          *prometheus.CounterVec
 	ResponseNS        *prometheus.HistogramVec
@@ -29,20 +39,41 @@ var (
 )
 
 func NewMetricsStore() MetricsStore {
+	reg := prometheus.NewRegistry()
+	reg.MustRegister(
+		collectors.NewGoCollector(
+			collectors.WithGoCollections(collectors.GoRuntimeMemStatsCollection),
+		),
+	)
+
+	factory := promauto.With(reg)
 	return &metricsStore{
-		ClientConnections: promauto.NewCounter(prometheus.CounterOpts{
+		registry: reg,
+		ClientConnections: factory.NewCounter(prometheus.CounterOpts{
 			Name: "fossil_client_connections",
 			Help: "The total number of client connections",
 		}),
-		Requests: promauto.NewCounterVec(prometheus.CounterOpts{
+		Requests: factory.NewCounterVec(prometheus.CounterOpts{
 			Name: "fossil_requests",
 			Help: "Request counts for the fossil commands",
 		}, []string{DatabaseLabel, CommandLabel}),
-		ResponseNS: promauto.NewHistogramVec(prometheus.HistogramOpts{
+		ResponseNS: factory.NewHistogramVec(prometheus.HistogramOpts{
 			Name: "fossil_response_ns",
 			Help: "Response times on commands made against a database",
 		}, []string{DatabaseLabel, CommandLabel}),
 	}
+}
+
+func (ms *metricsStore) Registry() *prometheus.Registry {
+	return ms.registry
+}
+
+func (ms *metricsStore) RegisterCollector(c prometheus.Collector) {
+	ms.registry.MustRegister(c)
+}
+
+func (ms *metricsStore) Handler() http.Handler {
+	return promhttp.HandlerFor(ms.Registry(), promhttp.HandlerOpts{Registry: ms.Registry()})
 }
 
 func (ms *metricsStore) IncClientConnection() {
