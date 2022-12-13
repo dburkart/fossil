@@ -346,8 +346,8 @@ func NewDatabase(log zerolog.Logger, name string, location string) (*Database, e
 		db.splatToDisk()
 	}
 	// Set up our convenience topic map
-	for k := range db.TopicLookup {
-		db.topics[db.TopicLookup[k]] = k
+	for k, v := range db.TopicLookup {
+		db.topics[v] = k
 	}
 	return &db, nil
 }
