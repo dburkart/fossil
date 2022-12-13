@@ -159,6 +159,7 @@ type (
 		TotalMem  uint64
 		Uptime    time.Duration
 		Segments  int
+		Topics    int
 	}
 
 	AppendRequest struct {
@@ -435,6 +436,7 @@ func (rq StatsResponse) Marshal() ([]byte, error) {
 	b := binary.LittleEndian.AppendUint64([]byte{}, rq.AllocHeap)
 	b = binary.LittleEndian.AppendUint64(b, rq.TotalMem)
 	b = binary.LittleEndian.AppendUint64(b, uint64(rq.Segments))
+	b = binary.LittleEndian.AppendUint64(b, uint64(rq.Topics))
 	buf := bytes.NewBuffer(b)
 	buf.WriteString(rq.Uptime.String())
 	return buf.Bytes(), nil
@@ -457,6 +459,12 @@ func (rq *StatsResponse) Unmarshal(b []byte) error {
 		return err
 	}
 	rq.Segments = int(segs)
+	var topics uint64
+	err = binary.Read(buf, binary.LittleEndian, &topics)
+	if err != nil {
+		return err
+	}
+	rq.Topics = int(topics)
 	up, err := io.ReadAll(buf)
 	if err != nil {
 		return err

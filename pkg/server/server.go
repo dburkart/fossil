@@ -185,6 +185,7 @@ func (s *Server) HandleStats(rw proto.ResponseWriter, r *proto.Request) {
 		TotalMem:  m.Sys,
 		Uptime:    time.Since(s.startupTime),
 		Segments:  len(r.Database().Segments),
+		Topics:    r.Database().TopicCount,
 	}
 	rw.WriteMessage(proto.NewMessageWithType(proto.CommandStats, resp))
 }
