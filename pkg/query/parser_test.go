@@ -91,6 +91,22 @@ func TestParseTopicSelector(t *testing.T) {
 	if fmt.Sprint(reflect.TypeOf(child)) != "*query.TopicNode" {
 		t.Errorf("wanted first child to be *query.TopicNode, found %s", reflect.TypeOf(child))
 	}
+
+	p = Parser{
+		Scanner: Scanner{
+			Input: "in /c02f3a2a-2791-443b-a2e9-c5e29740b803/",
+		},
+	}
+
+	ast = p.topicSelector()
+	if fmt.Sprint(reflect.TypeOf(ast)) != "*query.TopicSelectorNode" {
+		t.Errorf("wanted root node to be *query.TopicSelectorNode, found %s", reflect.TypeOf(ast))
+	}
+
+	child = ast.Children()[0]
+	if fmt.Sprint(reflect.TypeOf(child)) != "*query.TopicNode" {
+		t.Errorf("wanted first child to be *query.TopicNode, found %s", reflect.TypeOf(child))
+	}
 }
 
 func TestParseTimePredicate(t *testing.T) {

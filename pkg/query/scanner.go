@@ -51,7 +51,8 @@ func (s *Scanner) MatchTopic() int {
 	r, width := utf8.DecodeRuneInString(s.Input[i:])
 	size := 0
 
-	for unicode.IsDigit(r) || unicode.IsLetter(r) || r == '/' {
+	for unicode.IsDigit(r) || unicode.IsLetter(r) || r == '/' ||
+		r == '-' || r == '_' || r == '#' || r == '.' || r == '@' {
 		size += width
 		i += width
 		r, width = utf8.DecodeRuneInString(s.Input[i:])
