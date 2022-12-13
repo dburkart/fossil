@@ -169,9 +169,9 @@ func (q TopicSelectorNode) GenerateFilter(db *database.Database) database.Filter
 	var topicFilter = make(map[string]bool)
 
 	// Since topics are hierarchical, we want any topic which has the desired prefix
-	for key := range db.Topics {
-		if strings.HasPrefix(key, topicName) {
-			topicFilter[key] = true
+	for _, topic := range db.TopicLookup {
+		if strings.HasPrefix(topic, topicName) {
+			topicFilter[topic] = true
 		}
 	}
 

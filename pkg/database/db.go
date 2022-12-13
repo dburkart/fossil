@@ -19,17 +19,21 @@ import (
 )
 
 type Database struct {
-	Version     int
-	Name        string
-	Path        string
-	Segments    []Segment
-	Current     int
-	Topics      map[string]int
+	Version  int
+	Name     string
+	Path     string
+	Segments []Segment
+	Current  int
+
 	TopicLookup []string
 	TopicCount  int
 
 	// Private fields
+
+	// Our topic map is marked private since it is not thread safe
+	topics      map[string]int
 	writeLock   sync.Mutex
+	topicLock   sync.RWMutex
 	appendCount int
 	log         zerolog.Logger
 }
@@ -55,14 +59,12 @@ func normalizeTopicName(topicName string) string {
 
 func (d *Database) addTopicInternal(topicName string) int {
 	topicName = normalizeTopicName(topicName)
-
-	if index, exists := d.Topics[topicName]; exists {
-		return index
-	}
 	index := d.TopicCount
 	d.TopicLookup = append(d.TopicLookup, topicName)
 	d.TopicCount += 1
-	d.Topics[topicName] = index
+	d.topicLock.Lock()
+	defer d.topicLock.Unlock()
+	d.topics[topicName] = index
 	return index
 }
 
@@ -110,9 +112,12 @@ func (d *Database) splatToDisk() {
 func (d *Database) AddTopic(topic string) int {
 	topic = normalizeTopicName(topic)
 
-	if index, exists := d.Topics[topic]; exists {
+	d.topicLock.RLock()
+	if index, exists := d.topics[topic]; exists {
+		d.topicLock.RUnlock()
 		return index
 	}
+	d.topicLock.RUnlock()
 
 	// The topic doesn't exist, so add it
 	d.writeLock.Lock()
@@ -313,7 +318,7 @@ func NewDatabase(log zerolog.Logger, name string, location string) (*Database, e
 			Path:       directory,
 			Segments:   []Segment{},
 			Current:    0,
-			Topics:     make(map[string]int),
+			topics:     make(map[string]int),
 			TopicCount: 0,
 		}
 		wal := WriteAheadLog{filepath.Join(db.Path, "wal.log")}
@@ -324,7 +329,7 @@ func NewDatabase(log zerolog.Logger, name string, location string) (*Database, e
 			Path:       directory,
 			Segments:   []Segment{},
 			Current:    0,
-			Topics:     make(map[string]int),
+			topics:     make(map[string]int),
 			TopicCount: 0,
 		}
 		db.AddTopic("/")
@@ -339,6 +344,10 @@ func NewDatabase(log zerolog.Logger, name string, location string) (*Database, e
 	db.Name = name
 	if db.appendCount > SegmentSize {
 		db.splatToDisk()
+	}
+	// Set up our convenience topic map
+	for k := range db.TopicLookup {
+		db.topics[db.TopicLookup[k]] = k
 	}
 	return &db, nil
 }

@@ -209,8 +209,8 @@ func (s *Server) HandleList(rw proto.ResponseWriter, r *proto.Request) {
 			resp.ObjectList = append(resp.ObjectList, k)
 		}
 	} else if l.Object == "topics" {
-		for k := range r.Database().Topics {
-			resp.ObjectList = append(resp.ObjectList, k)
+		for _, v := range r.Database().TopicLookup {
+			resp.ObjectList = append(resp.ObjectList, v)
 		}
 	}
 
