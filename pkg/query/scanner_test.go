@@ -98,8 +98,8 @@ func TestEmitIdentifier(t *testing.T) {
 }
 
 func TestEmitTopic(t *testing.T) {
-	s := Scanner{Input: "/foo/bar/baz /"}
-	expectedTopicLexemes := []string{"/foo/bar/baz", "/"}
+	s := Scanner{Input: "/foo/bar/baz / /c02f3a2a-2791-443b-a2e9-c5e29740b803/"}
+	expectedTopicLexemes := []string{"/foo/bar/baz", "/", "/c02f3a2a-2791-443b-a2e9-c5e29740b803/"}
 
 	for i := 0; i < len(expectedTopicLexemes); i++ {
 		tok := s.Emit()
