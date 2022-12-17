@@ -10,6 +10,6 @@ type Parser struct {
 	Scanner Scanner
 }
 
-func (p *Parser) Parse() (Object, error) {
-
-}
+//func (p *Parser) Parse() (Object, error) {
+//
+//}
