@@ -135,9 +135,6 @@ func (d *Database) AddTopic(topic string) int {
 
 // Append to the end of the database
 func (d *Database) Append(data []byte, topic string) {
-	// Pull our timestamp at the top
-	appendTime := time.Now()
-
 	topicID := d.AddTopic(topic)
 
 	// Explicitly copy the data before taking the lock to minimize resource
@@ -151,6 +148,9 @@ func (d *Database) Append(data []byte, topic string) {
 	if d.appendCount > SegmentSize {
 		d.splatToDisk()
 	}
+
+	// Pull appendTime now that we have acquired our db lock
+	appendTime := time.Now()
 
 	wal := WriteAheadLog{filepath.Join(d.Path, "wal.log")}
 
