@@ -1,3 +1,12 @@
+# v0.1.2
+
+Small bugfix release with a fix for a regression, as well as a stability fix.
+
+  * Fixes a regression in v0.1.1 that would prevent a database with more
+    than 10,000 elements from being read from disk.
+  * Fixes a silent server crash when spilling a database to disk during
+    a high volume of concurrent appends.
+
 # v0.1.1
 
 Small bugfix release with reliability and quality-of-life fixes.
