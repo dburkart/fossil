@@ -316,6 +316,8 @@ func NewDatabase(log zerolog.Logger, name string, location string) (*Database, e
 			return nil, err
 		}
 		db.topics = make(map[string]int)
+		wal := WriteAheadLog{filepath.Join(db.Path, "wal.log")}
+		wal.ApplyToDB(&db)
 	} else if _, err := os.Stat(filepath.Join(directory, "wal.log")); err == nil {
 		db = Database{
 			Version:    1,
