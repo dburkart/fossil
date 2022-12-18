@@ -78,10 +78,6 @@ func (d *Database) addTopicInternal(topicName string) int {
 func (d *Database) splatToDisk() {
 	var encoded bytes.Buffer
 
-	// Stop all writes
-	d.writeLock.Lock()
-	defer d.writeLock.Unlock()
-
 	enc := gob.NewEncoder(&encoded)
 	err := enc.Encode(d)
 	if err != nil {
@@ -149,12 +145,12 @@ func (d *Database) Append(data []byte, topic string) {
 	e := Datum{Data: make([]byte, len(data)), TopicID: topicID}
 	copy(e.Data, data)
 
+	d.writeLock.Lock()
+	defer d.writeLock.Unlock()
+
 	if d.appendCount > SegmentSize {
 		d.splatToDisk()
 	}
-
-	d.writeLock.Lock()
-	defer d.writeLock.Unlock()
 
 	wal := WriteAheadLog{filepath.Join(d.Path, "wal.log")}
 
