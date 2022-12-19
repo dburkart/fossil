@@ -10,7 +10,11 @@ import (
 	"github.com/dburkart/fossil/pkg/database"
 	"github.com/dburkart/fossil/pkg/proto"
 	"github.com/pkg/errors"
+	"io"
+	"math"
 	"net"
+	"syscall"
+	"time"
 )
 
 // A Client holds the data needed to interact with a fossil database.
@@ -92,6 +96,29 @@ func connect(c net.Conn, dbName string) (proto.OkResponse, error) {
 	return ok, nil
 }
 
+func (c *Client) reconnectWithBackoff() (net.Conn, error) {
+	var conn net.Conn
+	var err error
+
+	// Try for a total of 6 seconds
+	for i := 0; i < 3; i++ {
+		delay := time.Duration(math.Exp2(float64(i)))
+		time.Sleep(delay * time.Second)
+		conn, err = net.Dial("tcp4", c.target.Address)
+
+		if err == nil {
+			_, err = connect(conn, c.target.Database)
+			if err != nil {
+				conn.Close()
+				continue
+			}
+			break
+		}
+	}
+
+	return conn, err
+}
+
 func (c *Client) Close() error {
 	for i := 0; i < len(c.conn); i++ {
 		conn := <-c.conn
@@ -116,13 +143,36 @@ func (c *Client) Send(m proto.Message) (proto.Message, error) {
 		c.conn <- conn
 	}()
 
+retry:
 	_, err = conn.Write(data)
 	if err != nil {
-		return proto.Message{}, err
+		// Handle peer reset with reconnect logic
+		if errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.EPIPE) {
+			conn, err = c.reconnectWithBackoff()
+			if err != nil {
+				return proto.Message{}, err
+			}
+			// We use a goto here because we need to retry sending our message,
+			// however, if we recursively call Send() we'll end up with a
+			// duplicated net.Conn in our connection pool.
+			goto retry
+		} else {
+			return proto.Message{}, err
+		}
 	}
 
 	resp, err := proto.ReadMessageFull(conn)
 	if err != nil {
+		if errors.Is(err, io.EOF) {
+			conn, err = c.reconnectWithBackoff()
+			if err != nil {
+				return proto.Message{}, err
+			}
+			// We use a goto here because we need to retry sending our message,
+			// however, if we recursively call Send() we'll end up with a
+			// duplicated net.Conn in our connection pool.
+			goto retry
+		}
 		return proto.Message{}, err
 	}
 	return resp, nil
