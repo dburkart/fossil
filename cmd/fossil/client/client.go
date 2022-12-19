@@ -209,7 +209,7 @@ func readlinePrompt(c fossil.Client) {
 		}
 		msg, err := c.Send(replMsg)
 		if err != nil {
-			log.Error().Err(err).Msg("error sending message to server")
+			log.Fatal().Err(err).Msg("error sending message to server")
 		}
 
 		switch msg.Command {
