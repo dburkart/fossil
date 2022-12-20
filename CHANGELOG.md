@@ -1,3 +1,13 @@
+# v0.1.3
+
+Small bugfix release that fixes a couple of correctness issues.
+
+  * Fixes a time-series ordering issue, since we weren't pulling our append
+    timestamp after acquiring the write lock.
+  * Fixes an issue where the write-ahead log would not be applied on large
+    enough databases.
+  * Enhances the client API to try reconnecting to a lost fossil server.
+
 # v0.1.2
 
 Small bugfix release with a fix for a regression, as well as a stability fix.
