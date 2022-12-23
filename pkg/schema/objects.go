@@ -6,6 +6,8 @@
 
 package schema
 
+import "fmt"
+
 type Object interface {
 	Validate([]byte) bool
 }
@@ -43,6 +45,8 @@ func (t Type) Size() int {
 	case t.Name == "float64":
 		return 8
 	case t.Name == "string":
+		return 4
+	case t.Name == "binary":
 		return 4
 	}
 	return 0
@@ -90,8 +94,9 @@ func (a Array) Size() int {
 func (a Array) Validate(val []byte) bool {
 	typeSize := a.Type.Size()
 
-	if a.Type.Name == "string" && len(val) >= 4*a.Length {
-		return true
+	// string / binary is not allowed.
+	if a.Type.Name == "string" || a.Type.Name == "binary" {
+		panic(fmt.Sprintf("invalid type found in array: %s", a.Type.Name))
 	}
 
 	if len(val) != a.Length*typeSize {
