@@ -69,7 +69,7 @@ func NewMessageWithType(cmd string, t Marshaler) Message {
 
 func (m Message) Marshal() ([]byte, error) {
 	b := make([]byte, lenWidth+commandWidth+len(m.Data))
-	binary.LittleEndian.PutUint32(b, uint32(commandWidth+len(m.Data)))
+	binary.BigEndian.PutUint32(b, uint32(commandWidth+len(m.Data)))
 	copy(b[lenWidth:], []byte(m.Command))
 	copy(b[commandWidth+lenWidth:], m.Data)
 
@@ -82,7 +82,7 @@ func (m *Message) Unmarshal(r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	length := binary.LittleEndian.Uint32(lengthPrefix)
+	length := binary.BigEndian.Uint32(lengthPrefix)
 	b := make([]byte, length)
 	n, err := io.ReadFull(r, b)
 	if err != nil {
@@ -198,7 +198,7 @@ func (v *VersionRequest) Unmarshal(b []byte) error {
 // Marshal a VersionResponse. As with VersionRequest, we override the version
 // specified in the supplied VersionResponse.
 func (v VersionResponse) Marshal() ([]byte, error) {
-	buf := bytes.NewBuffer(binary.LittleEndian.AppendUint32([]byte{}, v.Code))
+	buf := bytes.NewBuffer(binary.BigEndian.AppendUint32([]byte{}, v.Code))
 	_, err := buf.Write([]byte(Version))
 	if err != nil {
 		return nil, err
@@ -210,7 +210,7 @@ func (v VersionResponse) Marshal() ([]byte, error) {
 // Unmarshal ...
 func (v *VersionResponse) Unmarshal(b []byte) error {
 	buf := bytes.NewBuffer(b)
-	err := binary.Read(buf, binary.LittleEndian, &v.Code)
+	err := binary.Read(buf, binary.BigEndian, &v.Code)
 	if err != nil {
 		return err
 	}
@@ -244,7 +244,7 @@ func (rq *UseRequest) Unmarshal(b []byte) error {
 
 // Marshal ...
 func (rq ErrResponse) Marshal() ([]byte, error) {
-	buf := bytes.NewBuffer(binary.LittleEndian.AppendUint32([]byte{}, rq.Code))
+	buf := bytes.NewBuffer(binary.BigEndian.AppendUint32([]byte{}, rq.Code))
 
 	if rq.Err != nil {
 		_, err := buf.Write([]byte(rq.Err.Error()))
@@ -263,7 +263,7 @@ func (rq ErrResponse) Marshal() ([]byte, error) {
 // Unmarshal ...
 func (rq *ErrResponse) Unmarshal(b []byte) error {
 	buf := bytes.NewBuffer(b)
-	err := binary.Read(buf, binary.LittleEndian, &rq.Code)
+	err := binary.Read(buf, binary.BigEndian, &rq.Code)
 	if err != nil {
 		return err
 	}
@@ -282,7 +282,7 @@ func (rq *ErrResponse) Unmarshal(b []byte) error {
 
 // Marshal ...
 func (rq OkResponse) Marshal() ([]byte, error) {
-	buf := bytes.NewBuffer(binary.LittleEndian.AppendUint32([]byte{}, rq.Code))
+	buf := bytes.NewBuffer(binary.BigEndian.AppendUint32([]byte{}, rq.Code))
 
 	_, err := buf.WriteString(rq.Message)
 	if err != nil {
@@ -294,7 +294,7 @@ func (rq OkResponse) Marshal() ([]byte, error) {
 // Unmarshal ...
 func (rq *OkResponse) Unmarshal(b []byte) error {
 	buf := bytes.NewBuffer(b)
-	err := binary.Read(buf, binary.LittleEndian, &rq.Code)
+	err := binary.Read(buf, binary.BigEndian, &rq.Code)
 	if err != nil {
 		return err
 	}
@@ -313,7 +313,7 @@ func (rq *OkResponse) Unmarshal(b []byte) error {
 
 // Marshal ...
 func (rq AppendRequest) Marshal() ([]byte, error) {
-	buf := bytes.NewBuffer(binary.LittleEndian.AppendUint32([]byte{}, uint32(len(rq.Topic))))
+	buf := bytes.NewBuffer(binary.BigEndian.AppendUint32([]byte{}, uint32(len(rq.Topic))))
 	_, err := buf.Write([]byte(rq.Topic))
 	if err != nil {
 		return nil, err
@@ -333,7 +333,7 @@ func (rq *AppendRequest) Unmarshal(b []byte) error {
 	if err != nil {
 		return err
 	}
-	length := binary.LittleEndian.Uint32(lengthPrefix)
+	length := binary.BigEndian.Uint32(lengthPrefix)
 	topic := make([]byte, length)
 	m, err := io.ReadFull(buf, topic)
 	if err != nil {
@@ -370,10 +370,10 @@ func (rq *QueryRequest) Unmarshal(b []byte) error {
 // Marshal ...
 func (rq QueryResponse) Marshal() ([]byte, error) {
 	b := []byte{}
-	buf := bytes.NewBuffer(binary.LittleEndian.AppendUint32(b, uint32(len(rq.Results))))
+	buf := bytes.NewBuffer(binary.BigEndian.AppendUint32(b, uint32(len(rq.Results))))
 	for i := range rq.Results {
 		ent := rq.Results[i].ToString()
-		l := binary.LittleEndian.AppendUint32([]byte{}, uint32(len(ent)))
+		l := binary.BigEndian.AppendUint32([]byte{}, uint32(len(ent)))
 		buf.Write(l)
 		buf.WriteString(ent)
 	}
@@ -385,14 +385,14 @@ func (rq QueryResponse) Marshal() ([]byte, error) {
 func (rq *QueryResponse) Unmarshal(b []byte) error {
 	var count uint32 = 0
 	buf := bytes.NewBuffer(b)
-	err := binary.Read(buf, binary.LittleEndian, &count)
+	err := binary.Read(buf, binary.BigEndian, &count)
 	if err != nil {
 		return err
 	}
 	var i uint32
 	for i = 0; i < count; i++ {
 		var l uint32
-		err := binary.Read(buf, binary.LittleEndian, &l)
+		err := binary.Read(buf, binary.BigEndian, &l)
 		if err != nil {
 			return err
 		}
@@ -433,10 +433,10 @@ func (rq *StatsRequest) Unmarshal(b []byte) error {
 
 // Marshal ...
 func (rq StatsResponse) Marshal() ([]byte, error) {
-	b := binary.LittleEndian.AppendUint64([]byte{}, rq.AllocHeap)
-	b = binary.LittleEndian.AppendUint64(b, rq.TotalMem)
-	b = binary.LittleEndian.AppendUint64(b, uint64(rq.Segments))
-	b = binary.LittleEndian.AppendUint64(b, uint64(rq.Topics))
+	b := binary.BigEndian.AppendUint64([]byte{}, rq.AllocHeap)
+	b = binary.BigEndian.AppendUint64(b, rq.TotalMem)
+	b = binary.BigEndian.AppendUint64(b, uint64(rq.Segments))
+	b = binary.BigEndian.AppendUint64(b, uint64(rq.Topics))
 	buf := bytes.NewBuffer(b)
 	buf.WriteString(rq.Uptime.String())
 	return buf.Bytes(), nil
@@ -445,22 +445,22 @@ func (rq StatsResponse) Marshal() ([]byte, error) {
 // Unmarshal ...
 func (rq *StatsResponse) Unmarshal(b []byte) error {
 	buf := bytes.NewBuffer(b)
-	err := binary.Read(buf, binary.LittleEndian, &rq.AllocHeap)
+	err := binary.Read(buf, binary.BigEndian, &rq.AllocHeap)
 	if err != nil {
 		return err
 	}
-	err = binary.Read(buf, binary.LittleEndian, &rq.TotalMem)
+	err = binary.Read(buf, binary.BigEndian, &rq.TotalMem)
 	if err != nil {
 		return err
 	}
 	var segs uint64
-	err = binary.Read(buf, binary.LittleEndian, &segs)
+	err = binary.Read(buf, binary.BigEndian, &segs)
 	if err != nil {
 		return err
 	}
 	rq.Segments = int(segs)
 	var topics uint64
-	err = binary.Read(buf, binary.LittleEndian, &topics)
+	err = binary.Read(buf, binary.BigEndian, &topics)
 	if err != nil {
 		return err
 	}
@@ -508,9 +508,9 @@ func (rq *ListRequest) Unmarshal(b []byte) error {
 // Marshal ...
 func (rq ListResponse) Marshal() ([]byte, error) {
 	b := []byte{}
-	buf := bytes.NewBuffer(binary.LittleEndian.AppendUint32(b, uint32(len(rq.ObjectList))))
+	buf := bytes.NewBuffer(binary.BigEndian.AppendUint32(b, uint32(len(rq.ObjectList))))
 	for i := range rq.ObjectList {
-		l := binary.LittleEndian.AppendUint32([]byte{}, uint32(len(rq.ObjectList[i])))
+		l := binary.BigEndian.AppendUint32([]byte{}, uint32(len(rq.ObjectList[i])))
 		buf.Write(l)
 		buf.WriteString(rq.ObjectList[i])
 	}
@@ -521,7 +521,7 @@ func (rq ListResponse) Marshal() ([]byte, error) {
 func (rq *ListResponse) Unmarshal(b []byte) error {
 	var count uint32 = 0
 	buf := bytes.NewBuffer(b)
-	err := binary.Read(buf, binary.LittleEndian, &count)
+	err := binary.Read(buf, binary.BigEndian, &count)
 	if err != nil {
 		return err
 	}
@@ -529,7 +529,7 @@ func (rq *ListResponse) Unmarshal(b []byte) error {
 	var i uint32
 	for i = 0; i < count; i++ {
 		var l uint32
-		err := binary.Read(buf, binary.LittleEndian, &l)
+		err := binary.Read(buf, binary.BigEndian, &l)
 		if err != nil {
 			return err
 		}
