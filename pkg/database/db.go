@@ -500,10 +500,12 @@ func NewDatabase(log zerolog.Logger, name string, location string) (*Database, e
 		return nil, fmt.Errorf("supplied path is not a directory")
 	}
 
-	if _, err := os.Stat(filepath.Join(directory, "database")); err == nil {
-		// FIXME: Migrate the database
-		return nil, errors.New("database migration not supported yet.")
-	} else if _, err := os.Stat(filepath.Join(directory, "metadata")); err == nil {
+	if MigrationIsNeeded(directory) {
+		// FIXME: Implement migration logic
+		panic("We need to perform a migration!")
+	}
+
+	if _, err := os.Stat(filepath.Join(directory, "metadata")); err == nil {
 		db = Database{
 			Path: directory,
 		}
