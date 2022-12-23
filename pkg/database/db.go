@@ -18,6 +18,10 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// FossilDBVersion is the version of the database as recorded on disk.
+// This is primarily used for migration.
+const FossilDBVersion = 1
+
 type Database struct {
 	Version  int
 	Name     string
@@ -320,7 +324,7 @@ func NewDatabase(log zerolog.Logger, name string, location string) (*Database, e
 		wal.ApplyToDB(&db)
 	} else if _, err := os.Stat(filepath.Join(directory, "wal.log")); err == nil {
 		db = Database{
-			Version:    1,
+			Version:    FossilDBVersion,
 			Path:       directory,
 			Segments:   []Segment{},
 			Current:    0,
@@ -331,7 +335,7 @@ func NewDatabase(log zerolog.Logger, name string, location string) (*Database, e
 		wal.ApplyToDB(&db)
 	} else {
 		db = Database{
-			Version:    1,
+			Version:    FossilDBVersion,
 			Path:       directory,
 			Segments:   []Segment{},
 			Current:    0,
