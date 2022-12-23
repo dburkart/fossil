@@ -24,7 +24,7 @@ type Scanner struct {
 //
 // Grammar:
 //
-//  key = DQUOTE 1*( ALPHA / DIGIT / "_" / "-" ) DQUOTE
+//	key = DQUOTE 1*( ALPHA / DIGIT / "_" / "-" ) DQUOTE
 func (s *Scanner) MatchKey() int {
 	pos := s.Pos
 	r, width := utf8.DecodeRuneInString(s.Input[pos:])
@@ -115,6 +115,11 @@ func (s *Scanner) Emit() Token {
 			}
 			t.Type = TOK_KEY
 		case r == 'b':
+			if strings.HasPrefix(s.Input[s.Pos:], "binary") {
+				t.Type = TOK_TYPE
+				skip = len("binary")
+				break
+			}
 			if strings.HasPrefix(s.Input[s.Pos:], "boolean") {
 				t.Type = TOK_TYPE
 				skip = len("boolean")
