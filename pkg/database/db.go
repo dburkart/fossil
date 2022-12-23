@@ -8,9 +8,13 @@ package database
 
 import (
 	"bytes"
+	"compress/zlib"
+	"encoding/binary"
 	"encoding/gob"
+	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"sync"
 	"time"
@@ -23,14 +27,14 @@ import (
 const FossilDBVersion = 1
 
 type Database struct {
-	Version  int
-	Name     string
-	Path     string
-	Segments []Segment
-	Current  int
-
+	Version     uint32
+	Segments    []Segment
+	Current     uint32
 	TopicLookup []string
 	TopicCount  int
+	STime       time.Time // Last serialize time
+	Name        string    // <-- We do not save to disk, starting here
+	Path        string
 
 	// Private fields
 
@@ -79,39 +83,139 @@ func (d *Database) addTopicInternal(topicName string) int {
 	return index
 }
 
-func (d *Database) splatToDisk() {
-	var encoded bytes.Buffer
-
-	enc := gob.NewEncoder(&encoded)
-	err := enc.Encode(d)
+func (db *Database) serializeInternal() error {
+	// First, we write out our database metadata
+	newSTime := time.Now()
+	databaseMetadata := bytes.NewBuffer(binary.LittleEndian.AppendUint32([]byte{}, db.Version))
+	_, err := databaseMetadata.Write(binary.LittleEndian.AppendUint32([]byte{}, uint32(len(db.Segments))))
 	if err != nil {
-		d.log.Fatal().Err(err).Msg("error gob encoding database")
+		return err
+	}
+	_, err = databaseMetadata.Write(binary.LittleEndian.AppendUint32([]byte{}, db.Current))
+	if err != nil {
+		return err
+	}
+	_, err = databaseMetadata.Write([]byte(newSTime.Format(time.RFC3339)))
+	if err != nil {
+		return err
 	}
 
-	backupDBPath := filepath.Join(d.Path, "database.bak")
-	file, err := os.OpenFile(backupDBPath, os.O_TRUNC|os.O_WRONLY|os.O_CREATE, 0600)
+	// Ensure that there is a segments directory
+	segmentsDirectory := path.Join(db.Path, "segments")
+	_, err = os.Stat(segmentsDirectory)
+	if os.IsNotExist(err) {
+		err = os.Mkdir(segmentsDirectory, 0755)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Now, write out any segments after our STime
+	var first int
+	for idx, s := range db.Segments {
+		if s.HeadTime.After(db.STime) {
+			first = idx
+			if idx > 0 {
+				first = idx - 1
+			}
+			break
+		}
+	}
+
+	for i := uint32(first); i <= db.Current; i++ {
+		var encoded bytes.Buffer
+
+		enc := gob.NewEncoder(&encoded)
+		err := enc.Encode(db.Segments[i])
+		if err != nil {
+			db.log.Fatal().Err(err).Msg("error encoding segment")
+		}
+
+		tmpPath := filepath.Join(segmentsDirectory, fmt.Sprintf("%d.tmp", i))
+		file, err := os.OpenFile(tmpPath, os.O_TRUNC|os.O_WRONLY|os.O_CREATE, 0600)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		_, err = file.Write(encoded.Bytes())
+		if err != nil {
+			return err
+		}
+		file.Close()
+	}
+
+	for i := uint32(first); i <= db.Current; i++ {
+		err = os.Rename(path.Join(segmentsDirectory, fmt.Sprintf("%d.tmp", i)), path.Join(segmentsDirectory, fmt.Sprintf("%d", i)))
+		if err != nil {
+			return err
+		}
+	}
+
+	// Write out our topics
+	topics, err := json.Marshal(db.TopicLookup)
 	if err != nil {
-		d.log.Fatal().Err(err).Msg("unable to openfile")
+		return err
+	}
+
+	var topicBuffer bytes.Buffer
+	w := zlib.NewWriter(&topicBuffer)
+	_, err = w.Write(topics)
+	if err != nil {
+		return err
+	}
+	err = w.Close()
+	if err != nil {
+		return err
+	}
+
+	tmpPath := filepath.Join(db.Path, "topics.tmp")
+	file, err := os.OpenFile(tmpPath, os.O_TRUNC|os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return err
 	}
 	defer file.Close()
 
-	_, err = file.Write(encoded.Bytes())
+	_, err = file.Write(topicBuffer.Bytes())
 	if err != nil {
-		return
+		return err
+	}
+
+	err = os.Rename(tmpPath, path.Join(db.Path, "topics"))
+	if err != nil {
+		return err
+	}
+
+	// Now, write out our metadata
+	tmpPath = filepath.Join(db.Path, "metadata.tmp")
+	file, err = os.OpenFile(tmpPath, os.O_TRUNC|os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = file.Write(databaseMetadata.Bytes())
+	if err != nil {
+		return err
 	}
 	file.Close()
 
-	// First, overwrite the database
-	err = os.Rename(backupDBPath, filepath.Join(d.Path, "database"))
+	err = os.Rename(tmpPath, path.Join(db.Path, "metadata"))
 	if err != nil {
-		d.log.Fatal().Err(err).Msg("error renaming database file")
+		return err
 	}
+
 	// Next, zero out the WriteAheadLog
-	err = os.Remove(filepath.Join(d.Path, "wal.log"))
+	err = os.Remove(filepath.Join(db.Path, "wal.log"))
 	if err != nil {
-		d.log.Fatal().Err(err).Msg("error removing wal.log")
+		db.log.Fatal().Err(err).Msg("error removing wal.log")
 	}
-	d.appendCount = 0
+
+	// Finally, update our database's STime and appendCount
+	db.STime = newSTime
+	db.appendCount = 0
+
+	return nil
 }
 
 //-- Public Interfaces
@@ -150,7 +254,10 @@ func (d *Database) Append(data []byte, topic string) {
 	defer d.writeLock.Unlock()
 
 	if d.appendCount > SegmentSize {
-		d.splatToDisk()
+		err := d.serializeInternal()
+		if err != nil {
+			d.log.Fatal().Msg("Error serializing database to disk.")
+		}
 	}
 
 	// Pull appendTime now that we have acquired our db lock
@@ -224,14 +331,14 @@ func (d *Database) Retrieve(q Query) []Entry {
 		// If start has not been found, we still need to search the last segment
 		// of the database
 		if !startFound {
-			startIndex = d.Current
+			startIndex = int(d.Current)
 		}
 	}
 
 	// If endIndex is 0, that means there are no segments with head times after
 	// the specified end time, so use the last segment
 	if endIndex == 0 {
-		endIndex = d.Current
+		endIndex = int(d.Current)
 	}
 
 	startSubIndex := 0
@@ -353,7 +460,10 @@ func NewDatabase(log zerolog.Logger, name string, location string) (*Database, e
 	// change after we first splat to disk.
 	db.Name = name
 	if db.appendCount > SegmentSize {
-		db.splatToDisk()
+		err := db.serializeInternal()
+		if err != nil {
+			return nil, err
+		}
 	}
 	// Set up our convenience topic map
 	for k, v := range db.TopicLookup {
