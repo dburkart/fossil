@@ -7,12 +7,15 @@
 package database
 
 import (
+	"bufio"
 	"bytes"
 	"compress/zlib"
 	"encoding/binary"
 	"encoding/gob"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -24,7 +27,7 @@ import (
 
 // FossilDBVersion is the version of the database as recorded on disk.
 // This is primarily used for migration.
-const FossilDBVersion = 1
+const FossilDBVersion = 2
 
 type Database struct {
 	Version     uint32
@@ -81,6 +84,88 @@ func (d *Database) addTopicInternal(topicName string) int {
 	defer d.topicLock.Unlock()
 	d.topics[topicName] = index
 	return index
+}
+
+// deserializeInternal de-serializes a database from disk.
+// It expects the path field to be filled in on the database struct
+func (db *Database) deserializeInternal() error {
+	// First, read in our metadata
+	file, err := os.Open(path.Join(db.Path, "metadata"))
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	r := bufio.NewReader(file)
+	err = binary.Read(r, binary.LittleEndian, &db.Version)
+	if err != nil {
+		return err
+	}
+	if db.Version > FossilDBVersion {
+		return errors.New(fmt.Sprintf("cannot read database, on-disk version (%d) is greater than our version (%d)", db.Version, FossilDBVersion))
+	}
+
+	var segmentCount uint32
+	err = binary.Read(r, binary.LittleEndian, &segmentCount)
+	if err != nil {
+		return err
+	}
+
+	err = binary.Read(r, binary.LittleEndian, &db.Current)
+	if err != nil {
+		return err
+	}
+
+	timeBytes, err := io.ReadAll(r)
+	if err != nil {
+		return err
+	}
+	db.STime, err = time.Parse(time.RFC3339, string(timeBytes))
+	if err != nil {
+		return err
+	}
+
+	segmentsDirectory := path.Join(db.Path, "segments")
+	for i := uint32(0); i < segmentCount; i++ {
+		var segment Segment
+
+		contents, err := os.ReadFile(filepath.Join(segmentsDirectory, fmt.Sprintf("%d", i)))
+		if err != nil {
+			return err
+		}
+
+		dec := gob.NewDecoder(bytes.NewBuffer(contents))
+		err = dec.Decode(&segment)
+		if err != nil {
+			return err
+		}
+
+		db.Segments = append(db.Segments, segment)
+	}
+
+	file, err = os.Open(path.Join(db.Path, "topics"))
+	if err != nil {
+		return err
+	}
+
+	reader, err := zlib.NewReader(file)
+	if err != nil {
+		return err
+	}
+
+	var topicBuffer bytes.Buffer
+	_, err = io.Copy(&topicBuffer, reader)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(topicBuffer.Bytes(), &db.TopicLookup)
+	if err != nil {
+		return err
+	}
+
+	db.TopicCount = len(db.TopicLookup)
+	return nil
 }
 
 func (db *Database) serializeInternal() error {
@@ -416,13 +501,13 @@ func NewDatabase(log zerolog.Logger, name string, location string) (*Database, e
 	}
 
 	if _, err := os.Stat(filepath.Join(directory, "database")); err == nil {
-		contents, err := os.ReadFile(filepath.Join(directory, "database"))
-		if err != nil {
-			return nil, err
+		// FIXME: Migrate the database
+		return nil, errors.New("database migration not supported yet.")
+	} else if _, err := os.Stat(filepath.Join(directory, "metadata")); err == nil {
+		db = Database{
+			Path: directory,
 		}
-
-		dec := gob.NewDecoder(bytes.NewBuffer(contents))
-		err = dec.Decode(&db)
+		err = db.deserializeInternal()
 		if err != nil {
 			return nil, err
 		}
