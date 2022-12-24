@@ -9,31 +9,10 @@ package query
 import (
 	"errors"
 	"fmt"
+	"github.com/dburkart/fossil/pkg/common/parse"
 	"strings"
 	"time"
 )
-
-type SyntaxError struct {
-	Location [2]int
-	Message  string
-}
-
-func NewSyntaxError(t Token, m string) SyntaxError {
-	return SyntaxError{Location: t.Location, Message: m}
-}
-
-func (s *SyntaxError) FormatError(input string) string {
-	repeat := s.Location[1] - s.Location[0] - 1
-	if repeat < 0 {
-		repeat = 0
-	}
-
-	errorString := "Syntax error found in query:\n"
-	errorString += input
-	errorString += fmt.Sprintf("\n%s^%s ", strings.Repeat(" ", s.Location[0]), strings.Repeat("~", repeat))
-	errorString += fmt.Sprintf("%s\n", s.Message)
-	return errorString
-}
 
 type Parser struct {
 	Scanner Scanner
@@ -42,7 +21,7 @@ type Parser struct {
 func (p *Parser) Parse() (query ASTNode, err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			syntaxError, ok := e.(SyntaxError)
+			syntaxError, ok := e.(parse.SyntaxError)
 			if !ok {
 				panic(e)
 			}
@@ -59,7 +38,7 @@ func (p *Parser) Parse() (query ASTNode, err error) {
 
 	// If we didn't parse all the input, return an error
 	if p.Scanner.Pos != len(p.Scanner.Input) {
-		syntaxError := NewSyntaxError(Token{
+		syntaxError := parse.NewSyntaxError(parse.Token{
 			Type:     TOK_INVALID,
 			Location: [2]int{p.Scanner.Pos, len(p.Scanner.Input) - 1},
 		}, "Error: query is not valid, starting here")
@@ -112,7 +91,7 @@ func (p *Parser) quantifier() ASTNode {
 	tok := p.Scanner.Emit()
 
 	if tok.Type != TOK_KEYWORD || (tok.Lexeme != "all" && tok.Lexeme != "sample") {
-		panic(NewSyntaxError(tok, fmt.Sprintf("Error: unexpected token '%s', expected quantifier (all, sample, etc.)", tok.Lexeme)))
+		panic(parse.NewSyntaxError(tok, fmt.Sprintf("Error: unexpected token '%s', expected quantifier (all, sample, etc.)", tok.Lexeme)))
 	}
 
 	q := QuantifierNode{BaseNode{
@@ -122,14 +101,14 @@ func (p *Parser) quantifier() ASTNode {
 	if tok.Lexeme == "sample" {
 		tok = p.Scanner.Emit()
 		if tok.Type != TOK_PAREN_L {
-			panic(NewSyntaxError(tok, fmt.Sprintf("Error: unexpected token '%s', expected '('", tok.Lexeme)))
+			panic(parse.NewSyntaxError(tok, fmt.Sprintf("Error: unexpected token '%s', expected '('", tok.Lexeme)))
 		}
 
 		q.AddChild(p.timeQuantity())
 
 		tok = p.Scanner.Emit()
 		if tok.Type != TOK_PAREN_R {
-			panic(NewSyntaxError(tok, fmt.Sprintf("Error: unexpected token '%s', expected ')'", tok.Lexeme)))
+			panic(parse.NewSyntaxError(tok, fmt.Sprintf("Error: unexpected token '%s', expected ')'", tok.Lexeme)))
 		}
 	}
 
@@ -171,7 +150,7 @@ func (p *Parser) topic() ASTNode {
 	tok := p.Scanner.Emit()
 
 	if tok.Type != TOK_TOPIC {
-		panic(NewSyntaxError(tok, fmt.Sprintf("Error: unexpected token '%s', expected a topic after 'in' keyword", tok.Lexeme)))
+		panic(parse.NewSyntaxError(tok, fmt.Sprintf("Error: unexpected token '%s', expected a topic after 'in' keyword", tok.Lexeme)))
 	}
 
 	t := TopicNode{BaseNode{
@@ -208,7 +187,7 @@ func (p *Parser) timePredicate() ASTNode {
 		comma := p.Scanner.Emit()
 
 		if comma.Lexeme != "," {
-			panic(NewSyntaxError(comma, fmt.Sprintf("Error: unexpected token '%s', expected ','", comma.Lexeme)))
+			panic(parse.NewSyntaxError(comma, fmt.Sprintf("Error: unexpected token '%s', expected ','", comma.Lexeme)))
 		}
 
 		rh := p.timeExpression()
@@ -251,7 +230,7 @@ func (p *Parser) timeWhence() ASTNode {
 	tok := p.Scanner.Emit()
 
 	if tok.Type != TOK_WHENCE {
-		panic(NewSyntaxError(tok, fmt.Sprintf("Error: Unexpected token '%s', expected a time-whence (~now, etc.)", tok.Lexeme)))
+		panic(parse.NewSyntaxError(tok, fmt.Sprintf("Error: Unexpected token '%s', expected a time-whence (~now, etc.)", tok.Lexeme)))
 	}
 
 	var when time.Time
@@ -264,7 +243,7 @@ func (p *Parser) timeWhence() ASTNode {
 		value := tok.Lexeme[2 : len(tok.Lexeme)-1]
 		when, err = ParseVagueDateTime(value)
 		if err != nil {
-			panic(NewSyntaxError(tok, fmt.Sprintf("Error: %s", err.Error())))
+			panic(parse.NewSyntaxError(tok, fmt.Sprintf("Error: %s", err.Error())))
 		}
 	}
 
@@ -345,5 +324,5 @@ func (p *Parser) timeAtom() ASTNode {
 		}}
 	}
 
-	panic(NewSyntaxError(tok, fmt.Sprintf("Expected number of timespan, got '%s'", tok.Lexeme)))
+	panic(parse.NewSyntaxError(tok, fmt.Sprintf("Expected number of timespan, got '%s'", tok.Lexeme)))
 }

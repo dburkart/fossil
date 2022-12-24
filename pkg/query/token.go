@@ -9,7 +9,7 @@ package query
 type TokenType int
 
 const (
-	TOK_INVALID = iota
+	TOK_INVALID TokenType = iota
 	TOK_EOF
 	TOK_NL
 
@@ -73,10 +73,4 @@ func (t TokenType) ToString() string {
 		return "TOK_ARROW"
 	}
 	return "TOK_UNKNOWN"
-}
-
-type Token struct {
-	Type     TokenType
-	Lexeme   string
-	Location [2]int
 }

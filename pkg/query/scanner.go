@@ -7,6 +7,7 @@
 package query
 
 import (
+	"github.com/dburkart/fossil/pkg/common/parse"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -172,8 +173,8 @@ func (s *Scanner) MatchTimespan() int {
 }
 
 // Emit the next Token found on Scanner.Input
-func (s *Scanner) Emit() Token {
-	var t Token
+func (s *Scanner) Emit() parse.Token {
+	var t parse.Token
 
 	oldStart := s.Start
 
