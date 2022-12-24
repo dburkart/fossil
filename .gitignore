@@ -1,2 +1,5 @@
 wal.log
 data/
+default
+topics
+segments
