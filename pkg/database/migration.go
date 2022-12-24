@@ -80,7 +80,7 @@ func migrateV1ToV2(db any) (any, error) {
 	}
 
 	to := Database{
-		Version:     uint32(from.Version),
+		Version:     2,
 		Segments:    from.Segments,
 		Current:     uint32(from.Current),
 		TopicLookup: from.TopicLookup,

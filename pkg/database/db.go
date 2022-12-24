@@ -51,8 +51,9 @@ type Database struct {
 
 func (db *Database) Stats() Stats {
 	return Stats{
-		Segments:   len(db.Segments),
-		TopicCount: db.TopicCount,
+		Segments:      len(db.Segments),
+		TopicCount:    db.TopicCount,
+		SerializeTime: db.STime,
 	}
 }
 
