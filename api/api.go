@@ -7,14 +7,15 @@
 package fossil
 
 import (
-	"github.com/dburkart/fossil/pkg/database"
-	"github.com/dburkart/fossil/pkg/proto"
-	"github.com/pkg/errors"
 	"io"
 	"math"
 	"net"
 	"syscall"
 	"time"
+
+	"github.com/dburkart/fossil/pkg/database"
+	"github.com/dburkart/fossil/pkg/proto"
+	"github.com/pkg/errors"
 )
 
 // A Client holds the data needed to interact with a fossil database.
@@ -70,7 +71,7 @@ func connect(c net.Conn, dbName string) (proto.OkResponse, error) {
 		return proto.OkResponse{}, errors.Wrap(err, "unable to parse server version response")
 	}
 	version := proto.VersionResponse{}
-	err = version.Unmarshal(m.Data)
+	err = version.Unmarshal(m.Data())
 	if err != nil {
 		return proto.OkResponse{}, errors.Wrap(err, "unable to unmarshal version response")
 	}
@@ -88,7 +89,7 @@ func connect(c net.Conn, dbName string) (proto.OkResponse, error) {
 		return proto.OkResponse{}, errors.Wrap(err, "unable to parse server use response")
 	}
 	ok := proto.OkResponse{}
-	err = ok.Unmarshal(m.Data)
+	err = ok.Unmarshal(m.Data())
 	if err != nil {
 		return proto.OkResponse{}, errors.Wrap(err, "unable to unmarshal ok response")
 	}
@@ -135,7 +136,7 @@ func (c *Client) Close() error {
 func (c *Client) Send(m proto.Message) (proto.Message, error) {
 	data, err := m.Marshal()
 	if err != nil {
-		return proto.Message{}, err
+		return nil, err
 	}
 
 	conn := <-c.conn
@@ -150,14 +151,14 @@ retry:
 		if errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.EPIPE) {
 			conn, err = c.reconnectWithBackoff()
 			if err != nil {
-				return proto.Message{}, err
+				return nil, err
 			}
 			// We use a goto here because we need to retry sending our message,
 			// however, if we recursively call Send() we'll end up with a
 			// duplicated net.Conn in our connection pool.
 			goto retry
 		} else {
-			return proto.Message{}, err
+			return nil, err
 		}
 	}
 
@@ -166,14 +167,14 @@ retry:
 		if errors.Is(err, io.EOF) {
 			conn, err = c.reconnectWithBackoff()
 			if err != nil {
-				return proto.Message{}, err
+				return nil, err
 			}
 			// We use a goto here because we need to retry sending our message,
 			// however, if we recursively call Send() we'll end up with a
 			// duplicated net.Conn in our connection pool.
 			goto retry
 		}
-		return proto.Message{}, err
+		return nil, err
 	}
 	return resp, nil
 }
@@ -192,7 +193,7 @@ func (c *Client) Append(topic string, data []byte) error {
 	}
 
 	ok := proto.OkResponse{}
-	err = ok.Unmarshal(resp.Data)
+	err = ok.Unmarshal(resp.Data())
 	if err != nil {
 		return err
 	}
@@ -213,7 +214,7 @@ func (c *Client) Query(q string) (database.Entries, error) {
 	}
 
 	queryResponse := proto.QueryResponse{}
-	err = queryResponse.Unmarshal(resp.Data)
+	err = queryResponse.Unmarshal(resp.Data())
 	if err != nil {
 		return nil, err
 	}

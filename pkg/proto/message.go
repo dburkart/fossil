@@ -36,21 +36,29 @@ var (
 )
 
 func ReadMessageFull(r io.Reader) (Message, error) {
-	msg := Message{}
+	msg := &lineMessage{}
 	err := msg.Unmarshal(r)
 	if err != nil {
-		return msg, err
+		return nil, err
 	}
 	return msg, nil
 }
 
-type Message struct {
-	Command string
-	Data    []byte
+type Message interface {
+	Marshal() ([]byte, error)
+	Unmarshal(r io.Reader) error
+	Command() string
+	Data() []byte
+	MarshalZerologObject(e *zerolog.Event)
+}
+
+type lineMessage struct {
+	command string
+	data    []byte
 }
 
 func NewMessage(cmd string, data []byte) Message {
-	return Message{
+	return &lineMessage{
 		cmd,
 		data,
 	}
@@ -61,46 +69,53 @@ func NewMessageWithType(cmd string, t Marshaler) Message {
 	if err != nil {
 		panic(err)
 	}
-	return Message{
+	return &lineMessage{
 		cmd,
 		d,
 	}
 }
 
-func (m Message) Marshal() ([]byte, error) {
-	b := make([]byte, lenWidth+commandWidth+len(m.Data))
-	binary.BigEndian.PutUint32(b, uint32(commandWidth+len(m.Data)))
-	copy(b[lenWidth:], []byte(m.Command))
-	copy(b[commandWidth+lenWidth:], m.Data)
+func (m lineMessage) Marshal() ([]byte, error) {
+	b := make([]byte, lenWidth+commandWidth+len(m.data))
+	binary.BigEndian.PutUint32(b, uint32(commandWidth+len(m.data)))
+	copy(b[lenWidth:], []byte(m.command))
+	copy(b[commandWidth+lenWidth:], m.data)
 
 	return b, nil
 }
 
-func (m *Message) Unmarshal(r io.Reader) error {
+func (m *lineMessage) Unmarshal(r io.Reader) error {
 	lengthPrefix := make([]byte, lenWidth)
 	_, err := io.ReadFull(r, lengthPrefix)
 	if err != nil {
 		return err
 	}
 	length := binary.BigEndian.Uint32(lengthPrefix)
-	b := make([]byte, length)
-	n, err := io.ReadFull(r, b)
+	buf := make([]byte, length)
+	n, err := io.ReadFull(r, buf)
 	if err != nil {
-		return fmt.Errorf("unable to read response\n\t'%s'", string(b))
+		return fmt.Errorf("unable to read response\n\t'%s'", string(buf))
 	}
 	if n < 8 {
 		return errors.New("message format incorrect")
 	}
 
 	// Parse message
-	m.Command = strings.ToUpper(strings.Trim(string(b[:commandWidth]), "\u0000"))
-	m.Data = b[commandWidth:]
+	m.command = strings.ToUpper(strings.Trim(string(buf[:commandWidth]), "\u0000"))
+	m.data = buf[commandWidth:]
 
 	return nil
 }
+func (m lineMessage) Command() string {
+	return m.command
+}
 
-func (m Message) MarshalZerologObject(e *zerolog.Event) {
-	e.Str("command", m.Command).Bytes("data", m.Data)
+func (m lineMessage) Data() []byte {
+	return m.data
+}
+
+func (m lineMessage) MarshalZerologObject(e *zerolog.Event) {
+	e.Str("command", m.command).Bytes("data", m.data)
 }
 
 func Marshal(t Marshaler) ([]byte, error) {

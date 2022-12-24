@@ -33,10 +33,10 @@ func TestMessageMarshaling(t *testing.T) {
 	}
 
 	// Check fields
-	if m.Command != CommandAppend {
+	if m.Command() != CommandAppend {
 		t.Fail()
 	}
-	if !bytes.Equal(m.Data, []byte("\u0000\u0000\u0000\u0000y2k")) {
+	if !bytes.Equal(m.Data(), []byte("\u0000\u0000\u0000\u0000y2k")) {
 		t.Fail()
 	}
 }

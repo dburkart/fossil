@@ -101,7 +101,7 @@ func listDatabases(c fossil.Client) func(string) []string {
 		return func(string) []string { return []string{} }
 	}
 	resp := proto.ListResponse{}
-	err = resp.Unmarshal(msg.Data)
+	err = resp.Unmarshal(msg.Data())
 	if err != nil {
 		return func(string) []string { return []string{} }
 	}
@@ -121,7 +121,7 @@ func listTopics(c fossil.Client) func(string) []string {
 		return func(string) []string { return []string{} }
 	}
 	resp := proto.ListResponse{}
-	err = resp.Unmarshal(msg.Data)
+	err = resp.Unmarshal(msg.Data())
 	if err != nil {
 		return func(string) []string { return []string{} }
 	}
@@ -212,10 +212,10 @@ func readlinePrompt(c fossil.Client) {
 			log.Fatal().Err(err).Msg("error sending message to server")
 		}
 
-		switch msg.Command {
+		switch msg.Command() {
 		case proto.CommandVersion:
 			v := proto.VersionResponse{}
-			err = v.Unmarshal(msg.Data)
+			err = v.Unmarshal(msg.Data())
 			if err != nil {
 				log.Error().Err(err).Send()
 				continue
@@ -223,7 +223,7 @@ func readlinePrompt(c fossil.Client) {
 			fmt.Printf("%d %s\n", v.Code, v.Version)
 		case proto.CommandStats:
 			t := proto.StatsResponse{}
-			err = t.Unmarshal(msg.Data)
+			err = t.Unmarshal(msg.Data())
 			if err != nil {
 				log.Error().Err(err).Send()
 				continue
@@ -238,7 +238,7 @@ func readlinePrompt(c fossil.Client) {
 			)
 		case proto.CommandQuery:
 			t := proto.QueryResponse{}
-			err = t.Unmarshal(msg.Data)
+			err = t.Unmarshal(msg.Data())
 			if err != nil {
 				log.Error().Err(err).Send()
 				continue
@@ -257,7 +257,7 @@ func readlinePrompt(c fossil.Client) {
 			table.Render()
 		case proto.CommandError:
 			t := proto.ErrResponse{}
-			err = t.Unmarshal(msg.Data)
+			err = t.Unmarshal(msg.Data())
 			if err != nil {
 				log.Error().Err(err).Send()
 				continue
@@ -265,7 +265,7 @@ func readlinePrompt(c fossil.Client) {
 			fmt.Println(t.Code, t.Err)
 		case proto.CommandOk:
 			t := proto.OkResponse{}
-			err = t.Unmarshal(msg.Data)
+			err = t.Unmarshal(msg.Data())
 			if err != nil {
 				log.Error().Err(err).Send()
 				continue
@@ -273,7 +273,7 @@ func readlinePrompt(c fossil.Client) {
 			fmt.Println(t.Code, t.Message)
 		case proto.CommandAppend:
 			t := proto.OkResponse{}
-			err = t.Unmarshal(msg.Data)
+			err = t.Unmarshal(msg.Data())
 			if err != nil {
 				log.Error().Err(err).Send()
 				continue
@@ -281,7 +281,7 @@ func readlinePrompt(c fossil.Client) {
 			fmt.Println(t.Code, t.Message)
 		case proto.CommandList:
 			t := proto.ListResponse{}
-			err = t.Unmarshal(msg.Data)
+			err = t.Unmarshal(msg.Data())
 			if err != nil {
 				log.Error().Err(err).Send()
 				continue

@@ -31,10 +31,10 @@ func (r *Request) Database() *database.Database {
 
 // Command retrieves the command from the request
 func (r *Request) Command() string {
-	return r.msg.Command
+	return r.msg.Command()
 }
 
 // Data retrieves the data portion of the line message
 func (r *Request) Data() []byte {
-	return r.msg.Data
+	return r.msg.Data()
 }

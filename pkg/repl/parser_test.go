@@ -19,10 +19,10 @@ func TestParseREPLCommand(t *testing.T) {
 		if err != nil {
 			t.Fail()
 		}
-		if msg.Command != proto.CommandUse {
+		if msg.Command() != proto.CommandUse {
 			t.Fail()
 		}
-		if !bytes.Equal(msg.Data, []byte("default")) {
+		if !bytes.Equal(msg.Data(), []byte("default")) {
 			t.Fail()
 		}
 	})
@@ -32,10 +32,10 @@ func TestParseREPLCommand(t *testing.T) {
 		if err != nil {
 			t.Fail()
 		}
-		if msg.Command != proto.CommandAppend {
+		if msg.Command() != proto.CommandAppend {
 			t.Fail()
 		}
-		if !bytes.Equal(msg.Data, cmp.Data) {
+		if !bytes.Equal(msg.Data(), cmp.Data()) {
 			t.Fail()
 		}
 	})
@@ -45,10 +45,10 @@ func TestParseREPLCommand(t *testing.T) {
 		if err != nil {
 			t.Fail()
 		}
-		if msg.Command != proto.CommandAppend {
+		if msg.Command() != proto.CommandAppend {
 			t.Fail()
 		}
-		if !bytes.Equal(msg.Data, cmp.Data) {
+		if !bytes.Equal(msg.Data(), cmp.Data()) {
 			t.Fail()
 		}
 	})
@@ -58,10 +58,10 @@ func TestParseREPLCommand(t *testing.T) {
 		if err != nil {
 			t.Fail()
 		}
-		if msg.Command != proto.CommandAppend {
+		if msg.Command() != proto.CommandAppend {
 			t.Fail()
 		}
-		if !bytes.Equal(msg.Data, cmp.Data) {
+		if !bytes.Equal(msg.Data(), cmp.Data()) {
 			t.Fail()
 		}
 	})
@@ -77,10 +77,10 @@ func TestParseREPLCommand(t *testing.T) {
 		if err != nil {
 			t.Fail()
 		}
-		if msg.Command != proto.CommandQuery {
+		if msg.Command() != proto.CommandQuery {
 			t.Fail()
 		}
-		if !bytes.Equal(msg.Data, cmp.Data) {
+		if !bytes.Equal(msg.Data(), cmp.Data()) {
 			t.Fail()
 		}
 	})
@@ -90,10 +90,10 @@ func TestParseREPLCommand(t *testing.T) {
 		if err != nil {
 			t.Fail()
 		}
-		if msg.Command != proto.CommandQuery {
+		if msg.Command() != proto.CommandQuery {
 			t.Fail()
 		}
-		if !bytes.Equal(msg.Data, cmp.Data) {
+		if !bytes.Equal(msg.Data(), cmp.Data()) {
 			t.Fail()
 		}
 	})
