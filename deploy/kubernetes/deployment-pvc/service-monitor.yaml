@@ -2,7 +2,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: fossil
-  namespace: monitoring
+  namespace: fossil
   labels:
     app: fossil
     tier: server
@@ -18,4 +18,3 @@ spec:
     - port: http
       interval: 1s
       scheme: http
-

@@ -13,12 +13,12 @@ spec:
     spec:
       containers:
         - name: fossil
-          image: gideonw/fossil:v0.1.1
+          image: gideonw/fossil:v0.1.4
           args:
             - "server"
           imagePullPolicy: Always
           resources:
-            limits:
+            requests:
               memory: "500Mi"
               cpu: "500m"
           ports:
