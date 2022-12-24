@@ -42,7 +42,7 @@ func ParseREPLCommand(b []byte) (proto.Message, error) {
 		req := proto.AppendRequest{}
 
 		if len(data) == 0 {
-			return proto.Message{}, errors.New("malformed append request: expected data after append keyword")
+			return nil, errors.New("malformed append request: expected data after append keyword")
 		}
 
 		// check for space after topic, no space means the data starts with /
