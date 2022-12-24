@@ -51,6 +51,8 @@ func (s *Scanner) MatchKey() int {
 		r, width = utf8.DecodeRuneInString(s.Input[pos:])
 	}
 
+	pos += width
+
 	return pos - s.Pos
 }
 
