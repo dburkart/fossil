@@ -6,7 +6,9 @@
 
 package schema
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestParseType(t *testing.T) {
 	p := Parser{
@@ -80,6 +82,49 @@ func TestParseArray(t *testing.T) {
 	p = Parser{
 		Scanner{
 			Input: "[2]string",
+		},
+	}
+
+	_, err = p.Parse()
+	if err == nil {
+		t.Fail()
+	}
+}
+
+func TestParseShallowMap(t *testing.T) {
+	p := Parser{
+		Scanner{
+			Input: `{ "x": int32, "y": int32, }`,
+		},
+	}
+
+	obj, err := p.Parse()
+	if err != nil {
+		t.Fail()
+	}
+
+	if _, ok := obj.(*ShallowMap); !ok {
+		t.Fail()
+	}
+
+	p = Parser{
+		Scanner{
+			Input: `{ "event": string, "coords": [2]int32, }`,
+		},
+	}
+
+	obj, err = p.Parse()
+	if err != nil {
+		t.Fail()
+	}
+
+	if _, ok := obj.(*ShallowMap); !ok {
+		t.Fail()
+	}
+
+	p = Parser{
+		Scanner{
+			Input: `{ "key": foo, }`,
 		},
 	}
 
