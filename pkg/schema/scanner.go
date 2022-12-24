@@ -156,6 +156,22 @@ func (s *Scanner) Emit() parse.Token {
 			}
 			t.Type = TOK_INVALID
 			skip = s.SkipToBoundary(isDelimiter)
+		case r == 'u':
+			if strings.HasPrefix(s.Input[s.Pos:], "uint") {
+				if strings.HasPrefix(s.Input[s.Pos+4:], "8") {
+					t.Type = TOK_TYPE
+					skip = len("uint8")
+					break
+				}
+
+				if strings.HasPrefix(s.Input[s.Pos+4:], "16") ||
+					strings.HasPrefix(s.Input[s.Pos+4:], "32") ||
+					strings.HasPrefix(s.Input[s.Pos+4:], "64") {
+					t.Type = TOK_TYPE
+					skip = len("uint16")
+					break
+				}
+			}
 		}
 
 		s.Pos = s.Start + skip

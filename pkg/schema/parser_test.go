@@ -24,6 +24,17 @@ func TestParseType(t *testing.T) {
 
 	p = Parser{
 		Scanner{
+			Input: "uint32",
+		},
+	}
+
+	_, err = p.Parse()
+	if err != nil {
+		t.Fail()
+	}
+
+	p = Parser{
+		Scanner{
 			Input: "string",
 		},
 	}
