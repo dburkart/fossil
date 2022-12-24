@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: deleteme
+  labels:
+    name: deleteme
+spec:
+  containers:
+    - name: deleteme
+      image: ubuntu:latest
+      command: ["/bin/bash", "-c", "--"]
+      args: ["while true; do sleep 30; done;"]
+      resources:
+        limits:
+          memory: "128Mi"
+          cpu: "500m"
+      volumeMounts:
+        - name: fossil-data
+          mountPath: /mnt/data
+  volumes:
+    - name: fossil-data
+      persistentVolumeClaim:
+        claimName: fossil-data-pvc
