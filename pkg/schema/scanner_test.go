@@ -10,12 +10,12 @@ import "testing"
 
 func TestScannerMatchKey(t *testing.T) {
 	s := Scanner{
-		Input: "\"foobar\"",
+		Input: `"foobar"`,
 	}
 
 	n := s.MatchKey()
 
-	if n != 7 {
+	if n != len(s.Input) {
 		t.Fail()
 	}
 
