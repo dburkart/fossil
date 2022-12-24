@@ -7,6 +7,7 @@
 package schema
 
 import (
+	"github.com/dburkart/fossil/pkg/common/parse"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -67,8 +68,8 @@ func (s *Scanner) MatchNumber() int {
 }
 
 // Emit the next Token found on Scanner.Input
-func (s *Scanner) Emit() Token {
-	var t Token
+func (s *Scanner) Emit() parse.Token {
+	var t parse.Token
 
 	oldStart := s.Start
 
@@ -168,6 +169,13 @@ func (s *Scanner) Emit() Token {
 	s.LastWidth = s.Start - oldStart
 
 	return t
+}
+
+// Rewind the last read token
+func (s *Scanner) Rewind() {
+	s.Start -= s.LastWidth
+	s.Pos = s.Start
+	s.LastWidth = 0
 }
 
 type boundaryFunc func(rune) bool
