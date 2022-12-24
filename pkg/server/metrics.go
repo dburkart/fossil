@@ -8,6 +8,7 @@ package server
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
@@ -42,9 +43,14 @@ func NewMetricsStore() MetricsStore {
 	reg := prometheus.NewRegistry()
 	reg.MustRegister(
 		collectors.NewGoCollector(
-			collectors.WithGoCollections(collectors.GoRuntimeMemStatsCollection),
+			collectors.WithGoCollectorRuntimeMetrics(collectors.MetricsAll),
 		),
 	)
+
+	buckets := []float64{}
+	for i := 1; i < 20; i++ {
+		buckets = append(buckets, float64(2*i*int(time.Millisecond)))
+	}
 
 	factory := promauto.With(reg)
 	return &metricsStore{
@@ -58,8 +64,9 @@ func NewMetricsStore() MetricsStore {
 			Help: "Request counts for the fossil commands",
 		}, []string{DatabaseLabel, CommandLabel}),
 		ResponseNS: factory.NewHistogramVec(prometheus.HistogramOpts{
-			Name: "fossil_response_ns",
-			Help: "Response times on commands made against a database",
+			Name:    "fossil_response_ns",
+			Help:    "Response times on commands made against a database",
+			Buckets: buckets,
 		}, []string{DatabaseLabel, CommandLabel}),
 	}
 }
