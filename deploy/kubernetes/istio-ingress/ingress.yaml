@@ -1,0 +1,34 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: fossil-gw
+  namespace: fossil
+spec:
+  selector:
+    app: istio-ingressgateway
+  servers:
+    - port:
+        number: 8000
+        name: fossil
+        protocol: TCP
+      hosts:
+        - "fossil.gideonw.xyz"
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: fossil-svc
+  namespace: fossil
+spec:
+  gateways:
+    - fossil-gw
+  hosts:
+    - fossil.gideonw.xyz
+  tcp:
+    - match:
+        - port: 8000
+      route:
+        - destination:
+            host: fossil.fossil.svc.cluster.local
+            port:
+              number: 8001
