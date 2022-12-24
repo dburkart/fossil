@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/dburkart/fossil/pkg/common/parse"
+	"strconv"
 	"strings"
 )
 
@@ -31,6 +32,19 @@ func (p *Parser) Parse() (schema Object, err error) {
 	p.Scanner.Input = strings.Trim(p.Scanner.Input, " \t\n")
 
 	schema = p.schema()
+	if schema == nil {
+		syntaxError := parse.NewSyntaxError(parse.Token{
+			Type:     TOK_INVALID,
+			Location: [2]int{p.Scanner.Pos, len(p.Scanner.Input) - 1},
+		}, "Error: Unrecognized schema")
+		err = errors.New(syntaxError.FormatError(p.Scanner.Input))
+	} else if p.Scanner.Pos != len(p.Scanner.Input) {
+		syntaxError := parse.NewSyntaxError(parse.Token{
+			Type:     TOK_INVALID,
+			Location: [2]int{p.Scanner.Pos, len(p.Scanner.Input) - 1},
+		}, "Error: Schema not valid, starting here")
+		err = errors.New(syntaxError.FormatError(p.Scanner.Input))
+	}
 
 	return
 }
@@ -50,7 +64,7 @@ func (p *Parser) schema() Object {
 }
 
 func (p *Parser) dType() Object {
-	var dType *Type
+	var dType Type
 
 	tok := p.Scanner.Emit()
 	if tok.Type != TOK_TYPE {
@@ -60,11 +74,12 @@ func (p *Parser) dType() Object {
 
 	dType.Name = tok.Lexeme
 
-	return dType
+	return &dType
 }
 
 func (p *Parser) array() Object {
-	var array *Array
+	var array Array
+	var err error
 
 	tok := p.Scanner.Emit()
 	if tok.Type != TOK_BRACKET_O {
@@ -77,5 +92,27 @@ func (p *Parser) array() Object {
 		panic(parse.NewSyntaxError(tok, fmt.Sprintf("Error: unexpected token '%s', expected a number indicating array size", tok.Lexeme)))
 	}
 
-	return array
+	array.Length, err = strconv.Atoi(tok.Lexeme)
+	if err != nil {
+		panic(err)
+	}
+
+	tok = p.Scanner.Emit()
+	if tok.Type != TOK_BRACKET_X {
+		panic(parse.NewSyntaxError(tok, fmt.Sprintf("Error: unexpected token '%s', expected a ']'", tok.Lexeme)))
+	}
+
+	var dType *Type
+	dType = p.dType().(*Type)
+	if dType == nil {
+		panic(parse.NewSyntaxError(tok, fmt.Sprintf("Error: unexpected token '%s', expected a valid type", tok.Lexeme)))
+	}
+
+	if dType.Name == "string" || dType.Name == "binary" {
+		panic(parse.NewSyntaxError(tok, fmt.Sprintf("Error: variable-length type '%s' not valid in array", dType.Name)))
+	}
+
+	array.Type = *dType
+
+	return &array
 }
