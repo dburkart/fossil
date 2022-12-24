@@ -57,10 +57,14 @@ func (p *Parser) schema() Object {
 	}
 
 	if schema = p.array(); schema != nil {
-
+		return schema
 	}
 
-	return schema
+	if schema = p.shallowMap(); schema != nil {
+		return schema
+	}
+
+	return nil
 }
 
 func (p *Parser) dType() Object {
@@ -115,4 +119,54 @@ func (p *Parser) array() Object {
 	array.Type = *dType
 
 	return &array
+}
+
+func (p *Parser) shallowMap() Object {
+	var sMap ShallowMap
+
+	tok := p.Scanner.Emit()
+	if tok.Type != TOK_CURLY_O {
+		p.Scanner.Rewind()
+		return nil
+	}
+
+	tok = p.Scanner.Emit()
+
+	// Iterate over the keys and values of our map
+	for tok.Type != TOK_CURLY_X {
+		if tok.Type != TOK_KEY {
+			panic(parse.NewSyntaxError(tok, fmt.Sprintf("Error: unexpected token '%s', expected a map key (\"...\")", tok.Lexeme)))
+		}
+
+		sMap.Keys = append(sMap.Keys, tok.Lexeme)
+
+		tok = p.Scanner.Emit()
+		if tok.Type != TOK_COLON {
+			panic(parse.NewSyntaxError(tok, fmt.Sprintf("Error: unexpected token '%s', expected ':'", tok.Lexeme)))
+		}
+
+		// Now we must find a valid type
+		val := p.dType()
+		if val == nil {
+			// It could be an array
+			val = p.array()
+
+			if val == nil {
+				panic(parse.NewSyntaxError(tok, fmt.Sprintf("Error: expected a valid type or array as value for key '%s'", tok.Lexeme)))
+			}
+		}
+
+		sMap.Values = append(sMap.Values, val)
+
+		// Finally, every line must have a comma
+		tok = p.Scanner.Emit()
+		if tok.Type != TOK_COMMA {
+			panic(parse.NewSyntaxError(tok, fmt.Sprintf("Error: unexpected token '%s', expected ','", tok.Lexeme)))
+		}
+
+		// Pull off token for the next iteration
+		tok = p.Scanner.Emit()
+	}
+
+	return &sMap
 }
