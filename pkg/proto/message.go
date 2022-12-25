@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/dburkart/fossil/pkg/database"
+	"github.com/dustin/go-humanize"
 	"github.com/rs/zerolog"
 )
 
@@ -91,6 +92,9 @@ func (m *lineMessage) Unmarshal(r io.Reader) error {
 		return err
 	}
 	length := binary.BigEndian.Uint32(lengthPrefix)
+	if length > 100*humanize.MiByte {
+		return errors.New("message too large")
+	}
 	buf := make([]byte, length)
 	n, err := io.ReadFull(r, buf)
 	if err != nil {
