@@ -48,15 +48,19 @@ func TestScannerMatchKey(t *testing.T) {
 }
 
 func TestScannerTypes(t *testing.T) {
-	s := Scanner{Input: "boolean int8 int16 int32 int64 string"}
+	s := Scanner{Input: "boolean int8 int16 int32 int64 string float"}
 
-	expectedKeywordLexemes := []string{"boolean", "int8", "int16", "int32", "int64", "string"}
+	expectedKeywordLexemes := []string{"boolean", "int8", "int16", "int32", "int64", "string", "float"}
 
 	for i := 0; i < len(expectedKeywordLexemes); i++ {
 		tok := s.Emit()
 
 		if tok.Type != TOK_TYPE {
 			t.Error("wanted TOK_TYPE, got", tok.Type)
+		}
+
+		if tok.Type == TOK_INVALID {
+			t.Error("wanted a non invalid token type")
 		}
 
 		if tok.Lexeme != expectedKeywordLexemes[i] {

@@ -130,6 +130,14 @@ func (s *Scanner) Emit() parse.Token {
 			}
 			t.Type = TOK_INVALID
 			skip = s.SkipToBoundary(isDelimiter)
+		case r == 'f':
+			if strings.HasPrefix(s.Input[s.Pos:], "float") {
+				t.Type = TOK_TYPE
+				skip = len("float")
+				break
+			}
+			t.Type = TOK_INVALID
+			skip = s.SkipToBoundary(isDelimiter)
 		case r == 'i':
 			if strings.HasPrefix(s.Input[s.Pos:], "int") {
 				if strings.HasPrefix(s.Input[s.Pos+3:], "8") {

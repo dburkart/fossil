@@ -54,6 +54,17 @@ func TestParseType(t *testing.T) {
 	if err == nil {
 		t.Fail()
 	}
+
+	p = Parser{
+		Scanner{
+			Input: "float",
+		},
+	}
+
+	_, err = p.Parse()
+	if err != nil {
+		t.Fail()
+	}
 }
 
 func TestParseArray(t *testing.T) {
