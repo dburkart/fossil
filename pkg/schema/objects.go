@@ -10,6 +10,7 @@ import "fmt"
 
 type Object interface {
 	Validate([]byte) bool
+	ToSchema() string
 }
 
 type (
@@ -87,6 +88,10 @@ func (t Type) Validate(val []byte) bool {
 	return true
 }
 
+func (t Type) ToSchema() string {
+	return t.Name
+}
+
 func (a Array) Size() int {
 	return a.Length * a.Type.Size()
 }
@@ -104,6 +109,10 @@ func (a Array) Validate(val []byte) bool {
 	}
 
 	return true
+}
+
+func (a Array) ToSchema() string {
+	return fmt.Sprintf("[%d]%s", a.Length, a.Type.ToSchema())
 }
 
 func (c Composite) Validate(val []byte) bool {
@@ -128,4 +137,20 @@ func (c Composite) Validate(val []byte) bool {
 		return len(val) >= size
 	}
 	return len(val) == size
+}
+
+func (c Composite) ToSchema() string {
+	var schema string
+
+	schema += "{"
+
+	for idx := range c.Keys {
+		key := c.Keys[idx]
+		val := c.Values[idx].ToSchema()
+
+		schema += fmt.Sprintf(`"%s":%s,`, key, val)
+	}
+
+	schema += "}"
+	return schema
 }
