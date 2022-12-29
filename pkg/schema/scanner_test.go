@@ -45,6 +45,14 @@ func TestScannerMatchKey(t *testing.T) {
 	if n != 0 {
 		t.Fail()
 	}
+
+	s = Scanner{
+		Input: "'barbaz'",
+	}
+	n = s.MatchKey()
+	if n != len(s.Input) {
+		t.Fail()
+	}
 }
 
 func TestScannerTypes(t *testing.T) {
