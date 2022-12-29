@@ -90,6 +90,11 @@ func migrateV1ToV2(db any) (any, error) {
 		Name:        from.Name,
 	}
 
+	defaultSchema := to.loadSchema("string")
+	for range to.TopicLookup {
+		to.SchemaLookup = append(to.SchemaLookup, defaultSchema)
+	}
+
 	return &to, nil
 }
 

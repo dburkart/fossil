@@ -73,7 +73,12 @@ func (w *WriteAheadLog) ApplyToDB(d *Database) {
 			if err != nil {
 				log.Fatal(err)
 			}
-			d.addTopicInternal(topic)
+			pieces := strings.Split(topic, ":")
+			if len(pieces) == 1 {
+				d.addTopicInternal(topic, "string")
+			} else {
+				d.addTopicInternal(pieces[0], pieces[1])
+			}
 		}
 	}
 }
@@ -120,11 +125,11 @@ func (w *WriteAheadLog) AddSegment(t time.Time) {
 	}
 }
 
-func (w *WriteAheadLog) AddTopic(t string) {
+func (w *WriteAheadLog) AddTopic(t string, s string) {
 	var encoded bytes.Buffer
 
 	enc := gob.NewEncoder(&encoded)
-	err := enc.Encode(t)
+	err := enc.Encode(fmt.Sprintf("%s:%s", t, s))
 	if err != nil {
 		log.Fatal("encode:", err)
 	}
