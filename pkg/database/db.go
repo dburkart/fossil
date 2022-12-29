@@ -415,6 +415,13 @@ func (d *Database) Append(data []byte, topic string) {
 	e := Datum{Data: make([]byte, len(data)), TopicID: topicID}
 	copy(e.Data, data)
 
+	s := d.SchemaLookup[topicID]
+	if !s.Validate(data) {
+		// FIXME: We should either return an error, or move the data to a special topic
+		//        when this happens.
+		d.log.Error().Msg("Attempted to append non-validating data to a topic")
+	}
+
 	d.writeLock.Lock()
 	defer d.writeLock.Unlock()
 
