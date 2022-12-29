@@ -132,9 +132,12 @@ func (s *Scanner) Emit() parse.Token {
 			skip = s.SkipToBoundary(isDelimiter)
 		case r == 'f':
 			if strings.HasPrefix(s.Input[s.Pos:], "float") {
-				t.Type = TOK_TYPE
-				skip = len("float")
-				break
+				if strings.HasPrefix(s.Input[s.Pos+5:], "32") ||
+					strings.HasPrefix(s.Input[s.Pos+5:], "64") {
+					t.Type = TOK_TYPE
+					skip = len("float32")
+					break
+				}
 			}
 			t.Type = TOK_INVALID
 			skip = s.SkipToBoundary(isDelimiter)
