@@ -125,7 +125,7 @@ func TestParseShallowMap(t *testing.T) {
 		t.Fail()
 	}
 
-	if _, ok := obj.(*ShallowMap); !ok {
+	if _, ok := obj.(*Composite); !ok {
 		t.Fail()
 	}
 
@@ -140,7 +140,7 @@ func TestParseShallowMap(t *testing.T) {
 		t.Fail()
 	}
 
-	if _, ok := obj.(*ShallowMap); !ok {
+	if _, ok := obj.(*Composite); !ok {
 		t.Fail()
 	}
 

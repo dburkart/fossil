@@ -60,7 +60,7 @@ func (p *Parser) schema() Object {
 		return schema
 	}
 
-	if schema = p.shallowMap(); schema != nil {
+	if schema = p.composite(); schema != nil {
 		return schema
 	}
 
@@ -121,8 +121,8 @@ func (p *Parser) array() Object {
 	return &array
 }
 
-func (p *Parser) shallowMap() Object {
-	var sMap ShallowMap
+func (p *Parser) composite() Object {
+	var composite Composite
 
 	tok := p.Scanner.Emit()
 	if tok.Type != TOK_CURLY_O {
@@ -138,7 +138,7 @@ func (p *Parser) shallowMap() Object {
 			panic(parse.NewSyntaxError(tok, fmt.Sprintf("Error: unexpected token '%s', expected a map key (\"...\")", tok.Lexeme)))
 		}
 
-		sMap.Keys = append(sMap.Keys, tok.Lexeme)
+		composite.Keys = append(composite.Keys, tok.Lexeme)
 
 		tok = p.Scanner.Emit()
 		if tok.Type != TOK_COLON {
@@ -156,7 +156,7 @@ func (p *Parser) shallowMap() Object {
 			}
 		}
 
-		sMap.Values = append(sMap.Values, val)
+		composite.Values = append(composite.Values, val)
 
 		// Finally, every line must have a comma
 		tok = p.Scanner.Emit()
@@ -168,5 +168,5 @@ func (p *Parser) shallowMap() Object {
 		tok = p.Scanner.Emit()
 	}
 
-	return &sMap
+	return &composite
 }
