@@ -29,6 +29,10 @@ type (
 	}
 )
 
+func (t Type) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf(`"%s"`, t.ToSchema())), nil
+}
+
 func (t Type) Size() int {
 	switch {
 	case t.Name == "boolean":
@@ -92,6 +96,10 @@ func (t Type) ToSchema() string {
 	return t.Name
 }
 
+func (a Array) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf(`"%s"`, a.ToSchema())), nil
+}
+
 func (a Array) Size() int {
 	return a.Length * a.Type.Size()
 }
@@ -113,6 +121,10 @@ func (a Array) Validate(val []byte) bool {
 
 func (a Array) ToSchema() string {
 	return fmt.Sprintf("[%d]%s", a.Length, a.Type.ToSchema())
+}
+
+func (c Composite) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf(`"%s"`, c.ToSchema())), nil
 }
 
 func (c Composite) Validate(val []byte) bool {
@@ -148,7 +160,7 @@ func (c Composite) ToSchema() string {
 		key := c.Keys[idx]
 		val := c.Values[idx].ToSchema()
 
-		schema += fmt.Sprintf(`"%s":%s,`, key, val)
+		schema += fmt.Sprintf(`'%s':%s,`, key, val)
 	}
 
 	schema += "}"

@@ -30,14 +30,16 @@ func (s *Scanner) MatchKey() int {
 	pos := s.Pos
 	r, width := utf8.DecodeRuneInString(s.Input[pos:])
 
-	if r != '"' {
+	if r != '"' && r != '\'' {
 		return 0
 	}
+
+	matchRune := r
 
 	pos += width
 	r, width = utf8.DecodeRuneInString(s.Input[pos:])
 
-	for r != '"' {
+	for r != matchRune {
 		if pos >= len(s.Input) {
 			return 0
 		}
@@ -110,7 +112,7 @@ func (s *Scanner) Emit() parse.Token {
 				skip = s.SkipToBoundary(isDelimiter)
 			}
 			t.Type = TOK_NUMBER
-		case r == '"':
+		case r == '"' || r == '\'':
 			skip = s.MatchKey()
 			if skip == 0 {
 				t.Type = TOK_INVALID

@@ -8,6 +8,7 @@ package schema
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"testing"
 )
 
@@ -32,6 +33,21 @@ func TestArray_Validate(t *testing.T) {
 
 	b := make([]byte, 40)
 	if !tt.Validate(b) {
+		t.Fail()
+	}
+}
+
+func TestJSONMarshal(t *testing.T) {
+	ta := Array{Type: Type{Name: "int32"}, Length: 10}
+
+	b, _ := json.Marshal(ta)
+	if string(b) != `"[10]int32"` {
+		t.Fail()
+	}
+
+	tc := Composite{Keys: []string{"x", "y"}, Values: []Object{Type{Name: "int32"}, Type{Name: "int32"}}}
+	b, _ = json.Marshal(tc)
+	if string(b) != `"{'x':int32,'y':int32,}"` {
 		t.Fail()
 	}
 }
