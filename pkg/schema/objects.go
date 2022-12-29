@@ -22,7 +22,7 @@ type (
 		Type   Type
 	}
 
-	ShallowMap struct {
+	Composite struct {
 		Keys   []string
 		Values []Object
 	}
@@ -106,10 +106,10 @@ func (a Array) Validate(val []byte) bool {
 	return true
 }
 
-func (m ShallowMap) Validate(val []byte) bool {
+func (c Composite) Validate(val []byte) bool {
 	var size int
 	hasString := false
-	for _, val := range m.Values {
+	for _, val := range c.Values {
 		switch val.(type) {
 		case Type:
 			if val.(Type).Name == "string" {

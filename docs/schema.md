@@ -18,7 +18,7 @@ The complete list of types are:
 * int8, int16, int32, int64
 * float
 * array
-* shallow map
+* composite
 
 When creating a new topic, clients can choose to set a schema on the topic describing the kind of data expected to be
 stored. All datum which do not conform to the schema will be rejected on append.
@@ -29,10 +29,10 @@ Some interesting notes on data types:
   The difference is semantic; clients can choose to interpret the data differently depending on the type.
   For example, the fossil client will not display any data of type `binary`, since it could contain unprintable
   characters which have the potential to mess up a terminal.
-* Arrays can only hold one type of data, and the data can only be fixed. `string`, `binary`, and `shallow map`
+* Arrays can only hold one type of data, and the data can only be fixed. `string`, `binary`, and `composite`
   are all variable length, so cannot be held in an array. Additionally, array length must be declared as part of
   the upfront schema.
-* A shallow map is a constrained map which can contain any data type except a shallow map.
+* A composite is a combination of types that can be anything except a composite.
 
 ## Default Schema
 
@@ -70,7 +70,7 @@ For string, boolean, int*, float, and array, they are simply defined as the name
 | float    | float                     |
 | array    | `[size]<fixed-type>`      |
 
-A shallow map has a syntax similar to a JSON object, except that values are types:
+A composite type has a syntax similar to a JSON object, except that values are types:
 
 ```
 {
@@ -94,10 +94,10 @@ fixed-type  = "boolean" / "int8" / "int16" / "int32" / "int64" /
               "uint8" / "uint16" / "uint32" / "uint64" / "float32" / "float64"
 array       = "[" 1*DIGIT "]" fixed-type
 
-shallow-map = "{" map-entries "}"
-map-entries = 1*map-entry
-map-entry   = key ":" map-value ","
-map-value   = type / array
+composite   = "{" entries "}"
+entries     = 1*entry
+entry       = key ":" value ","
+value       = type / array
 
 key         = DQUOTE 1*( ALPHA / DIGIT / "_" / "-" ) DQUOTE
 ```
