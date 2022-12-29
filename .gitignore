@@ -2,4 +2,5 @@ wal.log
 data/
 default
 topics
+schemas
 segments
