@@ -22,6 +22,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dburkart/fossil/pkg/schema"
 	"github.com/rs/zerolog"
 )
 
@@ -30,19 +31,21 @@ import (
 const FossilDBVersion = 2
 
 type Database struct {
-	Version     uint32
-	Segments    []Segment
-	Current     uint32
-	TopicLookup []string
-	TopicCount  int
-	STime       time.Time // Last serialize time
-	Name        string    // <-- We do not save to disk, starting here
-	Path        string
+	Version      uint32
+	Segments     []Segment
+	Current      uint32
+	TopicLookup  []string
+	SchemaLookup []schema.Object
+	TopicCount   int
+	STime        time.Time // Last serialize time
+	Name         string    // <-- We do not save to disk, starting here
+	Path         string
 
 	// Private fields
 
 	// Our topic map is marked private since it is not thread safe
 	topics      map[string]int
+	schemaCache sync.Map
 	writeLock   sync.Mutex
 	topicLock   sync.RWMutex
 	appendCount int
@@ -76,9 +79,27 @@ func normalizeTopicName(topicName string) string {
 	return topicName
 }
 
-func (d *Database) addTopicInternal(topicName string) int {
+func (d *Database) loadSchema(s string) schema.Object {
+	obj, ok := d.schemaCache.Load(s)
+	if !ok {
+		o, err := schema.Parse(s)
+		if err != nil {
+			obj, ok = d.schemaCache.Load("string")
+			if !ok {
+				obj, _ = schema.Parse("string")
+			}
+		} else {
+			d.schemaCache.Store(s, o)
+			return o
+		}
+	}
+	return obj.(schema.Object)
+}
+
+func (d *Database) addTopicInternal(topicName string, s string) int {
 	topicName = normalizeTopicName(topicName)
 	index := d.TopicCount
+	d.SchemaLookup = append(d.SchemaLookup, d.loadSchema(s))
 	d.TopicLookup = append(d.TopicLookup, topicName)
 	d.TopicCount += 1
 	d.topicLock.Lock()
@@ -163,6 +184,30 @@ func (db *Database) deserializeInternal() error {
 	err = json.Unmarshal(topicBuffer.Bytes(), &db.TopicLookup)
 	if err != nil {
 		return err
+	}
+
+	file, err = os.Open(path.Join(db.Path, "schemas"))
+	if err != nil {
+		return err
+	}
+	reader.Close()
+
+	reader, err = zlib.NewReader(file)
+	if err != nil {
+		return err
+	}
+
+	var schemaBuffer bytes.Buffer
+	_, err = io.Copy(&schemaBuffer, reader)
+
+	var schemas []string
+	err = json.Unmarshal(schemaBuffer.Bytes(), &schemas)
+	if err != nil {
+		return err
+	}
+
+	for _, s := range schemas {
+		db.SchemaLookup = append(db.SchemaLookup, db.loadSchema(s))
 	}
 
 	db.TopicCount = len(db.TopicLookup)
@@ -272,6 +317,40 @@ func (db *Database) serializeInternal() error {
 		return err
 	}
 
+	// Write out our topic schemas
+	schemas, err := json.Marshal(db.SchemaLookup)
+	if err != nil {
+		return err
+	}
+
+	var schemaBuffer bytes.Buffer
+	w = zlib.NewWriter(&schemaBuffer)
+	_, err = w.Write(schemas)
+	if err != nil {
+		return err
+	}
+	err = w.Close()
+	if err != nil {
+		return err
+	}
+
+	tmpPath = filepath.Join(db.Path, "schemas.tmp")
+	file, err = os.OpenFile(tmpPath, os.O_TRUNC|os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = file.Write(schemaBuffer.Bytes())
+	if err != nil {
+		return err
+	}
+
+	err = os.Rename(tmpPath, path.Join(db.Path, "schemas"))
+	if err != nil {
+		return err
+	}
+
 	// Now, write out our metadata
 	tmpPath = filepath.Join(db.Path, "metadata.tmp")
 	file, err = os.OpenFile(tmpPath, os.O_TRUNC|os.O_WRONLY|os.O_CREATE, 0600)
@@ -306,7 +385,7 @@ func (db *Database) serializeInternal() error {
 
 //-- Public Interfaces
 
-func (d *Database) AddTopic(topic string) int {
+func (d *Database) AddTopic(topic string, schema string) int {
 	topic = normalizeTopicName(topic)
 
 	d.topicLock.RLock()
@@ -320,16 +399,16 @@ func (d *Database) AddTopic(topic string) int {
 	d.writeLock.Lock()
 	defer d.writeLock.Unlock()
 
-	index := d.addTopicInternal(topic)
+	index := d.addTopicInternal(topic, schema)
 	wal := WriteAheadLog{filepath.Join(d.Path, "wal.log")}
-	wal.AddTopic(topic)
+	wal.AddTopic(topic, "string")
 
 	return index
 }
 
 // Append to the end of the database
 func (d *Database) Append(data []byte, topic string) {
-	topicID := d.AddTopic(topic)
+	topicID := d.AddTopic(topic, "string")
 
 	// Explicitly copy the data before taking the lock to minimize resource
 	// contention
@@ -538,7 +617,7 @@ func NewDatabase(log zerolog.Logger, name string, location string) (*Database, e
 			topics:     make(map[string]int),
 			TopicCount: 0,
 		}
-		db.AddTopic("/")
+		db.AddTopic("/", "string")
 		// TODO: Generalize this
 		sTime := time.Now()
 		wal := WriteAheadLog{filepath.Join(db.Path, "wal.log")}

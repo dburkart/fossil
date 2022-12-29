@@ -14,6 +14,11 @@ import (
 	"strings"
 )
 
+func Parse(s string) (Object, error) {
+	p := Parser{Scanner{Input: s}}
+	return p.Parse()
+}
+
 type Parser struct {
 	Scanner Scanner
 }
