@@ -57,7 +57,7 @@ func TestParseType(t *testing.T) {
 
 	p = Parser{
 		Scanner{
-			Input: "float",
+			Input: "float32",
 		},
 	}
 

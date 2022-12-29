@@ -48,9 +48,9 @@ func TestScannerMatchKey(t *testing.T) {
 }
 
 func TestScannerTypes(t *testing.T) {
-	s := Scanner{Input: "boolean int8 int16 int32 int64 string float"}
+	s := Scanner{Input: "boolean int8 int16 int32 int64 string float32 float64"}
 
-	expectedKeywordLexemes := []string{"boolean", "int8", "int16", "int32", "int64", "string", "float"}
+	expectedKeywordLexemes := []string{"boolean", "int8", "int16", "int32", "int64", "string", "float32", "float64"}
 
 	for i := 0; i < len(expectedKeywordLexemes); i++ {
 		tok := s.Emit()
