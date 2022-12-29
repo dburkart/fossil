@@ -1,3 +1,12 @@
+# v0.1.4
+
+One small enhancement, and a security fix around message size.
+
+  * Switches the protocol to use BigEndian encoding for numbers, matching
+    what we do on main.
+  * Constrain individual protocol messages to be < 100 MiB in size. This
+    limit will be configurable in the future.
+
 # v0.1.3
 
 Small bugfix release that fixes a couple of correctness issues.
