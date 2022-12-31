@@ -401,26 +401,27 @@ func (d *Database) AddTopic(topic string, schema string) int {
 
 	index := d.addTopicInternal(topic, schema)
 	wal := WriteAheadLog{filepath.Join(d.Path, "wal.log")}
-	wal.AddTopic(topic, "string")
+	wal.AddTopic(topic, schema)
 
 	return index
 }
 
 // Append to the end of the database
-func (d *Database) Append(data []byte, topic string) {
+func (d *Database) Append(data []byte, topic string) error {
 	topicID := d.AddTopic(topic, "string")
-
-	// Explicitly copy the data before taking the lock to minimize resource
-	// contention
-	e := Datum{Data: make([]byte, len(data)), TopicID: topicID}
-	copy(e.Data, data)
 
 	s := d.SchemaLookup[topicID]
 	if !s.Validate(data) {
 		// FIXME: We should either return an error, or move the data to a special topic
 		//        when this happens.
 		d.log.Error().Msg("Attempted to append non-validating data to a topic")
+		return errors.New(fmt.Sprintf("Data does not conform to %s", s.ToSchema()))
 	}
+
+	// Explicitly copy the data before taking the lock to minimize resource
+	// contention
+	e := Datum{Data: make([]byte, len(data)), TopicID: topicID}
+	copy(e.Data, data)
 
 	d.writeLock.Lock()
 	defer d.writeLock.Unlock()
@@ -453,6 +454,8 @@ func (d *Database) Append(data []byte, topic string) {
 	e.Delta = delta
 	wal.AddEvent(&e)
 	d.appendInternal(&e)
+
+	return nil
 }
 
 func (d *Database) entriesFromData(s *Segment, data []Datum) []Entry {

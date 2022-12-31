@@ -601,6 +601,7 @@ func (rq *CreateTopicRequest) Unmarshal(b []byte) error {
 	if err != nil {
 		return err
 	}
+	rq.Topic = string(topic)
 	rq.Schema = string(b[n+m:])
 	if rq.Schema == "" {
 		rq.Schema = "string"
