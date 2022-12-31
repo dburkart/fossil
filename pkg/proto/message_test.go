@@ -323,3 +323,22 @@ func TestListResponse(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestCreateTopicRequest(t *testing.T) {
+	req := CreateTopicRequest{Topic: "/foo/bar", Schema: "int32"}
+
+	b, _ := req.Marshal()
+	err := req.Unmarshal(b)
+	if err != nil {
+		t.Log(err)
+		t.Fail()
+	}
+
+	if req.Topic != "/foo/bar" {
+		t.Fail()
+	}
+
+	if req.Schema != "int32" {
+		t.Fail()
+	}
+}
