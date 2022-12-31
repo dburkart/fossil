@@ -79,6 +79,27 @@ func ParseREPLCommand(b []byte) (proto.Message, error) {
 		req.Object = string(data)
 
 		msg = proto.NewMessageWithType(proto.CommandList, req)
+	case proto.CommandCreate:
+		req := proto.CreateTopicRequest{}
+
+		if !strings.HasPrefix(string(data), "topic") &&
+			!strings.HasPrefix(string(data), "TOPIC") {
+			return nil, errors.New("malformed create request: expected topic keyword after create")
+		}
+
+		begin := bytes.IndexByte(data, ' ') + 1
+		spaceInd := bytes.IndexByte(data[begin:], ' ') + begin
+
+		// No schema
+		if spaceInd == -1 {
+			req.Topic = string(data[begin:])
+			req.Schema = ""
+		} else {
+			req.Topic = string(data[begin:spaceInd])
+			req.Schema = string(data[spaceInd+1:])
+		}
+
+		msg = proto.NewMessageWithType(proto.CommandCreate, req)
 	default:
 		msg = proto.NewMessage(command, b)
 	}
