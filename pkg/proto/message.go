@@ -193,6 +193,11 @@ type (
 	QueryResponse struct {
 		Results database.Entries
 	}
+
+	CreateTopicRequest struct {
+		Topic  string
+		Schema string
+	}
 )
 
 // VersionRequest
@@ -561,6 +566,44 @@ func (rq *ListResponse) Unmarshal(b []byte) error {
 			return fmt.Errorf("error entry len not the right len %d != %d", n, l)
 		}
 		rq.ObjectList = append(rq.ObjectList, string(line))
+	}
+	return nil
+}
+
+// CreateTopicRequest
+//-------------------------
+
+// Marshal ...
+func (rq CreateTopicRequest) Marshal() ([]byte, error) {
+	buf := bytes.NewBuffer(binary.BigEndian.AppendUint32([]byte{}, uint32(len(rq.Topic))))
+	_, err := buf.Write([]byte(rq.Topic))
+	if err != nil {
+		return nil, err
+	}
+	_, err = buf.Write([]byte(rq.Schema))
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// Unmarshal ...
+func (rq *CreateTopicRequest) Unmarshal(b []byte) error {
+	buf := bytes.NewBuffer(b)
+	lengthPrefix := make([]byte, lenWidth)
+	n, err := io.ReadFull(buf, lengthPrefix)
+	if err != nil {
+		return err
+	}
+	length := binary.BigEndian.Uint32(lengthPrefix)
+	topic := make([]byte, length)
+	m, err := io.ReadFull(buf, topic)
+	if err != nil {
+		return err
+	}
+	rq.Schema = string(b[n+m:])
+	if rq.Schema == "" {
+		rq.Schema = "string"
 	}
 	return nil
 }
