@@ -91,6 +91,7 @@ func (s *Server) ServeDatabase() {
 	mux.Handle(proto.CommandAppend, s.accessLog(s.log, s.HandleAppend))
 	mux.Handle(proto.CommandStats, s.accessLog(s.log, s.HandleStats))
 	mux.Handle(proto.CommandList, s.accessLog(s.log, s.HandleList))
+	mux.Handle(proto.CommandCreate, s.accessLog(s.log, s.HandleCreate))
 
 	err := srv.ListenAndServe(s.port, mux)
 	if err != nil {
@@ -148,8 +149,12 @@ func (s *Server) HandleAppend(rw proto.ResponseWriter, r *proto.Request) {
 	}
 
 	s.log.Trace().Str("topic", a.Topic).Msg("append")
-	r.Database().Append(a.Data, a.Topic)
-	rw.WriteMessage(proto.MessageOk)
+	err = r.Database().Append(a.Data, a.Topic)
+	if err != nil {
+		rw.WriteMessage(proto.NewMessageWithType(proto.CommandError, proto.ErrResponse{Code: 503, Err: err}))
+	} else {
+		rw.WriteMessage(proto.MessageOk)
+	}
 }
 
 func (s *Server) HandleQuery(rw proto.ResponseWriter, r *proto.Request) {
@@ -219,4 +224,18 @@ func (s *Server) HandleList(rw proto.ResponseWriter, r *proto.Request) {
 	}
 
 	rw.WriteMessage(proto.NewMessageWithType(proto.CommandList, resp))
+}
+
+func (s *Server) HandleCreate(rw proto.ResponseWriter, r *proto.Request) {
+	c := proto.CreateTopicRequest{}
+
+	err := proto.Unmarshal(r.Data(), &c)
+	if err != nil {
+		s.log.Error().Err(err).Msg("error unmarshaling")
+		rw.WriteMessage(proto.MessageErrorUnmarshaling)
+		return
+	}
+
+	r.Database().AddTopic(c.Topic, c.Schema)
+	rw.WriteMessage(proto.MessageOk)
 }
