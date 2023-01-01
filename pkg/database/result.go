@@ -7,6 +7,7 @@
 package database
 
 import (
+	"encoding/base64"
 	"fmt"
 	"strings"
 	"time"
@@ -21,13 +22,14 @@ type Result struct {
 // An Entry is a hydrated Datum, where the time and topic have been
 // expanded.
 type Entry struct {
-	Time  time.Time
-	Topic string
-	Data  []byte
+	Time   time.Time
+	Topic  string
+	Schema string
+	Data   []byte
 }
 
 func (e *Entry) ToString() string {
-	return fmt.Sprintf("%s\t%s\t%s", e.Time.Format(time.RFC3339Nano), e.Topic, string(e.Data))
+	return fmt.Sprintf("%s\t%s\t%s\t%s", e.Time.Format(time.RFC3339Nano), e.Topic, base64.StdEncoding.EncodeToString(e.Data), e.Schema)
 }
 
 func ParseEntry(s string) (Entry, error) {
@@ -42,7 +44,8 @@ func ParseEntry(s string) (Entry, error) {
 	}
 	ent.Time = t
 	ent.Topic = parts[1]
-	ent.Data = []byte(parts[2])
+	ent.Data, err = base64.StdEncoding.DecodeString(parts[2])
+	ent.Schema = parts[3]
 	return ent, nil
 }
 

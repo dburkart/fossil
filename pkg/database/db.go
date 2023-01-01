@@ -500,9 +500,10 @@ func (d *Database) entriesFromData(s *Segment, data []Datum) []Entry {
 
 	for index, val := range data {
 		entries[index] = Entry{
-			Time:  s.HeadTime.Add(val.Delta),
-			Topic: d.TopicLookup[val.TopicID],
-			Data:  val.Data,
+			Time:   s.HeadTime.Add(val.Delta),
+			Topic:  d.TopicLookup[val.TopicID],
+			Schema: d.SchemaLookup[val.TopicID].ToSchema(),
+			Data:   val.Data,
 		}
 	}
 

@@ -9,7 +9,9 @@ package client
 
 import (
 	"bufio"
+	"encoding/binary"
 	"fmt"
+	"github.com/dburkart/fossil/pkg/schema"
 	"os"
 	"strings"
 	"time"
@@ -135,6 +137,67 @@ func listTopics(c fossil.Client) func(string) []string {
 	}
 }
 
+func listSchemas(c fossil.Client) map[string]schema.Object {
+	msg, err := c.Send(proto.NewMessageWithType(proto.CommandList, proto.ListRequest{Object: "schemas"}))
+	if err != nil {
+		return nil
+	}
+	resp := proto.ListResponse{}
+	err = resp.Unmarshal(msg.Data())
+	if err != nil {
+		return nil
+	}
+	schemaMap := make(map[string]schema.Object, len(resp.ObjectList))
+	for _, line := range resp.ObjectList {
+		pieces := strings.Split(line, " ")
+		obj, err := schema.Parse(pieces[1])
+		if err != nil {
+			return nil
+		}
+		schemaMap[pieces[0]] = obj
+	}
+	return schemaMap
+}
+
+func formatDataForTopic(entry database.Entry) string {
+	var output string
+	schemaName := entry.Schema
+	data := entry.Data
+
+	switch {
+	case schemaName == "string":
+		output = string(data)
+	case schemaName == "binary":
+		output = "binary(...binary data...)"
+	case schemaName == "boolean":
+		b := "true"
+		if data[0] == 0 {
+			b = "false"
+		}
+		output = fmt.Sprintf("boolean(%s)", b)
+	case schemaName == "uint8":
+		output = fmt.Sprintf("uint8(%d)", data[0])
+	case schemaName == "uint16":
+		output = fmt.Sprintf("uint16(%d)", binary.LittleEndian.Uint16(data))
+	case schemaName == "uint32":
+		output = fmt.Sprintf("uint32(%d)", binary.LittleEndian.Uint32(data))
+	case schemaName == "uint64":
+		output = fmt.Sprintf("uint64(%d)", binary.LittleEndian.Uint64(data))
+	case schemaName == "int16":
+		output = fmt.Sprintf("int16(%d)", int16(binary.LittleEndian.Uint16(data)))
+	case schemaName == "int32":
+		output = fmt.Sprintf("int32(%d)", int32(binary.LittleEndian.Uint32(data)))
+	case schemaName == "int64":
+		output = fmt.Sprintf("int64(%d)", int64(binary.LittleEndian.Uint64(data)))
+	case schemaName == "float32":
+		output = fmt.Sprintf("float32(%f)", float32(binary.LittleEndian.Uint32(data)))
+	case schemaName == "float64":
+		output = fmt.Sprintf("float64(%f)", float64(binary.LittleEndian.Uint64(data)))
+	}
+
+	return output
+}
+
 func filterStringSlice(s []string, prefix string) []string {
 	retList := []string{}
 	for i := range s {
@@ -250,7 +313,7 @@ func readlinePrompt(c fossil.Client) {
 				table.Append([]string{
 					t.Results[i].Time.Format(time.RFC3339Nano),
 					t.Results[i].Topic,
-					string(t.Results[i].Data),
+					formatDataForTopic(t.Results[i]),
 				})
 			}
 
