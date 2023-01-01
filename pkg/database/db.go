@@ -76,7 +76,7 @@ func normalizeTopicName(topicName string) string {
 		topicName = "/" + topicName
 	}
 
-	if topicName[len(topicName)-1] == '/' {
+	if len(topicName) > 1 && topicName[len(topicName)-1] == '/' {
 		topicName = topicName[:len(topicName)-1]
 	}
 
