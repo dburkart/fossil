@@ -76,7 +76,32 @@ func normalizeTopicName(topicName string) string {
 		topicName = "/" + topicName
 	}
 
+	if topicName[len(topicName)-1] == '/' {
+		topicName = topicName[:len(topicName)-1]
+	}
+
 	return topicName
+}
+
+// parentSchema returns the first non-string schema in any parent of topic, or nil
+func (d *Database) parentSchema(topicName string) schema.Object {
+	if topicName == "/" {
+		return nil
+	}
+
+	d.topicLock.RLock()
+	idx, ok := d.topics[topicName]
+	d.topicLock.RUnlock()
+
+	if ok {
+		schemaObj := d.SchemaLookup[idx]
+		if t, isType := schemaObj.(schema.Type); isType && t.Name == "string" {
+			return d.parentSchema(path.Dir(topicName))
+		}
+		return schemaObj
+	}
+
+	return d.parentSchema(path.Dir(topicName))
 }
 
 func (d *Database) loadSchema(s string) schema.Object {
@@ -395,7 +420,19 @@ func (d *Database) AddTopic(topic string, schema string) int {
 	}
 	d.topicLock.RUnlock()
 
-	// The topic doesn't exist, so add it
+	// The topic doesn't exist, so get any non-string parent schema
+	parentSchema := d.parentSchema(topic)
+	// If schema is an empty string, we are doing an implicit topic add,
+	// so we should inherit our parent schema
+	if parentSchema != nil && schema == "" {
+		schema = parentSchema.ToSchema()
+	} else if parentSchema != nil && parentSchema.ToSchema() != schema {
+		// Otherwise we are trying to create an invalid schema
+		// FIXME: This should be an error
+		return 0
+	}
+
+	// The topic doesn't exist, and the schema is valid, so add it
 	d.writeLock.Lock()
 	defer d.writeLock.Unlock()
 
@@ -408,7 +445,7 @@ func (d *Database) AddTopic(topic string, schema string) int {
 
 // Append to the end of the database
 func (d *Database) Append(data []byte, topic string) error {
-	topicID := d.AddTopic(topic, "string")
+	topicID := d.AddTopic(topic, "")
 
 	s := d.SchemaLookup[topicID]
 	if !s.Validate(data) {
