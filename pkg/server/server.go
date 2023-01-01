@@ -221,6 +221,15 @@ func (s *Server) HandleList(rw proto.ResponseWriter, r *proto.Request) {
 		for _, v := range r.Database().TopicLookup {
 			resp.ObjectList = append(resp.ObjectList, v)
 		}
+	} else if l.Object == "schemas" {
+		// Get our string object
+		str := r.Database().SchemaLookup[0]
+		for idx, v := range r.Database().TopicLookup {
+			schema := r.Database().SchemaLookup[idx]
+			if schema != str {
+				resp.ObjectList = append(resp.ObjectList, fmt.Sprintf("%s %s", v, schema.ToSchema()))
+			}
+		}
 	}
 
 	rw.WriteMessage(proto.NewMessageWithType(proto.CommandList, resp))
