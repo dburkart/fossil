@@ -104,7 +104,7 @@ For documentation on deploying Fossil, see [deployment.md](./docs/deployment.md)
 port = 8000
 prom-port = 2112
 
-host = "fossil://local/default"
+host = "fossil://localhost:8001/default"
 local = true
 verbose = 2
 
@@ -118,13 +118,13 @@ directory = "./data"
 ```
 
 #### Root `fossil` config block
-| Option             | Default                    | Description                                            |
-| ------------------ | -------------------------- | ------------------------------------------------------ |
-| `fossil.port`      | 8001                       | Port fossil server listens on                          |
-| `fossil.prom-port` | 2112                       | Port fossil server servers `/metrics` on               |
-| `fossil.verbose`   | 0                          | Configures the log level [0: info, 1: debug, 2: trace] |
-| `fossil.host`      | `"fossil://local/default"` | Connection string client will connect to               |
-| `fossil.local`     | true                       | Configures output logs to be in plaintext              |
+| Option             | Default       | Description                                            |
+| ------------------ |---------------| ------------------------------------------------------ |
+| `fossil.port`      | 8001          | Port fossil server listens on                          |
+| `fossil.prom-port` | 2112          | Port fossil server servers `/metrics` on               |
+| `fossil.verbose`   | 0             | Configures the log level [0: info, 1: debug, 2: trace] |
+| `fossil.host`      | `"./default"` | Connection string client will connect to               |
+| `fossil.local`     | true          | Configures output logs to be in plaintext              |
 
 ####  `database` config block
 The first database block without a `.<name>` applies to the `default` database. 
