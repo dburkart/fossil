@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2022, Gideon Williams <gideon@gideonw.com>
- * Copyright (c) 2022, Dana Burkart <dana.burkart@gmail.com>
+ * Copyright (c) 2022-2023, Dana Burkart <dana.burkart@gmail.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -41,7 +41,10 @@ var (
 			log := viper.Get("logger").(zerolog.Logger)
 
 			host := viper.GetString("fossil.host")
-			target := proto.ParseConnectionString(host)
+			target, err := proto.ParseConnectionString(host)
+			if err != nil {
+				log.Fatal().Err(err).Msg("error parsing URL")
+			}
 
 			if target.Local {
 				db, err := database.NewDatabase(log, target.Database, target.Database)

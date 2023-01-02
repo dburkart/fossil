@@ -2,7 +2,7 @@
 port = 8001
 prom-port = 2112
 
-host = "fossil://local/default"
+host = "fossil://localhost:8001/default"
 local = true
 verbose = 2
 

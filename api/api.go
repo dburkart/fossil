@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Dana Burkart <dana.burkart@gmail.com>
+ * Copyright (c) 2022-2023, Dana Burkart <dana.burkart@gmail.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -41,8 +41,13 @@ func NewClient(connstr string) (Client, error) {
 // volumes of data to fossil.
 func NewClientPool(connstr string, size uint) (Client, error) {
 	var client Client
+	var err error
 
-	client.target = proto.ParseConnectionString(connstr)
+	client.target, err = proto.ParseConnectionString(connstr)
+	if err != nil {
+		return Client{}, err
+	}
+
 	client.conn = make(chan net.Conn, size)
 
 	for i := uint(0); i < size; i++ {

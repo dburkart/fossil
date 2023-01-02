@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Dana Burkart <dana.burkart@gmail.com>
+ * Copyright (c) 2022-2023, Dana Burkart <dana.burkart@gmail.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -615,12 +615,10 @@ func (d *Database) Retrieve(q Query) []Entry {
 func NewDatabase(log zerolog.Logger, name string, location string) (*Database, error) {
 	var db Database
 
-	directory := filepath.Join(location, name)
-
 	// If the path does not exist, create a new directory
-	fileinfo, err := os.Stat(directory)
+	fileinfo, err := os.Stat(location)
 	if os.IsNotExist(err) {
-		err := os.Mkdir(directory, 0700)
+		err := os.Mkdir(location, 0700)
 		if err != nil {
 			return nil, err
 		}
@@ -629,14 +627,14 @@ func NewDatabase(log zerolog.Logger, name string, location string) (*Database, e
 	}
 
 	// Migrate the database if it's old
-	err = MigrateDatabaseIfNeeded(directory)
+	err = MigrateDatabaseIfNeeded(location)
 	if err != nil {
 		return nil, err
 	}
 
-	if _, err = os.Stat(filepath.Join(directory, "metadata")); err == nil {
+	if _, err = os.Stat(filepath.Join(location, "metadata")); err == nil {
 		db = Database{
-			Path: directory,
+			Path: location,
 		}
 		err = db.deserializeInternal()
 		if err != nil {
@@ -645,10 +643,10 @@ func NewDatabase(log zerolog.Logger, name string, location string) (*Database, e
 		db.topics = make(map[string]int)
 		wal := WriteAheadLog{filepath.Join(db.Path, "wal.log")}
 		wal.ApplyToDB(&db)
-	} else if _, err = os.Stat(filepath.Join(directory, "wal.log")); err == nil {
+	} else if _, err = os.Stat(filepath.Join(location, "wal.log")); err == nil {
 		db = Database{
 			Version:    FossilDBVersion,
-			Path:       directory,
+			Path:       location,
 			Segments:   []Segment{},
 			Current:    0,
 			topics:     make(map[string]int),
@@ -659,7 +657,7 @@ func NewDatabase(log zerolog.Logger, name string, location string) (*Database, e
 	} else {
 		db = Database{
 			Version:    FossilDBVersion,
-			Path:       directory,
+			Path:       location,
 			Segments:   []Segment{},
 			Current:    0,
 			topics:     make(map[string]int),
