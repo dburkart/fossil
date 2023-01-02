@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2022, Gideon Williams gideon@gideonw.com
+ * Copyright (c) 2022, Gideon Williams <gideon@gideonw.com>
+ * Copyright (c) 2023, Dana Burkart <dana.burkart@gmail.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -7,8 +8,10 @@
 package proto
 
 import (
+	"errors"
 	"fmt"
-	"strings"
+	"net/url"
+	"path"
 )
 
 var Protocol = "fossil"
@@ -21,54 +24,51 @@ type ConnectionString struct {
 
 // ParseConnectionString takes a connection string and parses it into the parts
 // the application needs to make a connection. This function will always parse,
-// even horribly malformed connection strings. It will only panic if a protocol
-// is specified and it is != 'fossil'.
-// Format:
+// even horribly malformed connection strings. It will only return an error if
+// the protocol is not "fossil" or "file"
 //
-//	[fossil://]<host:port|local>[/<db_name>]
-func ParseConnectionString(connStr string) ConnectionString {
+// Formats:
+//
+//	./path/to/local/db
+//	file://./path/to/local/db
+//	fossil://<host:port>[/<db_name>]
+func ParseConnectionString(connStr string) (ConnectionString, error) {
 	ret := ConnectionString{
 		Local:    true,
 		Address:  "local",
 		Database: "default",
 	}
 
-	// if there is no connStr, use local and default
-	if len(connStr) == 0 {
-		return ret
+	if connStr == "" {
+		connStr = "./"
 	}
 
-	protoSep := strings.Index(connStr, "://")
-	if protoSep != -1 {
-		if connStr[:protoSep] != Protocol {
-			panic(fmt.Sprintf("Unsupported protocol '%s'. ", connStr[:protoSep]))
-		}
+	u, err := url.Parse(connStr)
+	if err != nil {
+		return ConnectionString{}, err
 	}
 
-	// Remove the optional protocol prefix
-	connStr = strings.TrimPrefix(connStr, Protocol+"://")
-
-	// strip ending slash before assigning values
-	connStr = strings.TrimSuffix(connStr, "/")
-
-	// if there is no connStr, after removing all parts, use local and default
-	if len(connStr) == 0 {
-		return ret
+	// Handle the local case
+	if u.Scheme == "" || u.Scheme == "file" {
+		ret.Database = u.Path
+		return ret, nil
 	}
 
-	// then search for path separator
-	delim := strings.Index(connStr, "/")
-	if delim == -1 {
-		ret.Address = connStr
-		ret.Database = "default"
-	} else {
-		ret.Address = connStr[:delim]
-		ret.Database = connStr[delim+1:]
-	}
-
-	if ret.Address != "local" {
+	if u.Scheme == "fossil" {
 		ret.Local = false
+		ret.Address = u.Host
+		d, p := path.Split(u.Path)
+		if d == "" && p == "" {
+			ret.Database = "default"
+		} else if d != "/" {
+			return ConnectionString{}, errors.New(fmt.Sprintf("invalid database %s", u.Path))
+		}
+		if p == "" {
+			p = "default"
+		}
+		ret.Database = p
+		return ret, nil
 	}
 
-	return ret
+	return ConnectionString{}, errors.New(fmt.Sprintf("unrecognized scheme: %s", u.Scheme))
 }

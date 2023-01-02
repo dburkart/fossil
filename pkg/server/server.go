@@ -9,6 +9,7 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"path"
 	"runtime"
 	"time"
 
@@ -45,7 +46,7 @@ func New(log zerolog.Logger, dbConfigs map[string]DatabaseConfig, port, metricsP
 	for k, v := range dbConfigs {
 		log.Info().Str("name", v.Name).Str("directory", v.Directory).Msg("initializing database")
 		dbLogger := log.With().Str("db", v.Name).Logger()
-		db, err := database.NewDatabase(dbLogger, v.Name, v.Directory)
+		db, err := database.NewDatabase(dbLogger, v.Name, path.Join(v.Directory, v.Name))
 		if err != nil {
 			dbLogger.Fatal().Err(err).Msg("error initializing database")
 		}

@@ -21,21 +21,21 @@ func TestParseConnectionString(t *testing.T) {
 			"",
 			"local",
 			true,
-			"default",
+			"./",
 		},
 		{
 			"Test local no db",
-			"fossil://local",
+			"file:///local",
 			"local",
 			true,
-			"default",
+			"/local",
 		},
 		{
-			"Test local db",
-			"fossil://local/db1",
+			"Test local db no scheme",
+			"./local/db1",
 			"local",
 			true,
-			"db1",
+			"./local/db1",
 		},
 		{
 			"Test host no db end slash",
@@ -49,34 +49,33 @@ func TestParseConnectionString(t *testing.T) {
 			"local",
 			"local",
 			true,
-			"default",
+			"local",
 		},
 		{
 			"Test no proto local path db",
-			"local/data/db.log",
+			"./data/default",
 			"local",
 			true,
-			"data/db.log",
-		},
-		{
-			"Test no proto local no db",
-			"localhost/",
-			"localhost",
-			false,
-			"default",
+			"./data/default",
 		},
 	}
 
-	shouldPanic(t, func(t *testing.T) {
-		ParseConnectionString("fosssil:///zx")
-	})
-	shouldPanic(t, func(t *testing.T) {
-		ParseConnectionString("tcp:///zx")
-	})
+	_, err := ParseConnectionString("fosssil:///zx")
+	if err == nil {
+		t.Error("fosssil:///zx should have caused an error")
+	}
+
+	_, err = ParseConnectionString("tcp:///zx")
+	if err == nil {
+		t.Error("tcp:///zx should have caused an error")
+	}
 
 	for _, tc := range tt {
 		t.Run(tc.test, func(t *testing.T) {
-			connStr := ParseConnectionString(tc.connStr)
+			connStr, err := ParseConnectionString(tc.connStr)
+			if err != nil {
+				t.Error(err)
+			}
 			recover()
 			if connStr.Address != tc.addr {
 				t.Errorf("Address mismatch: %s != %s", connStr.Address, tc.addr)
