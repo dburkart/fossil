@@ -341,4 +341,21 @@ func TestCreateTopicRequest(t *testing.T) {
 	if req.Schema != "int32" {
 		t.Fail()
 	}
+
+	req = CreateTopicRequest{Topic: "/foo/bar", Schema: ""}
+
+	b, _ = req.Marshal()
+	err = req.Unmarshal(b)
+	if err != nil {
+		t.Log(err)
+		t.Fail()
+	}
+
+	if req.Topic != "/foo/bar" {
+		t.Fail()
+	}
+
+	if req.Schema != "string" {
+		t.Fail()
+	}
 }
