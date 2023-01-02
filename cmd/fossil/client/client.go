@@ -168,7 +168,7 @@ func formatDataForTopic(entry database.Entry) string {
 	case schemaName == "string":
 		output = string(data)
 	case schemaName == "binary":
-		output = "binary(...binary data...)"
+		output = fmt.Sprintf("binary(...%d bytes...)", len(data))
 	case schemaName == "boolean":
 		b := "true"
 		if data[0] == 0 {
