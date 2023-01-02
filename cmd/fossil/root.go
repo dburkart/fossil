@@ -31,7 +31,7 @@ func init() {
 	// Configure the root binary options
 	rootCmd.PersistentFlags().CountP("verbose", "v", "-v for debug logs (-vv for trace)")
 	rootCmd.PersistentFlags().Bool("local", true, "Configures the logger to print readable logs") //TODO: true until we have a config file format
-	rootCmd.PersistentFlags().StringP("host", "H", "fossil://local/default", "Host to send the messages")
+	rootCmd.PersistentFlags().StringP("host", "H", "./default", "Host to send the messages")
 	rootCmd.PersistentFlags().StringP("config", "c", "", "Path to the fossil config file (default ./config.toml)")
 
 	// Bind viper config to the root flags
