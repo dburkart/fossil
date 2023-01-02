@@ -1,7 +1,7 @@
 # Query Grammar
 
 ```abnf
-query           = quantifier [ identifier ] [ topic-selector ] [ time-predicate ] [ data-predicate ]
+query           = quantifier [ identifier ] [ topic-selector ] [ time-predicate ] [ data-pipeline ]
 
 ; Quantifier
 quantifier      = "all" / sample
@@ -24,28 +24,35 @@ time-term       = time-atom *( "*" time-atom )
 time-atom       = number / timespan
 timespan        = "@second" / "@minute" / "@hour" / "@day" / "@week" / "@month" / "@year"
 
-; Data
-data-predicate  = "->" data-expression
-data-expression = term comparator term
-term            = number / string / data-field
-data-field      = identifier "." identifier
-comparator      = "==" / "!=" / "<" / "<=" / ">" / ">="
+; Data Pipeline
+data-pipeline   = 1*data-stage
+data-stage      = ":" data-function
+data-function   = ( "filter" / "map" / "reduce" ) data-args "->" expression
+data-args       = identifier [ "," data-args ]
+
+; Expressions
+expression      = equality
+equality        = comparison *( ( "!=" / "==" ) comparison )
+comparison      = term *( ( ">" / ">=" / "<" / "<=" ) term )
+term            = term_md *( ( "-" / "+" ) term_md )
+term_md         = unary *( ( "/" / "*" ) unary )
+unary           = ( "-" / "+" ) unary / primary
+primary         = identifier / number / string / tuple / builtin
+
+; Built in functions
+builtin         = identifier "(" ( expression / tuple ) ")"
 
 ; Data Types
 number          = 1*DIGIT
 string          = DQUOTE *ALPHA DQUOTE
+tuple           = expression 1*( "," expression )
 ```
 
-Examples:
+Simple Query Examples:
 
 ```
-all in /visits from ~yesterday
-all x in /clicks since @day * 30 -> x.target == "window"
+all in /visits since ~now - @day
 sample(@minute) in /cpu-usage since @week
 ```
 
-## Semantic rules not covered by the grammar
-
-* A data-predicate is only valid as long as ALL of the following is true:
-  1. A topic-selector has been specified
-  2. The topic(s) in question have schemas specified
+For more information on Data pipelines, see [data pipelines](./pipelines.md)
