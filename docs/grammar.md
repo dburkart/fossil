@@ -40,7 +40,7 @@ unary           = ( "-" / "+" ) unary / primary
 primary         = identifier / number / string / tuple / builtin
 
 ; Built in functions
-builtin         = identifier "(" ( expression / tuple ) ")"
+builtin         = identifier "(" expression  ")"
 
 ; Data Types
 number          = 1*DIGIT
