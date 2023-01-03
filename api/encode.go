@@ -53,6 +53,61 @@ func EncodeType(v any) ([]byte, error) {
 	return nil, errors.New("unrecognized type")
 }
 
+func DecodeStringForSchema(input []byte, s schema.Object) (string, error) {
+	switch t := s.(type) {
+	case *schema.Type:
+		switch t.Name {
+		case "string":
+			return string(input), nil
+		case "binary":
+			return fmt.Sprintf("...%d bytes...", len(input)), nil
+		case "boolean":
+			if input[0] == 0 {
+				return "false", nil
+			}
+			return "true", nil
+		case "uint8":
+			return fmt.Sprintf("%d", input[0]), nil
+		case "uint16":
+			return fmt.Sprintf("%d", binary.LittleEndian.Uint16(input)), nil
+		case "uint32":
+			return fmt.Sprintf("%d", binary.LittleEndian.Uint32(input)), nil
+		case "uint64":
+			return fmt.Sprintf("%d", binary.LittleEndian.Uint64(input)), nil
+		case "int16":
+			return fmt.Sprintf("%d", int16(binary.LittleEndian.Uint16(input))), nil
+		case "int32":
+			return fmt.Sprintf("%d", int32(binary.LittleEndian.Uint32(input))), nil
+		case "int64":
+			return fmt.Sprintf("%d", int64(binary.LittleEndian.Uint64(input))), nil
+		case "float32":
+			return fmt.Sprintf("%f", math.Float32frombits(binary.LittleEndian.Uint32(input))), nil
+		case "float64":
+			return fmt.Sprintf("%f", math.Float64frombits(binary.LittleEndian.Uint64(input))), nil
+		}
+	case *schema.Array:
+		var output string
+
+		for i := 0; i < t.Length; i++ {
+			width := t.Type.Size()
+			e, err := DecodeStringForSchema(input[i*width:(i+1)*width], &t.Type)
+			if err != nil {
+				return "", err
+			}
+			output += e
+			if i < t.Length-1 {
+				output += ", "
+			}
+		}
+
+		return output, nil
+	case *schema.Composite:
+		// FIXME: Implement
+	}
+
+	return "", errors.New("unknown schema")
+}
+
 // EncodeStringForSchema takes an input string and a schema.Object, and returns
 // a byte slice representing that string.
 func EncodeStringForSchema(input string, s schema.Object) ([]byte, error) {

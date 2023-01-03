@@ -165,38 +165,47 @@ func listSchemas(c fossil.Client) map[string]schema.Object {
 
 func formatDataForPrinting(entry database.Entry) string {
 	var output string
-	schemaName := entry.Schema
+	s, err := schema.Parse(entry.Schema)
+	if err != nil {
+		panic(err)
+	}
 	data := entry.Data
 
-	switch {
-	case schemaName == "string":
-		output = string(data)
-	case schemaName == "binary":
-		output = fmt.Sprintf("binary(...%d bytes...)", len(data))
-	case schemaName == "boolean":
-		b := "true"
-		if data[0] == 0 {
-			b = "false"
+	switch t := s.(type) {
+	case *schema.Type:
+		switch t.Name {
+		case "string":
+			output = string(data)
+		case "binary":
+			output = fmt.Sprintf("binary(...%d bytes...)", len(data))
+		case "boolean":
+			b := "true"
+			if data[0] == 0 {
+				b = "false"
+			}
+			output = fmt.Sprintf("boolean(%s)", b)
+		case "uint8":
+			output = fmt.Sprintf("uint8(%d)", data[0])
+		case "uint16":
+			output = fmt.Sprintf("uint16(%d)", binary.LittleEndian.Uint16(data))
+		case "uint32":
+			output = fmt.Sprintf("uint32(%d)", binary.LittleEndian.Uint32(data))
+		case "uint64":
+			output = fmt.Sprintf("uint64(%d)", binary.LittleEndian.Uint64(data))
+		case "int16":
+			output = fmt.Sprintf("int16(%d)", int16(binary.LittleEndian.Uint16(data)))
+		case "int32":
+			output = fmt.Sprintf("int32(%d)", int32(binary.LittleEndian.Uint32(data)))
+		case "int64":
+			output = fmt.Sprintf("int64(%d)", int64(binary.LittleEndian.Uint64(data)))
+		case "float32":
+			output = fmt.Sprintf("float32(%f)", math.Float32frombits(binary.LittleEndian.Uint32(data)))
+		case "float64":
+			output = fmt.Sprintf("float64(%f)", math.Float64frombits(binary.LittleEndian.Uint64(data)))
 		}
-		output = fmt.Sprintf("boolean(%s)", b)
-	case schemaName == "uint8":
-		output = fmt.Sprintf("uint8(%d)", data[0])
-	case schemaName == "uint16":
-		output = fmt.Sprintf("uint16(%d)", binary.LittleEndian.Uint16(data))
-	case schemaName == "uint32":
-		output = fmt.Sprintf("uint32(%d)", binary.LittleEndian.Uint32(data))
-	case schemaName == "uint64":
-		output = fmt.Sprintf("uint64(%d)", binary.LittleEndian.Uint64(data))
-	case schemaName == "int16":
-		output = fmt.Sprintf("int16(%d)", int16(binary.LittleEndian.Uint16(data)))
-	case schemaName == "int32":
-		output = fmt.Sprintf("int32(%d)", int32(binary.LittleEndian.Uint32(data)))
-	case schemaName == "int64":
-		output = fmt.Sprintf("int64(%d)", int64(binary.LittleEndian.Uint64(data)))
-	case schemaName == "float32":
-		output = fmt.Sprintf("float32(%f)", math.Float32frombits(binary.LittleEndian.Uint32(data)))
-	case schemaName == "float64":
-		output = fmt.Sprintf("float64(%f)", math.Float64frombits(binary.LittleEndian.Uint64(data)))
+	case *schema.Array:
+		arr, _ := fossil.DecodeStringForSchema(data, s)
+		output = fmt.Sprintf("%s(%s)", t.ToSchema(), arr)
 	}
 
 	return output
