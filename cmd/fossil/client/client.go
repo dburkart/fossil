@@ -12,6 +12,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/dburkart/fossil/pkg/schema"
+	"math"
 	"os"
 	"strings"
 	"time"
@@ -162,7 +163,7 @@ func listSchemas(c fossil.Client) map[string]schema.Object {
 	return schemaMap
 }
 
-func formatDataForTopic(entry database.Entry) string {
+func formatDataForPrinting(entry database.Entry) string {
 	var output string
 	schemaName := entry.Schema
 	data := entry.Data
@@ -193,9 +194,9 @@ func formatDataForTopic(entry database.Entry) string {
 	case schemaName == "int64":
 		output = fmt.Sprintf("int64(%d)", int64(binary.LittleEndian.Uint64(data)))
 	case schemaName == "float32":
-		output = fmt.Sprintf("float32(%f)", float32(binary.LittleEndian.Uint32(data)))
+		output = fmt.Sprintf("float32(%f)", math.Float32frombits(binary.LittleEndian.Uint32(data)))
 	case schemaName == "float64":
-		output = fmt.Sprintf("float64(%f)", float64(binary.LittleEndian.Uint64(data)))
+		output = fmt.Sprintf("float64(%f)", math.Float64frombits(binary.LittleEndian.Uint64(data)))
 	}
 
 	return output
@@ -254,6 +255,8 @@ func readlinePrompt(c fossil.Client) {
 	}
 	defer rl.Close()
 
+	schemas := listSchemas(c)
+
 	// Handle input
 	for {
 		ln := rl.Line()
@@ -268,7 +271,7 @@ func readlinePrompt(c fossil.Client) {
 			os.Exit(0)
 		}
 
-		replMsg, err := repl.ParseREPLCommand([]byte(line))
+		replMsg, err := repl.ParseREPLCommand([]byte(line), schemas)
 		if err != nil {
 			log.Error().Err(err).Send()
 			continue
@@ -316,7 +319,7 @@ func readlinePrompt(c fossil.Client) {
 				table.Append([]string{
 					t.Results[i].Time.Format(time.RFC3339Nano),
 					t.Results[i].Topic,
-					formatDataForTopic(t.Results[i]),
+					formatDataForPrinting(t.Results[i]),
 				})
 			}
 

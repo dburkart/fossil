@@ -11,13 +11,15 @@ import (
 	"errors"
 	"strings"
 
+	fossil "github.com/dburkart/fossil/api"
 	"github.com/dburkart/fossil/pkg/proto"
+	"github.com/dburkart/fossil/pkg/schema"
 )
 
 // ParseREPLCommand parses input from the command line
 //
 // This function assumes there is no '\n'
-func ParseREPLCommand(b []byte) (proto.Message, error) {
+func ParseREPLCommand(b []byte, schemas map[string]schema.Object) (proto.Message, error) {
 	// Get the command
 	var msg proto.Message
 	var cmd []byte
@@ -49,7 +51,16 @@ func ParseREPLCommand(b []byte) (proto.Message, error) {
 		spaceInd := bytes.IndexByte(data, ' ')
 		if data[0] == '/' && spaceInd != -1 {
 			req.Topic = string(data[:spaceInd])
-			req.Data = data[spaceInd+1:]
+			s, ok := schemas[req.Topic]
+			if ok {
+				d, err := fossil.EncodeStringForSchema(string(data[spaceInd+1:]), s)
+				if err != nil {
+					return nil, err
+				}
+				req.Data = d
+			} else {
+				req.Data = data[spaceInd+1:]
+			}
 		} else {
 			req.Data = data[:]
 		}
