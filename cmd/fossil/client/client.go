@@ -265,6 +265,7 @@ func readlinePrompt(c fossil.Client) {
 	defer rl.Close()
 
 	schemas := listSchemas(c)
+	recomputeSchemaCache := false
 
 	// Handle input
 	for {
@@ -288,6 +289,13 @@ func readlinePrompt(c fossil.Client) {
 		msg, err := c.Send(replMsg)
 		if err != nil {
 			log.Fatal().Err(err).Msg("error sending message to server")
+		}
+
+		// FIXME: This is quite the hack. We need a better heuristic to invalidate our schema cache
+		//		  than just looking at the command type we sent over the wire. It would be better if
+		//		  we could reach into the message and examine the topic we're appending to or creating
+		if replMsg.Command() == proto.CommandAppend || replMsg.Command() == proto.CommandCreate {
+			recomputeSchemaCache = true
 		}
 
 		switch msg.Command() {
@@ -369,6 +377,11 @@ func readlinePrompt(c fossil.Client) {
 			}
 		}
 		fmt.Println()
+
+		if recomputeSchemaCache {
+			schemas = listSchemas(c)
+			recomputeSchemaCache = false
+		}
 	}
 	rl.Clean()
 }
