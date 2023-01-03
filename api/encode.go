@@ -16,10 +16,15 @@ import (
 	"strings"
 )
 
-func EncodeType(v any) ([]byte, error) {
+type SchemaType interface {
+	[]byte | bool | string | int16 | int32 | int64 | uint16 |
+		uint32 | uint64 | float32 | float64
+}
+
+func EncodeType[T SchemaType](v T) ([]byte, error) {
 	var formatted []byte
 
-	switch t := v.(type) {
+	switch t := any(v).(type) {
 	case []byte:
 		return t, nil
 	case bool:
@@ -50,7 +55,7 @@ func EncodeType(v any) ([]byte, error) {
 		return binary.LittleEndian.AppendUint64(formatted, math.Float64bits(t)), nil
 	}
 
-	return nil, errors.New("unrecognized type")
+	panic("We should not get here")
 }
 
 func DecodeStringForSchema(input []byte, s schema.Object) (string, error) {
