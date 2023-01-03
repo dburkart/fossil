@@ -1,10 +1,13 @@
 # Fossil
 
-A small, efficient time-series database. See [Overview](./docs/overview.md) for a high-level overview on current design.
+🚨🐞 Fossil is under active development, please read the [caveats](#caveats) below 🐞🚨
+
+A simple and efficient time-series database. See [Overview](./docs/overview.md) for a high-level overview on current design.
 
 - [Fossil](#fossil)
   - [Overview](#overview)
     - [Use Cases](#use-cases)
+  - [Caveats](#caveats)
   - [How to](#how-to)
     - [Install](#install)
     - [Connect](#connecting-to-a-fossil-server)
@@ -14,23 +17,38 @@ A small, efficient time-series database. See [Overview](./docs/overview.md) for 
     - [Config](#config)
       - [Root `fossil` config block](#root-fossil-config-block)
       - [`database` config block](#database-config-block)
+  - [Development Notice](#development-notice)
 
 
 ## Overview
 
 Fossil is intended to be simple enough to use as a local time-series database (similar to a SQLite database) and robust
-enough to perform in a distributed environment. If what you need to track is small pieces of data, ordered by time, then
+enough to perform in a distributed environment. If what you need to track are small pieces of data, ordered by time, then
 this is the right database for you!
 
 For more detailed documentation of the internals see the [docs](/docs) folder.
 
 ### Use Cases
 
-Fossil solves the following use cases:
+Fossil attempts to solve the following use cases:
 
-- Local Time Series Database that stores data in a local DB file
-- Collect data over a TCP connection in fire and forget mode
-- Query data over a TCP connection
+- Store both structured and unstructured data in a local filesystem
+- Collect and query data both locally, and over a TCP connection
+- Provide a rich query language for retrieving and transforming data
+
+## Caveats
+
+Fossil is currently under active development, so you may find all manner of bugs. We try to keep our tagged versions
+as free of bugs as possible, but they still do happen of course. Keep this in mind before you use the database in a
+production environment.
+
+Additionally, we make the following guarantees (or lack of guarantees) until we hit `v1.0.0`:
+
+1. Breaking protocol changes between minor versions of fossil will definitely happen until `v1.0.0`. In other
+   words, don't expect a v0.1.0 client to be able to talk to a v0.2.0 server (or vice versa).
+2. We will implement auto-migration of the on-disk database between minor versions, even in our pre-release state. 
+   However, since this project is not stable, this may break. Always back up your on-disk database before upgrading
+   minor versions. If we break your database, please file an issue.
 
 ## How to
 
