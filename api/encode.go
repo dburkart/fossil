@@ -123,6 +123,8 @@ func EncodeStringForSchema(input string, s schema.Object) ([]byte, error) {
 		switch t.Name {
 		case "string":
 			return []byte(input), nil
+		case "binary":
+			return []byte(input), nil
 		case "boolean":
 			var b uint8
 			b = 1
