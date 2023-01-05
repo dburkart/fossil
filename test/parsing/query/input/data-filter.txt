@@ -6,3 +6,5 @@ all : filter x -> x < 2 < 5
 all : filter z -> z < 100 + 12
 all : filter x -> x / 32 * 24
 all : filter x -> 3 * x + 4
+all : filter x -> -x
+all : filter x -> x * -1
