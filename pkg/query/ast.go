@@ -28,8 +28,18 @@ func ASTToString(ast ASTNode) string {
 func ASTToStringInternal(ast ASTNode, indent int) string {
 	level := strings.Repeat("    ", indent)
 
+	value := ast.Val()
+	switch t := ast.(type) {
+	case *DataFunctionNode:
+		var args string
+		for _, a := range t.Arguments {
+			args += a.Val() + ", "
+		}
+		value = "name(" + ast.Val() + ") args(" + args[:len(args)-2] + ")"
+	}
+
 	t := reflect.TypeOf(ast)
-	output := level + t.Elem().Name() + "[" + ast.Val() + "]" + "\n"
+	output := level + t.Elem().Name() + "[" + value + "]" + "\n"
 
 	for _, child := range ast.Children() {
 		output += ASTToStringInternal(child, indent+1)

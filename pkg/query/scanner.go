@@ -26,13 +26,13 @@ type Scanner struct {
 //
 // Grammar:
 //
-//	identifier      = 1*(ALPHA / DIGIT)
+//	identifier      = 1*(ALPHA / DIGIT / '_' / '-')
 func (s *Scanner) MatchIdentifier() int {
 	i := s.Pos
 	r, width := utf8.DecodeRuneInString(s.Input[i:])
 	size := 0
 
-	for unicode.IsDigit(r) || unicode.IsLetter(r) {
+	for unicode.IsDigit(r) || unicode.IsLetter(r) || r == '-' || r == '_' {
 		size += width
 		i += width
 		r, width = utf8.DecodeRuneInString(s.Input[i:])
@@ -79,6 +79,30 @@ func (s *Scanner) MatchNumber() int {
 	}
 
 	return size
+}
+
+// MatchString returns the length of the next token, assuming it is a
+// string
+//
+// Grammar:
+//
+//	string          = DQUOTE *ALPHANUM DQUOTE / SQUOTE *ALPHANUM SQUOTE
+func (s *Scanner) MatchString() int {
+	r, width := utf8.DecodeRuneInString(s.Input[s.Pos:])
+	size := 0
+
+	quote := r
+	r, width = utf8.DecodeRuneInString(s.Input[s.Pos+1:])
+	for r != quote {
+		if r == utf8.RuneError {
+			return 0
+		}
+		size += width
+		r, width = utf8.DecodeRuneInString(s.Input[s.Pos+size+1:])
+	}
+
+	// Include quote runes
+	return size + 2
 }
 
 // MatchTimeWhence returns the length of the next token, assuming it is
@@ -205,6 +229,38 @@ func (s *Scanner) Emit() parse.Token {
 		case r == ')':
 			t.Type = TOK_PAREN_R
 			skip = width
+		case r == '=':
+			if strings.HasPrefix(s.Input[s.Pos:], "==") {
+				t.Type = TOK_EQ_EQ
+				skip = len("==")
+				break
+			}
+			t.Type = TOK_INVALID
+			skip = s.SkipToBoundary(isDelimiter)
+		case r == '!':
+			if strings.HasPrefix(s.Input[s.Pos:], "!=") {
+				t.Type = TOK_NOT_EQ
+				skip = len("!=")
+				break
+			}
+			t.Type = TOK_INVALID
+			skip = s.SkipToBoundary(isDelimiter)
+		case r == '<':
+			if strings.HasPrefix(s.Input[s.Pos:], "<=") {
+				t.Type = TOK_LESS_EQ
+				skip = len("<=")
+				break
+			}
+			t.Type = TOK_LESS
+			skip = width
+		case r == '>':
+			if strings.HasPrefix(s.Input[s.Pos:], ">=") {
+				t.Type = TOK_GREATER_EQ
+				skip = len(">=")
+				break
+			}
+			t.Type = TOK_GREATER
+			skip = width
 		case r == '*':
 			t.Type = TOK_STAR
 			skip = width
@@ -237,6 +293,14 @@ func (s *Scanner) Emit() parse.Token {
 			skip = s.MatchTimespan()
 			if skip > 0 {
 				t.Type = TOK_TIMESPAN
+			} else {
+				t.Type = TOK_INVALID
+				skip = s.SkipToBoundary(isDelimiter)
+			}
+		case r == '\'' || r == '"':
+			skip = s.MatchString()
+			if skip > 0 {
+				t.Type = TOK_STRING
 			} else {
 				t.Type = TOK_INVALID
 				skip = s.SkipToBoundary(isDelimiter)

@@ -8,7 +8,7 @@ quantifier      = "all" / sample
 sample          = "sample(" time-quantity ")"
 
 ; Identifier
-identifier      = 1*(ALPHA / DIGIT)
+identifier      = 1*(ALPHA / DIGIT / '_' / '-')
 
 ; Topic selection
 topic-selector  = "in" topic
@@ -43,7 +43,7 @@ builtin         = identifier "(" expression  ")"
 
 ; Data Types
 number          = 1*DIGIT
-string          = DQUOTE *ALPHA DQUOTE
+string          = DQUOTE *ALPHANUM DQUOTE / SQUOTE *ALPHANUM SQUOTE
 tuple           = expression 1*( "," expression )
 ```
 

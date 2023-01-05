@@ -1,2 +1,4 @@
 PASS
-all : filter x ->
+all : filter x -> x > 100
+all : filter y -> y == "foo"
+all : filter cool_var -> cool_var == 'bar'
