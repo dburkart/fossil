@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Dana Burkart <dana.burkart@gmail.com>
+ * Copyright (c) 2022-2023, Dana Burkart <dana.burkart@gmail.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -19,6 +19,7 @@ const (
 	TOK_STRING
 	TOK_TOPIC
 	TOK_COMMA
+	TOK_COLON
 
 	// Arithmetic
 	TOK_PLUS
@@ -59,6 +60,8 @@ func (t TokenType) ToString() string {
 		return "TOK_TIMESPAN"
 	case TOK_COMMA:
 		return "TOK_COMMA"
+	case TOK_COLON:
+		return "TOK_COLON"
 	case TOK_PLUS:
 		return "TOK_PLUS"
 	case TOK_MINUS:
