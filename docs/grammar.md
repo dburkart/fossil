@@ -31,11 +31,11 @@ data-function   = ( "filter" / "map" / "reduce" ) data-args "->" expression
 data-args       = identifier [ "," data-args ]
 
 ; Expressions
-expression      = comparison *( ( "!=" / "==" ) comparison )
-comparison      = term *( ( ">" / ">=" / "<" / "<=" ) term )
-term            = term_md *( ( "-" / "+" ) term_md )
-term_md         = unary *( ( "/" / "*" ) unary )
-unary           = ( "-" / "+" ) unary / primary
+expression      = comparison *( ( "!=" / "==" ) expression )
+comparison      = term *( ( ">" / ">=" / "<" / "<=" ) comparison )
+term            = term_md *( ( "-" / "+" ) term )
+term_md         = unary *( ( "/" / "*" ) term_md )
+unary           = ( "-" / "+" ) number / primary
 primary         = identifier / number / string / tuple / builtin
 
 ; Built in functions
