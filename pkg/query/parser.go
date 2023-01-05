@@ -402,12 +402,7 @@ func (p *Parser) dataFunction() ASTNode {
 		t = p.Scanner.Emit()
 	}
 
-	list := p.tuple()
-	if list != nil {
-		fn.children = append(fn.children, list)
-	} else {
-		fn.children = append(fn.children, p.expression())
-	}
+	fn.children = append(fn.children, p.tuple())
 
 	return &fn
 }
