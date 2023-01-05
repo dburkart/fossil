@@ -366,7 +366,7 @@ func (p *Parser) dataStage() ASTNode {
 //
 // Grammar:
 //
-//	data-function   = ( "filter" / "map" / "reduce" ) data-args "->" expression
+//	data-function   = ( "filter" / "map" / "reduce" ) data-args "->" ( expression / tuple )
 //	data-args       = identifier [ "," data-args ]
 func (p *Parser) dataFunction() ASTNode {
 	t := p.Scanner.Emit()
@@ -402,7 +402,12 @@ func (p *Parser) dataFunction() ASTNode {
 		t = p.Scanner.Emit()
 	}
 
-	fn.children = append(fn.children, p.expression())
+	list := p.tuple()
+	if list != nil {
+		fn.children = append(fn.children, list)
+	} else {
+		fn.children = append(fn.children, p.expression())
+	}
 
 	return &fn
 }
@@ -532,4 +537,31 @@ func (p *Parser) primary() ASTNode {
 	default:
 		panic(parse.NewSyntaxError(t, fmt.Sprintf("Error: Unexpected token '%s'. Expected identifier, number, string, tuple or builtin.", t.Lexeme)))
 	}
+}
+
+// tuple returns a TupleNode or nil
+//
+// Grammar:
+//
+//	tuple           = expression 1*( "," expression )
+func (p *Parser) tuple() ASTNode {
+	list := TupleNode{}
+	e := p.expression()
+	t := p.Scanner.Emit()
+	list.children = append(list.children, e)
+
+	for t.Type == TOK_COMMA {
+		e = p.expression()
+		list.children = append(list.children, e)
+		t = p.Scanner.Emit()
+	}
+
+	p.Scanner.Rewind()
+
+	// We weren't a tuple, so restore scanner, and return nil
+	if len(list.children) == 1 {
+		return e
+	}
+
+	return &list
 }

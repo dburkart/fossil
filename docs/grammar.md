@@ -27,7 +27,7 @@ timespan        = "@second" / "@minute" / "@hour" / "@day" / "@week" / "@month" 
 ; Data Pipeline
 data-pipeline   = 1*data-stage
 data-stage      = ":" data-function
-data-function   = ( "filter" / "map" / "reduce" ) data-args "->" expression
+data-function   = ( "filter" / "map" / "reduce" ) data-args "->" ( expression / tuple )
 data-args       = identifier [ "," data-args ]
 
 ; Expressions
@@ -36,7 +36,7 @@ comparison      = term *( ( ">" / ">=" / "<" / "<=" ) comparison )
 term            = term_md *( ( "-" / "+" ) term )
 term_md         = unary *( ( "/" / "*" ) term_md )
 unary           = ( "-" / "+" ) ( number / identifier ) / primary
-primary         = identifier / number / string / tuple / builtin
+primary         = identifier / number / string / builtin
 
 ; Built in functions
 builtin         = identifier "(" expression  ")"

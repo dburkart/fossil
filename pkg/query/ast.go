@@ -118,6 +118,10 @@ type (
 		BaseNode
 	}
 
+	TupleNode struct {
+		BaseNode
+	}
+
 	DataPipelineNode struct {
 		BaseNode
 	}
