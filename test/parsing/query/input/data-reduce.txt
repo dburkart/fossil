@@ -1,0 +1,2 @@
+PASS
+all : reduce a, b -> a + b
