@@ -1,0 +1,5 @@
+QueryNode[all since ~now]
+    QuantifierNode[all]
+    TimePredicateNode[since]
+        TimeExpressionNode[]
+            TimeWhenceNode[~now]

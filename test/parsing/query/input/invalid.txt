@@ -1,0 +1,4 @@
+FAIL
+foo
+all and then some garbage
+

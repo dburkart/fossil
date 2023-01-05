@@ -8,16 +8,41 @@ package query
 
 import (
 	"fmt"
-	"github.com/dburkart/fossil/pkg/database"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/dburkart/fossil/pkg/database"
 )
+
+func (b *BaseNode) ToString() string {
+	t := reflect.TypeOf(b)
+	return t.Elem().Name()
+}
+
+func ASTToString(ast ASTNode) string {
+	return ASTToStringInternal(ast, 0)
+}
+
+func ASTToStringInternal(ast ASTNode, indent int) string {
+	level := strings.Repeat("    ", indent)
+
+	t := reflect.TypeOf(ast)
+	output := level + t.Elem().Name() + "[" + ast.Val() + "]" + "\n"
+
+	for _, child := range ast.Children() {
+		output += ASTToStringInternal(child, indent+1)
+	}
+
+	return output
+}
 
 type ASTNode interface {
 	Children() []ASTNode
 	GenerateFilter(*database.Database) database.Filter
 	Walk(*database.Database) []database.Filter
+	Val() string
 }
 
 type Numeric interface {
@@ -112,6 +137,10 @@ func (b *BaseNode) descend(d *database.Database, n ASTNode) []database.Filter {
 
 func (b *BaseNode) Walk(d *database.Database) []database.Filter {
 	return b.descend(d, b)
+}
+
+func (b *BaseNode) Val() string {
+	return b.Value
 }
 
 //-- QueryNode
