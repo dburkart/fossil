@@ -411,7 +411,7 @@ func (p *Parser) dataFunction() ASTNode {
 //
 // Grammar:
 //
-//	expression      = comparison *( ( "!=" / "==" ) comparison )
+//	expression      = comparison *( ( "!=" / "==" ) expression )
 func (p *Parser) expression() ASTNode {
 	c := p.comparison()
 
@@ -419,7 +419,7 @@ func (p *Parser) expression() ASTNode {
 	if t.Type == TOK_NOT_EQ || t.Type == TOK_EQ_EQ {
 		op := BinaryOpNode{BaseNode{Value: t.Lexeme}}
 		op.children = append(op.children, c)
-		op.children = append(op.children, p.comparison())
+		op.children = append(op.children, p.expression())
 		return &op
 	}
 	p.Scanner.Rewind()
@@ -431,18 +431,37 @@ func (p *Parser) expression() ASTNode {
 //
 // Grammar:
 //
-//	comparison      = term *( ( ">" / ">=" / "<" / "<=" ) term )
+//	comparison      = term *( ( ">" / ">=" / "<" / "<=" ) comparison )
 func (p *Parser) comparison() ASTNode {
-	// FIXME: Implement term
-	t := p.primary()
+	t := p.term()
 
 	c := p.Scanner.Emit()
 	if c.Type == TOK_GREATER || c.Type == TOK_GREATER_EQ ||
 		c.Type == TOK_LESS || c.Type == TOK_LESS_EQ {
 		op := BinaryOpNode{BaseNode{Value: c.Lexeme}}
 		op.children = append(op.children, t)
-		// FIXME: Implement term
-		op.children = append(op.children, p.primary())
+		op.children = append(op.children, p.comparison())
+		return &op
+	}
+	p.Scanner.Rewind()
+
+	return t
+}
+
+// term returns a BinaryOpNode, or the result of term_md
+//
+// Grammar:
+//
+//	term            = term_md *( ( "-" / "+" ) term )
+func (p *Parser) term() ASTNode {
+	// FIXME: Implement term_md
+	t := p.primary()
+
+	c := p.Scanner.Emit()
+	if c.Type == TOK_MINUS || c.Type == TOK_PLUS {
+		op := BinaryOpNode{BaseNode{Value: c.Lexeme}}
+		op.children = append(op.children, t)
+		op.children = append(op.children, p.term())
 		return &op
 	}
 	p.Scanner.Rewind()
