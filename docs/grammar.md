@@ -1,7 +1,7 @@
 # Query Grammar
 
 ```abnf
-query           = quantifier [ identifier ] [ topic-selector ] [ time-predicate ] [ data-pipeline ]
+query           = quantifier [ topic-selector ] [ time-predicate ] [ data-pipeline ]
 
 ; Quantifier
 quantifier      = "all" / sample
@@ -31,8 +31,7 @@ data-function   = ( "filter" / "map" / "reduce" ) data-args "->" expression
 data-args       = identifier [ "," data-args ]
 
 ; Expressions
-expression      = equality
-equality        = comparison *( ( "!=" / "==" ) comparison )
+expression      = comparison *( ( "!=" / "==" ) comparison )
 comparison      = term *( ( ">" / ">=" / "<" / "<=" ) term )
 term            = term_md *( ( "-" / "+" ) term_md )
 term_md         = unary *( ( "/" / "*" ) unary )

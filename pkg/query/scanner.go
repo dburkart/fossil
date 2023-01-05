@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Dana Burkart <dana.burkart@gmail.com>
+ * Copyright (c) 2022-2023, Dana Burkart <dana.burkart@gmail.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -196,6 +196,9 @@ func (s *Scanner) Emit() parse.Token {
 		case unicode.IsSpace(r):
 			skip = width
 			found = false
+		case r == ':':
+			t.Type = TOK_COLON
+			skip = width
 		case r == '(':
 			t.Type = TOK_PAREN_L
 			skip = width
@@ -209,6 +212,11 @@ func (s *Scanner) Emit() parse.Token {
 			t.Type = TOK_PLUS
 			skip = width
 		case r == '-':
+			if strings.HasPrefix(s.Input[s.Pos:], "->") {
+				t.Type = TOK_ARROW
+				skip = len("->")
+				break
+			}
 			t.Type = TOK_MINUS
 			skip = width
 		case r == ',':

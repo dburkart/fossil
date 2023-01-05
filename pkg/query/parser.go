@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Dana Burkart <dana.burkart@gmail.com>
+ * Copyright (c) 2022-2023, Dana Burkart <dana.burkart@gmail.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -52,7 +52,7 @@ func (p *Parser) Parse() (query ASTNode, err error) {
 //
 // Grammar:
 //
-//	query           = quantifier [ identifier ] [ topic-selector ] [ time-predicate ] [ data-predicate ]
+//	query           = quantifier [ topic-selector ] [ time-predicate ] [ data-predicate ] [ data-pipeline ]
 func (p *Parser) query() ASTNode {
 	q := QueryNode{BaseNode{
 		Value: p.Scanner.Input,
@@ -60,8 +60,6 @@ func (p *Parser) query() ASTNode {
 
 	// Queries must start with a Quantifier
 	q.AddChild(p.quantifier())
-
-	// TODO: Check for identifier
 
 	// Check for topic-selector
 	topicSelector := p.topicSelector()
@@ -74,9 +72,10 @@ func (p *Parser) query() ASTNode {
 		q.AddChild(timePredicate)
 	}
 
-	// TODO: Check for data-predicate.
-	// 		 Note: this will have to be at the beginning of our filters, based
-	//	     on the current design
+	dataPipeline := p.dataPipeline()
+	if dataPipeline != nil {
+		q.AddChild(dataPipeline)
+	}
 
 	return &q
 }
@@ -325,4 +324,85 @@ func (p *Parser) timeAtom() ASTNode {
 	}
 
 	panic(parse.NewSyntaxError(tok, fmt.Sprintf("Expected number of timespan, got '%s'", tok.Lexeme)))
+}
+
+// dataPipeline returns a DataPipelineNode, or nil
+//
+// Grammar:
+//
+//   data-pipeline   = 1*data-stage
+func (p *Parser) dataPipeline() ASTNode {
+	stage := p.dataStage()
+	if stage == nil {
+		return nil
+	}
+
+	stages := []ASTNode{}
+
+	for stage != nil {
+		stages = append(stages, stage)
+		stage = p.dataStage()
+	}
+
+	return &DataPipelineNode{BaseNode{children: stages}}
+}
+
+// dataStage returns a DataFunctionNode, or nil if it's not a stage
+//
+// Grammar:
+//
+//   data-stage      = ":" data-function
+func (p *Parser) dataStage() ASTNode {
+	t := p.Scanner.Emit()
+	if t.Type != TOK_COLON {
+		p.Scanner.Rewind()
+		return nil
+	}
+
+	return p.dataFunction()
+}
+
+// dataFunction returns a DataFunctionNode, or errors out
+//
+// Grammar:
+//
+//   data-function   = ( "filter" / "map" / "reduce" ) data-args "->" expression
+//   data-args       = identifier [ "," data-args ]
+func (p *Parser) dataFunction() ASTNode {
+	t := p.Scanner.Emit()
+	if t.Type != TOK_KEYWORD && t.Lexeme != "map" && t.Lexeme != "reduce" &&
+		t.Lexeme != "filter" {
+		panic(parse.NewSyntaxError(t, fmt.Sprintf("Error: Unexpected token '%s', expected 'filter', 'map', or 'reduce'", t.Lexeme)))
+	}
+
+	fn := DataFunctionNode{BaseNode: BaseNode{Value: t.Lexeme}}
+
+	// First, parse arguments
+	t = p.Scanner.Emit()
+	for {
+		// We're done parsing arguments when we hit a '->'
+		if t.Type == TOK_ARROW {
+			break
+		}
+
+		if t.Type != TOK_IDENTIFIER {
+			panic(parse.NewSyntaxError(t, fmt.Sprintf("Error: Unexpected token '%s', expected an identifier", t.Lexeme)))
+		}
+
+		fn.Arguments = append(fn.Arguments, IdentifierNode{BaseNode: BaseNode{Value: t.Lexeme}})
+
+		// Pull off a comma if one exists
+		t = p.Scanner.Emit()
+
+		if t.Type != TOK_COMMA {
+			continue
+		}
+
+		// Next argument
+		t = p.Scanner.Emit()
+	}
+
+	// FIXME: Parse expression
+
+	return &fn
 }
