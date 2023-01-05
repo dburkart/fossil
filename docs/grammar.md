@@ -35,7 +35,7 @@ expression      = comparison *( ( "!=" / "==" ) expression )
 comparison      = term *( ( ">" / ">=" / "<" / "<=" ) comparison )
 term            = term_md *( ( "-" / "+" ) term )
 term_md         = unary *( ( "/" / "*" ) term_md )
-unary           = ( "-" / "+" ) number / primary
+unary           = ( "-" / "+" ) ( number / identifier ) / primary
 primary         = identifier / number / string / tuple / builtin
 
 ; Built in functions

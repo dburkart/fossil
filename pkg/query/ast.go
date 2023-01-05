@@ -98,6 +98,10 @@ type (
 		BaseNode
 	}
 
+	UnaryOpNode struct {
+		BaseNode
+	}
+
 	TimespanNode struct {
 		BaseNode
 	}

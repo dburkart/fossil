@@ -474,8 +474,7 @@ func (p *Parser) term() ASTNode {
 //
 //	term_md         = unary *( ( "/" / "*" ) term_md )
 func (p *Parser) termMD() ASTNode {
-	// FIXME: Implement unary
-	u := p.primary()
+	u := p.unary()
 
 	c := p.Scanner.Emit()
 	if c.Type == TOK_SLASH || c.Type == TOK_STAR {
@@ -487,6 +486,32 @@ func (p *Parser) termMD() ASTNode {
 	p.Scanner.Rewind()
 
 	return u
+}
+
+// unary returns a UnaryOpNode, or the result of primary
+//
+// Grammar:
+//
+//	unary           = ( "-" / "+" ) ( number / identifier ) / primary
+func (p *Parser) unary() ASTNode {
+	t := p.Scanner.Emit()
+	if t.Type == TOK_MINUS || t.Type == TOK_PLUS {
+		op := UnaryOpNode{BaseNode{Value: t.Lexeme}}
+		t = p.Scanner.Emit()
+
+		if t.Type == TOK_NUMBER {
+			op.children = append(op.children, &NumberNode{BaseNode{Value: t.Lexeme}})
+		} else if t.Type == TOK_IDENTIFIER {
+			op.children = append(op.children, &IdentifierNode{BaseNode{Value: t.Lexeme}})
+		} else {
+			panic(parse.NewSyntaxError(t, fmt.Sprintf("Error: Unexpected token '%s'. Expected a number or identifier.", t.Lexeme)))
+		}
+
+		return &op
+	}
+	p.Scanner.Rewind()
+
+	return p.primary()
 }
 
 // primary returns a leaf node for an expression
