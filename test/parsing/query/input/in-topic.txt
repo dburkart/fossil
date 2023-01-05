@@ -1,0 +1,3 @@
+PASS
+all in /foo/bar/baz
+all in /c02f3a2a-2791-443b-a2e9-c5e29740b803/

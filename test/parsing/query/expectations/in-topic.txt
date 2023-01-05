@@ -1,0 +1,8 @@
+QueryNode[all in /foo/bar/baz]
+    QuantifierNode[all]
+    TopicSelectorNode[in]
+        TopicNode[/foo/bar/baz]
+QueryNode[all in /c02f3a2a-2791-443b-a2e9-c5e29740b803/]
+    QuantifierNode[all]
+    TopicSelectorNode[in]
+        TopicNode[/c02f3a2a-2791-443b-a2e9-c5e29740b803/]

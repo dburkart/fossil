@@ -1,0 +1,4 @@
+QueryNode[all]
+    QuantifierNode[all]
+QueryNode[all]
+    QuantifierNode[all]
