@@ -148,7 +148,7 @@ func (p *Parser) topicSelector() ASTNode {
 func (p *Parser) topic() ASTNode {
 	tok := p.Scanner.Emit()
 
-	if tok.Type != TOK_TOPIC {
+	if tok.Type != TOK_TOPIC && tok.Type != TOK_SLASH {
 		panic(parse.NewSyntaxError(tok, fmt.Sprintf("Error: unexpected token '%s', expected a topic after 'in' keyword", tok.Lexeme)))
 	}
 
@@ -454,8 +454,7 @@ func (p *Parser) comparison() ASTNode {
 //
 //	term            = term_md *( ( "-" / "+" ) term )
 func (p *Parser) term() ASTNode {
-	// FIXME: Implement term_md
-	t := p.primary()
+	t := p.termMD()
 
 	c := p.Scanner.Emit()
 	if c.Type == TOK_MINUS || c.Type == TOK_PLUS {
@@ -467,6 +466,27 @@ func (p *Parser) term() ASTNode {
 	p.Scanner.Rewind()
 
 	return t
+}
+
+// termMD returns a BinaryOpNode, or the result of unary
+//
+// Grammar:
+//
+//	term_md         = unary *( ( "/" / "*" ) term_md )
+func (p *Parser) termMD() ASTNode {
+	// FIXME: Implement unary
+	u := p.primary()
+
+	c := p.Scanner.Emit()
+	if c.Type == TOK_SLASH || c.Type == TOK_STAR {
+		op := BinaryOpNode{BaseNode{Value: c.Lexeme}}
+		op.children = append(op.children, u)
+		op.children = append(op.children, p.termMD())
+		return &op
+	}
+	p.Scanner.Rewind()
+
+	return u
 }
 
 // primary returns a leaf node for an expression
