@@ -1,0 +1,5 @@
+QueryNode[all before ~(01/01/2023)]
+    QuantifierNode[all]
+    TimePredicateNode[before]
+        TimeExpressionNode[]
+            TimeWhenceNode[~(01/01/2023)]

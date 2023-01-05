@@ -1,0 +1,2 @@
+PASS
+sample(@hour) between ~now - @month * 6, ~now - @month * 2

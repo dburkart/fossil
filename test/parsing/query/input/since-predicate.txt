@@ -1,2 +1,4 @@
 PASS
 all since ~now
+all since ~now - @minute * 10
+all since ~(02/01/2023)
