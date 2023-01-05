@@ -104,7 +104,7 @@ func TestEmitTopic(t *testing.T) {
 	for i := 0; i < len(expectedTopicLexemes); i++ {
 		tok := s.Emit()
 
-		if tok.Type != TOK_TOPIC {
+		if tok.Type != TOK_TOPIC && tok.Type != TOK_SLASH {
 			t.Error("wanted TOK_TOPIC, got", tok.Type.ToString())
 		}
 

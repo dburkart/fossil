@@ -30,6 +30,7 @@ const (
 	TOK_GREATER_EQ
 	TOK_PLUS
 	TOK_MINUS
+	TOK_SLASH
 	TOK_STAR
 
 	// Time
@@ -84,6 +85,8 @@ func (t TokenType) ToString() string {
 		return "TOK_PLUS"
 	case TOK_MINUS:
 		return "TOK_MINUS"
+	case TOK_SLASH:
+		return "TOK_SLASH"
 	case TOK_STAR:
 		return "TOK_STAR"
 	case TOK_PAREN_L:

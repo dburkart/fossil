@@ -1,3 +1,7 @@
+QueryNode[all in /]
+    QuantifierNode[all]
+    TopicSelectorNode[in]
+        TopicNode[/]
 QueryNode[all in /foo/bar/baz]
     QuantifierNode[all]
     TopicSelectorNode[in]

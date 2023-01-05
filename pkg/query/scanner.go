@@ -279,6 +279,12 @@ func (s *Scanner) Emit() parse.Token {
 			t.Type = TOK_COMMA
 			skip = width
 		case r == '/':
+			next, _ := utf8.DecodeRuneInString(s.Input[s.Pos+1:])
+			if isDelimiter(next) || !unicode.IsLetter(next) {
+				t.Type = TOK_SLASH
+				skip = width
+				break
+			}
 			t.Type = TOK_TOPIC
 			skip = s.MatchTopic()
 		case r == '~':
