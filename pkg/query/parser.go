@@ -330,7 +330,7 @@ func (p *Parser) timeAtom() ASTNode {
 //
 // Grammar:
 //
-//   data-pipeline   = 1*data-stage
+//	data-pipeline   = 1*data-stage
 func (p *Parser) dataPipeline() ASTNode {
 	stage := p.dataStage()
 	if stage == nil {
@@ -351,7 +351,7 @@ func (p *Parser) dataPipeline() ASTNode {
 //
 // Grammar:
 //
-//   data-stage      = ":" data-function
+//	data-stage      = ":" data-function
 func (p *Parser) dataStage() ASTNode {
 	t := p.Scanner.Emit()
 	if t.Type != TOK_COLON {
@@ -366,8 +366,8 @@ func (p *Parser) dataStage() ASTNode {
 //
 // Grammar:
 //
-//   data-function   = ( "filter" / "map" / "reduce" ) data-args "->" expression
-//   data-args       = identifier [ "," data-args ]
+//	data-function   = ( "filter" / "map" / "reduce" ) data-args "->" expression
+//	data-args       = identifier [ "," data-args ]
 func (p *Parser) dataFunction() ASTNode {
 	t := p.Scanner.Emit()
 	if t.Type != TOK_KEYWORD && t.Lexeme != "map" && t.Lexeme != "reduce" &&
@@ -402,7 +402,70 @@ func (p *Parser) dataFunction() ASTNode {
 		t = p.Scanner.Emit()
 	}
 
-	// FIXME: Parse expression
+	fn.children = append(fn.children, p.expression())
 
 	return &fn
+}
+
+// expression returns a BinaryOpNode, or the result of comparison
+//
+// Grammar:
+//
+//	expression      = comparison *( ( "!=" / "==" ) comparison )
+func (p *Parser) expression() ASTNode {
+	c := p.comparison()
+
+	t := p.Scanner.Emit()
+	if t.Type == TOK_NOT_EQ || t.Type == TOK_EQ_EQ {
+		op := BinaryOpNode{BaseNode{Value: t.Lexeme}}
+		op.children = append(op.children, c)
+		op.children = append(op.children, p.comparison())
+		return &op
+	}
+	p.Scanner.Rewind()
+
+	return c
+}
+
+// comparison returns a BinaryOpNode, or the result of term
+//
+// Grammar:
+//
+//	comparison      = term *( ( ">" / ">=" / "<" / "<=" ) term )
+func (p *Parser) comparison() ASTNode {
+	// FIXME: Implement term
+	t := p.primary()
+
+	c := p.Scanner.Emit()
+	if c.Type == TOK_GREATER || c.Type == TOK_GREATER_EQ ||
+		c.Type == TOK_LESS || c.Type == TOK_LESS_EQ {
+		op := BinaryOpNode{BaseNode{Value: c.Lexeme}}
+		op.children = append(op.children, t)
+		// FIXME: Implement term
+		op.children = append(op.children, p.primary())
+		return &op
+	}
+	p.Scanner.Rewind()
+
+	return t
+}
+
+// primary returns a leaf node for an expression
+//
+// Grammar:
+//
+//	primary         = identifier / number / string / tuple / builtin
+func (p *Parser) primary() ASTNode {
+	t := p.Scanner.Emit()
+
+	switch t.Type {
+	case TOK_IDENTIFIER:
+		return &IdentifierNode{BaseNode{Value: t.Lexeme}}
+	case TOK_NUMBER:
+		return &NumberNode{BaseNode{Value: t.Lexeme}}
+	case TOK_STRING:
+		return &StringNode{BaseNode{Value: t.Lexeme}}
+	default:
+		panic(parse.NewSyntaxError(t, fmt.Sprintf("Error: Unexpected token '%s'. Expected identifier, number, string, tuple or builtin.", t.Lexeme)))
+	}
 }

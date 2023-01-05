@@ -21,7 +21,13 @@ const (
 	TOK_COMMA
 	TOK_COLON
 
-	// Arithmetic
+	// Expressions
+	TOK_EQ_EQ
+	TOK_NOT_EQ
+	TOK_LESS
+	TOK_LESS_EQ
+	TOK_GREATER
+	TOK_GREATER_EQ
 	TOK_PLUS
 	TOK_MINUS
 	TOK_STAR
@@ -62,6 +68,18 @@ func (t TokenType) ToString() string {
 		return "TOK_COMMA"
 	case TOK_COLON:
 		return "TOK_COLON"
+	case TOK_EQ_EQ:
+		return "TOK_EQ_EQ"
+	case TOK_NOT_EQ:
+		return "TOK_NOT_EQ"
+	case TOK_LESS:
+		return "TOK_LESS"
+	case TOK_LESS_EQ:
+		return "TOK_LESS_EQ"
+	case TOK_GREATER:
+		return "TOK_GREATER"
+	case TOK_GREATER_EQ:
+		return "TOK_GREATER_EQ"
 	case TOK_PLUS:
 		return "TOK_PLUS"
 	case TOK_MINUS:
