@@ -1,5 +1,7 @@
 # Fossil
 
+[![Go](https://github.com/dburkart/fossil/actions/workflows/go.yml/badge.svg)](https://github.com/dburkart/fossil/actions/workflows/go.yml)
+
 🚨🐞 Fossil is under active development, please read the [caveats](#caveats) below 🐞🚨
 
 A simple and efficient time-series database. See [Overview](./docs/overview.md) for a high-level overview on current design.
