@@ -120,7 +120,7 @@ func listDatabases(c fossil.Client) func(string) []string {
 	}
 	return func(line string) []string {
 		lineTopic := line
-		if strings.HasPrefix(line, "USE") || strings.HasPrefix(line, "use") {
+		if strings.HasPrefix(line, "use") {
 			lineTopic = lineTopic[4:]
 		}
 
@@ -140,7 +140,7 @@ func listTopics(c fossil.Client) func(string) []string {
 	}
 	return func(line string) []string {
 		lineTopic := line
-		if strings.HasPrefix(line, "APPEND") || strings.HasPrefix(line, "append") {
+		if strings.HasPrefix(line, "append") {
 			lineTopic = lineTopic[7:]
 		}
 
@@ -189,23 +189,81 @@ func filterInput(r rune) (rune, bool) {
 	return r, true
 }
 
+func completeCreateTopic(c fossil.Client) func(string) []string {
+	msg, err := c.Send(proto.NewMessageWithType(proto.CommandList, proto.ListRequest{Object: "topics"}))
+	if err != nil {
+		return func(string) []string { return []string{} }
+	}
+	resp := proto.ListResponse{}
+	err = resp.Unmarshal(msg.Data())
+	if err != nil {
+		return func(string) []string { return []string{} }
+	}
+	return func(line string) []string {
+		fields := strings.Fields(line)
+		if len(fields) <= 2 {
+			return nil
+		}
+		lineTopic := strings.TrimPrefix(line, fields[0])
+		lineTopic = strings.TrimPrefix(lineTopic[1:], fields[1])
+		lineTopic = strings.TrimPrefix(lineTopic[1:], fields[2])
+		lineTopic = strings.TrimPrefix(lineTopic, " ")
+
+		fmt.Printf("'%s'", lineTopic)
+		fmt.Println(fields)
+		fmt.Println(resp.ObjectList)
+		options := filterStringSlice(resp.ObjectList, lineTopic)
+		if len(fields[2]) > 0 {
+			options = append(options, fields[2])
+		}
+
+		return options
+	}
+}
+
+func makeSchemaOptions(c fossil.Client) []readline.PrefixCompleterInterface {
+	schemaSlice := []string{
+		"string",
+		"binary",
+		"boolean",
+		"uint8",
+		"uint16",
+		"uint32",
+		"uint64",
+		"int16",
+		"int32",
+		"int64",
+		"float32",
+		"float64",
+	}
+
+	ret := []readline.PrefixCompleterInterface{}
+	for i := range schemaSlice {
+		ret = append(ret, readline.PcItem(schemaSlice[i]))
+	}
+	return ret
+}
+
 func readlinePrompt(c fossil.Client, output string) {
 	// Configure the completer
 	useItem := readline.PcItemDynamic(listDatabases(c))
 	appendItem := readline.PcItemDynamic(listTopics(c))
+
+	listItems := []readline.PrefixCompleterInterface{
+		readline.PcItem("topics"), readline.PcItem("databases"), readline.PcItem("schemas"),
+	}
+
 	completer := readline.NewPrefixCompleter(
-		readline.PcItem("USE", useItem),
+		readline.PcItem("help", useItem),
 		readline.PcItem("use", useItem),
-		readline.PcItem("APPEND", appendItem),
 		readline.PcItem("append", appendItem),
-		readline.PcItem("INSERT"),
 		readline.PcItem("insert"),
-		readline.PcItem("QUERY"),
 		readline.PcItem("query"),
-		readline.PcItem("EXIT"),
 		readline.PcItem("exit"),
-		readline.PcItem("LIST"),
-		readline.PcItem("list"),
+		readline.PcItem("list", listItems...),
+		readline.PcItem("create",
+			readline.PcItem("topic", readline.PcItemDynamic(completeCreateTopic(c), makeSchemaOptions(c)...)),
+		),
 	)
 
 	// Setup the readline executor
@@ -239,6 +297,11 @@ func readlinePrompt(c fossil.Client, output string) {
 		}
 		line := strings.TrimSpace(ln.Line)
 
+		if strings.ToUpper(line) == "HELP" {
+			fmt.Println("usage:")
+			fmt.Println(completer.Tree("    "))
+			continue
+		}
 		if strings.ToUpper(line) == "EXIT" {
 			os.Exit(0)
 		}
