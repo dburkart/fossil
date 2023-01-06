@@ -34,12 +34,12 @@ func initConfig(configFile string) {
 
 	err := viper.ReadInConfig()
 	if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-		log.Info().Msg("No config file found, using defaults as a base")
+		log.Debug().Msg("No config file found, using defaults as a base")
 	} else if err != nil {
 		log.Error().Msg("Error loading config file")
 	}
 
-	log.Info().Str("file", viper.ConfigFileUsed()).Msg("loaded config from file")
+	log.Debug().Str("file", viper.ConfigFileUsed()).Msg("loaded config from file")
 
 	databaseConfigs := viper.GetStringMap("database")
 	databases := []string{}
