@@ -138,6 +138,11 @@ type Unmarshaler interface {
 	Unmarshal([]byte) error
 }
 
+type Printable interface {
+	Headers() []string
+	Values() [][]string
+}
+
 type (
 	VersionRequest struct {
 		Version string
