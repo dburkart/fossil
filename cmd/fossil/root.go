@@ -21,6 +21,7 @@ var rootCmd = &cobra.Command{
 	Short: "Fossil is a small and fast tsdb",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		initLogging()
+		initLogLevel()
 		initConfig(cmd.Root().PersistentFlags().Lookup("config").Value.String())
 		initLogLevel()
 		traceConfig()
