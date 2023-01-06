@@ -22,10 +22,10 @@ type Result struct {
 // An Entry is a hydrated Datum, where the time and topic have been
 // expanded.
 type Entry struct {
-	Time   time.Time
-	Topic  string
-	Schema string
-	Data   []byte
+	Time   time.Time `json:"time"`
+	Topic  string    `json:"topic"`
+	Schema string    `json:"schema"`
+	Data   []byte    `json:"data"`
 }
 
 func (e *Entry) ToString() string {

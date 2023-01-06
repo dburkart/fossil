@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Gideon Williams gideon@gideonw.com
+ * Copyright (c) 2022-2023, Gideon Williams gideon@gideonw.com
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -12,10 +12,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"strings"
 	"time"
 
 	"github.com/dburkart/fossil/pkg/database"
+	"github.com/dburkart/fossil/pkg/schema"
 	"github.com/dustin/go-humanize"
 	"github.com/rs/zerolog"
 )
@@ -148,18 +150,18 @@ type (
 		Version string
 	}
 	VersionResponse struct {
-		Code    uint32
-		Version string
+		Code    uint32 `json:"code"`
+		Version string `json:"version"`
 	}
 
 	ErrResponse struct {
-		Code uint32
-		Err  error
+		Code uint32 `json:"code"`
+		Err  error  `json:"error"`
 	}
 
 	OkResponse struct {
-		Code    uint32
-		Message string
+		Code    uint32 `json:"code"`
+		Message string `json:"message"`
 	}
 
 	UseRequest struct {
@@ -171,7 +173,7 @@ type (
 	}
 
 	ListResponse struct {
-		ObjectList []string
+		ObjectList []string `json:"results"`
 	}
 
 	StatsRequest struct {
@@ -179,11 +181,11 @@ type (
 	}
 
 	StatsResponse struct {
-		AllocHeap uint64
-		TotalMem  uint64
-		Uptime    time.Duration
-		Segments  int
-		Topics    int
+		AllocHeap uint64        `json:"alloc_heap"`
+		TotalMem  uint64        `json:"total_mem"`
+		Uptime    time.Duration `json:"uptime"`
+		Segments  int           `json:"segments"`
+		Topics    int           `json:"topics"`
 	}
 
 	AppendRequest struct {
@@ -196,7 +198,7 @@ type (
 	}
 
 	QueryResponse struct {
-		Results database.Entries
+		Results database.Entries `json:"results"`
 	}
 
 	CreateTopicRequest struct {
@@ -253,6 +255,14 @@ func (v *VersionResponse) Unmarshal(b []byte) error {
 	return nil
 }
 
+func (v VersionResponse) Headers() []string {
+	return []string{"code", "version"}
+}
+
+func (v VersionResponse) Values() [][]string {
+	return [][]string{[]string{fmt.Sprintf("%d", v.Code), v.Version}}
+}
+
 // UseRequest
 // --------------------------
 
@@ -306,6 +316,14 @@ func (rq *ErrResponse) Unmarshal(b []byte) error {
 	return nil
 }
 
+func (v ErrResponse) Headers() []string {
+	return []string{"code", "error"}
+}
+
+func (v ErrResponse) Values() [][]string {
+	return [][]string{[]string{fmt.Sprintf("%d", v.Code), v.Err.Error()}}
+}
+
 // OkResponse
 // --------------------------
 
@@ -335,6 +353,14 @@ func (rq *OkResponse) Unmarshal(b []byte) error {
 	rq.Message = string(msg)
 
 	return nil
+}
+
+func (v OkResponse) Headers() []string {
+	return []string{"code", "message"}
+}
+
+func (v OkResponse) Values() [][]string {
+	return [][]string{[]string{fmt.Sprintf("%d", v.Code), v.Message}}
 }
 
 // AppendRequest
@@ -442,6 +468,72 @@ func (rq *QueryResponse) Unmarshal(b []byte) error {
 	return nil
 }
 
+func (v QueryResponse) Headers() []string {
+	return []string{"time", "topic", "schema", "data"}
+}
+
+func (v QueryResponse) Values() [][]string {
+	res := [][]string{}
+	for _, val := range v.Results {
+		res = append(res, []string{
+			val.Time.Format(time.RFC3339Nano),
+			val.Topic,
+			val.Schema,
+			formatDataForPrinting(val),
+		})
+	}
+
+	return res
+}
+
+func formatDataForPrinting(entry database.Entry) string {
+	var output string
+	s, err := schema.Parse(entry.Schema)
+	if err != nil {
+		panic(err)
+	}
+	data := entry.Data
+
+	switch t := s.(type) {
+	case *schema.Type:
+		switch t.Name {
+		case "string":
+			output = string(data)
+		case "binary":
+			output = fmt.Sprintf("binary(...%d bytes...)", len(data))
+		case "boolean":
+			b := "true"
+			if data[0] == 0 {
+				b = "false"
+			}
+			output = fmt.Sprintf("boolean(%s)", b)
+		case "uint8":
+			output = fmt.Sprintf("uint8(%d)", data[0])
+		case "uint16":
+			output = fmt.Sprintf("uint16(%d)", binary.LittleEndian.Uint16(data))
+		case "uint32":
+			output = fmt.Sprintf("uint32(%d)", binary.LittleEndian.Uint32(data))
+		case "uint64":
+			output = fmt.Sprintf("uint64(%d)", binary.LittleEndian.Uint64(data))
+		case "int16":
+			output = fmt.Sprintf("int16(%d)", int16(binary.LittleEndian.Uint16(data)))
+		case "int32":
+			output = fmt.Sprintf("int32(%d)", int32(binary.LittleEndian.Uint32(data)))
+		case "int64":
+			output = fmt.Sprintf("int64(%d)", int64(binary.LittleEndian.Uint64(data)))
+		case "float32":
+			output = fmt.Sprintf("float32(%f)", math.Float32frombits(binary.LittleEndian.Uint32(data)))
+		case "float64":
+			output = fmt.Sprintf("float64(%f)", math.Float64frombits(binary.LittleEndian.Uint64(data)))
+		}
+	case *schema.Array:
+		// arr, _ := fossil.DecodeStringForSchema(data, s)
+		// output = fmt.Sprintf("%s(%s)", t.ToSchema(), arr)
+	}
+
+	return output
+}
+
 // StatsRequest
 // --------------------------
 
@@ -505,6 +597,22 @@ func (rq *StatsResponse) Unmarshal(b []byte) error {
 	rq.Uptime = d
 
 	return nil
+}
+
+func (v StatsResponse) Headers() []string {
+	return []string{"alloc_heap", "total_mem", "uptime", "segments", "topics"}
+}
+
+func (v StatsResponse) Values() [][]string {
+	return [][]string{
+		[]string{
+			humanize.Bytes(v.AllocHeap),
+			humanize.Bytes(v.TotalMem),
+			v.Uptime.String(),
+			fmt.Sprintf("%d", v.Segments),
+			fmt.Sprintf("%d", v.Topics),
+		},
+	}
 }
 
 // ListRequest
@@ -573,6 +681,19 @@ func (rq *ListResponse) Unmarshal(b []byte) error {
 		rq.ObjectList = append(rq.ObjectList, string(line))
 	}
 	return nil
+}
+
+func (v ListResponse) Headers() []string {
+	return []string{"result"}
+}
+
+func (v ListResponse) Values() [][]string {
+	res := [][]string{}
+	for i := range v.ObjectList {
+		res = append(res, []string{v.ObjectList[i]})
+	}
+
+	return res
 }
 
 // CreateTopicRequest
