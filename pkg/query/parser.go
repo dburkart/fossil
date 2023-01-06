@@ -520,11 +520,14 @@ func (p *Parser) unary() ASTNode {
 //
 //	primary         = identifier / number / string / tuple / builtin
 func (p *Parser) primary() ASTNode {
+	builtin := p.builtin()
+	if builtin != nil {
+		return builtin
+	}
+
 	t := p.Scanner.Emit()
 
 	switch t.Type {
-	case TOK_IDENTIFIER:
-		return &IdentifierNode{BaseNode{Value: t.Lexeme}}
 	case TOK_NUMBER:
 		return &NumberNode{BaseNode{Value: t.Lexeme}}
 	case TOK_STRING:
@@ -534,7 +537,39 @@ func (p *Parser) primary() ASTNode {
 	}
 }
 
-// tuple returns a TupleNode or nil
+// builtin returns a BuiltinFunctionNode or an IdentifierNode or nil
+//
+// Grammar:
+//
+//	builtin         = identifier "(" expression  ")"
+func (p *Parser) builtin() ASTNode {
+	t := p.Scanner.Emit()
+
+	if t.Type != TOK_IDENTIFIER {
+		p.Scanner.Rewind()
+		return nil
+	}
+
+	node := BuiltinFunctionNode{BaseNode{Value: t.Lexeme}}
+
+	t = p.Scanner.Emit()
+	if t.Type != TOK_PAREN_L {
+		p.Scanner.Rewind()
+		return &IdentifierNode{BaseNode{Value: node.Value}}
+	}
+
+	tuple := p.tuple()
+	node.children = append(node.children, tuple)
+
+	t = p.Scanner.Emit()
+	if t.Type != TOK_PAREN_R {
+		panic(parse.NewSyntaxError(t, fmt.Sprintf("Error: Unexpected token '%s'. Expected ')'", t.Lexeme)))
+	}
+
+	return &node
+}
+
+// tuple returns a TupleNode or the result of expression
 //
 // Grammar:
 //

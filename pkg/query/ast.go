@@ -130,6 +130,10 @@ type (
 		BaseNode
 		Arguments []IdentifierNode
 	}
+
+	BuiltinFunctionNode struct {
+		BaseNode
+	}
 )
 
 //-- BaseNode
