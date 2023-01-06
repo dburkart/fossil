@@ -5,3 +5,5 @@ all : map x -> -x
 all : map x -> x * -1
 all : map x -> 1, x
 all : map x -> 1, x * 2
+all in /logs : map l -> len(l)
+all : map x -> pow(x, 2)
