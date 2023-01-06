@@ -40,6 +40,10 @@ var (
 
 		Run: func(cmd *cobra.Command, args []string) {
 			log := viper.Get("logger").(zerolog.Logger)
+			output := viper.GetString("fossil.output")
+			if len(filterStringSlice([]string{"csv", "text", "json"}, output)) != 1 {
+				log.Fatal().Msg("unsupported output format")
+			}
 
 			host := viper.GetString("fossil.host")
 			target, err := proto.ParseConnectionString(host)
@@ -53,7 +57,7 @@ var (
 					log.Fatal().Err(err).Msg("error creating new database")
 				}
 
-				localPrompt(db)
+				localPrompt(db, output)
 			} else {
 				client, err := fossil.NewClient(host)
 				if err != nil {
@@ -61,7 +65,7 @@ var (
 				}
 
 				// REPL
-				readlinePrompt(client)
+				readlinePrompt(client, output)
 			}
 		},
 	}
@@ -76,9 +80,15 @@ func init() {
 		Timestamp().
 		Caller().
 		Logger()
+
+		// Flags for this command
+	Command.Flags().StringP("output", "o", "text", "Output format of results in pipe mode [csv, json, text]")
+
+	// Bind flags to viper
+	viper.BindPFlag("fossil.output", Command.Flags().Lookup("output"))
 }
 
-func localPrompt(db *database.Database) {
+func localPrompt(db *database.Database, output string) {
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		fmt.Print("\n> ")
@@ -230,7 +240,7 @@ func filterInput(r rune) (rune, bool) {
 	return r, true
 }
 
-func readlinePrompt(c fossil.Client) {
+func readlinePrompt(c fossil.Client, output string) {
 	// Configure the completer
 	useItem := readline.PcItemDynamic(listDatabases(c))
 	appendItem := readline.PcItemDynamic(listTopics(c))
@@ -267,6 +277,9 @@ func readlinePrompt(c fossil.Client) {
 	schemas := listSchemas(c)
 	recomputeSchemaCache := false
 
+	// Configure output writer
+	writer := repl.NewOutputWriter(os.Stdout, output)
+
 	// Handle input
 	for {
 		ln := rl.Line()
@@ -286,6 +299,7 @@ func readlinePrompt(c fossil.Client) {
 			log.Error().Err(err).Send()
 			continue
 		}
+
 		msg, err := c.Send(replMsg)
 		if err != nil {
 			log.Fatal().Err(err).Msg("error sending message to server")
@@ -306,7 +320,7 @@ func readlinePrompt(c fossil.Client) {
 				log.Error().Err(err).Send()
 				continue
 			}
-			fmt.Printf("%d %s\n", v.Code, v.Version)
+			writer.Write(v)
 		case proto.CommandStats:
 			t := proto.StatsResponse{}
 			err = t.Unmarshal(msg.Data())
@@ -314,14 +328,8 @@ func readlinePrompt(c fossil.Client) {
 				log.Error().Err(err).Send()
 				continue
 			}
-			fmt.Printf(
-				"Allocated Heap: %v\nTotal Memory: %v\nUptime: %s\nSegments: %d\nTopics: %d\n",
-				humanize.Bytes(t.AllocHeap),
-				humanize.Bytes(t.TotalMem),
-				t.Uptime,
-				t.Segments,
-				t.Topics,
-			)
+
+			writer.Write(t)
 		case proto.CommandQuery:
 			t := proto.QueryResponse{}
 			err = t.Unmarshal(msg.Data())
@@ -330,17 +338,7 @@ func readlinePrompt(c fossil.Client) {
 				continue
 			}
 
-			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"Time", "Topic", "Data"})
-			for i := range t.Results {
-				table.Append([]string{
-					t.Results[i].Time.Format(time.RFC3339Nano),
-					t.Results[i].Topic,
-					formatDataForPrinting(t.Results[i]),
-				})
-			}
-
-			table.Render()
+			writer.Write(t)
 		case proto.CommandError:
 			t := proto.ErrResponse{}
 			err = t.Unmarshal(msg.Data())
@@ -348,7 +346,7 @@ func readlinePrompt(c fossil.Client) {
 				log.Error().Err(err).Send()
 				continue
 			}
-			fmt.Println(t.Code, t.Err)
+			writer.Write(t)
 		case proto.CommandOk:
 			t := proto.OkResponse{}
 			err = t.Unmarshal(msg.Data())
@@ -356,7 +354,7 @@ func readlinePrompt(c fossil.Client) {
 				log.Error().Err(err).Send()
 				continue
 			}
-			fmt.Println(t.Code, t.Message)
+			writer.Write(t)
 		case proto.CommandAppend:
 			t := proto.OkResponse{}
 			err = t.Unmarshal(msg.Data())
@@ -364,7 +362,7 @@ func readlinePrompt(c fossil.Client) {
 				log.Error().Err(err).Send()
 				continue
 			}
-			fmt.Println(t.Code, t.Message)
+			writer.Write(t)
 		case proto.CommandList:
 			t := proto.ListResponse{}
 			err = t.Unmarshal(msg.Data())
@@ -372,9 +370,7 @@ func readlinePrompt(c fossil.Client) {
 				log.Error().Err(err).Send()
 				continue
 			}
-			for _, v := range t.ObjectList {
-				fmt.Println(v)
-			}
+			writer.Write(t)
 		}
 		fmt.Println()
 
