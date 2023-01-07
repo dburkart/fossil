@@ -4,13 +4,12 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-package fossil
+package schema
 
 import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/dburkart/fossil/pkg/schema"
 	"math"
 	"strconv"
 	"strings"
@@ -21,6 +20,8 @@ type SchemaType interface {
 		uint32 | uint64 | float32 | float64
 }
 
+// EncodeType takes a SchemaType and returns the byte slice representing the
+// data in a format the database expects
 func EncodeType[T SchemaType](v T) ([]byte, error) {
 	var formatted []byte
 
@@ -58,9 +59,9 @@ func EncodeType[T SchemaType](v T) ([]byte, error) {
 	panic("We should not get here")
 }
 
-func DecodeStringForSchema(input []byte, s schema.Object) (string, error) {
+func DecodeStringForSchema(input []byte, s Object) (string, error) {
 	switch t := s.(type) {
-	case *schema.Type:
+	case *Type:
 		switch t.Name {
 		case "string":
 			return string(input), nil
@@ -90,7 +91,7 @@ func DecodeStringForSchema(input []byte, s schema.Object) (string, error) {
 		case "float64":
 			return fmt.Sprintf("%f", math.Float64frombits(binary.LittleEndian.Uint64(input))), nil
 		}
-	case *schema.Array:
+	case *Array:
 		var output string
 
 		for i := 0; i < t.Length; i++ {
@@ -106,20 +107,20 @@ func DecodeStringForSchema(input []byte, s schema.Object) (string, error) {
 		}
 
 		return output, nil
-	case *schema.Composite:
+	case *Composite:
 		// FIXME: Implement
 	}
 
 	return "", errors.New("unknown schema")
 }
 
-// EncodeStringForSchema takes an input string and a schema.Object, and returns
+// EncodeStringForSchema takes an input string and a Object, and returns
 // a byte slice representing that string.
-func EncodeStringForSchema(input string, s schema.Object) ([]byte, error) {
+func EncodeStringForSchema(input string, s Object) ([]byte, error) {
 	var formatted []byte
 
 	switch t := s.(type) {
-	case *schema.Type:
+	case *Type:
 		switch t.Name {
 		case "string":
 			return []byte(input), nil
@@ -182,12 +183,12 @@ func EncodeStringForSchema(input string, s schema.Object) ([]byte, error) {
 			}
 			return EncodeType(f)
 		}
-	case *schema.Array:
+	case *Array:
 		var array []string
 		array = strings.Split(input, ",")
 		// Basic bounds checking
 		if len(array) != t.Length {
-			return nil, errors.New(fmt.Sprintf("schema expects %d elements, you provided %d", t.Length, len(array)))
+			return nil, fmt.Errorf("schema expects %d elements, you provided %d", t.Length, len(array))
 		}
 		// For each value in the array, pack it into formatted
 		for _, v := range array {
@@ -199,7 +200,7 @@ func EncodeStringForSchema(input string, s schema.Object) ([]byte, error) {
 		}
 
 		return formatted, nil
-	case *schema.Composite:
+	case *Composite:
 		// FIXME: Implement
 	}
 

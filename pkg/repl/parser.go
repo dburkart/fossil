@@ -11,7 +11,6 @@ import (
 	"errors"
 	"strings"
 
-	fossil "github.com/dburkart/fossil/api"
 	"github.com/dburkart/fossil/pkg/proto"
 	"github.com/dburkart/fossil/pkg/schema"
 )
@@ -53,7 +52,7 @@ func ParseREPLCommand(b []byte, schemas map[string]schema.Object) (proto.Message
 			req.Topic = string(data[:spaceInd])
 			s, ok := schemas[req.Topic]
 			if ok {
-				d, err := fossil.EncodeStringForSchema(string(data[spaceInd+1:]), s)
+				d, err := schema.EncodeStringForSchema(string(data[spaceInd+1:]), s)
 				if err != nil {
 					return nil, err
 				}

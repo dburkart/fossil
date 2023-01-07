@@ -6,7 +6,9 @@
 
 package schema
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type Object interface {
 	Validate([]byte) bool
@@ -28,6 +30,64 @@ type (
 		Values []Object
 	}
 )
+
+func TypeFromString(input string) Object {
+	switch input {
+	case "boolean":
+		return &Type{
+			Name: "boolean",
+		}
+	case "int8":
+		return &Type{
+			Name: "int8",
+		}
+	case "uint8":
+		return &Type{
+			Name: "uint8",
+		}
+	case "int16":
+		return &Type{
+			Name: "int16",
+		}
+	case "uint16":
+		return &Type{
+			Name: "uint16",
+		}
+	case "int32":
+		return &Type{
+			Name: "int32",
+		}
+	case "uint32":
+		return &Type{
+			Name: "uint32",
+		}
+	case "int64":
+		return &Type{
+			Name: "int64",
+		}
+	case "uint64":
+		return &Type{
+			Name: "uint64",
+		}
+	case "float32":
+		return &Type{
+			Name: "float32",
+		}
+	case "float64":
+		return &Type{
+			Name: "float64",
+		}
+	case "string":
+		return &Type{
+			Name: "string",
+		}
+	case "binary":
+		return &Type{
+			Name: "binary",
+		}
+	}
+	panic("unknown schema type")
+}
 
 func (t Type) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf(`"%s"`, t.ToSchema())), nil
