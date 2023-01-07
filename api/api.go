@@ -15,6 +15,7 @@ import (
 
 	"github.com/dburkart/fossil/pkg/database"
 	"github.com/dburkart/fossil/pkg/proto"
+	"github.com/dburkart/fossil/pkg/schema"
 	"github.com/pkg/errors"
 )
 
@@ -225,4 +226,8 @@ func (c *Client) Query(q string) (database.Entries, error) {
 	}
 
 	return queryResponse.Results, nil
+}
+
+func EncodeData[T schema.SchemaType](v T) ([]byte, error) {
+	return schema.EncodeType(v)
 }

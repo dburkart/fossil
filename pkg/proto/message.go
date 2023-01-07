@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"strings"
 	"time"
 
@@ -475,63 +474,21 @@ func (v QueryResponse) Headers() []string {
 func (v QueryResponse) Values() [][]string {
 	res := [][]string{}
 	for _, val := range v.Results {
+		obj := schema.TypeFromString(val.Schema)
+		str, err := schema.DecodeStringForSchema(val.Data, obj)
+		if err != nil {
+			fmt.Println(err, obj.(schema.Type).Name, val.Schema)
+			continue
+		}
 		res = append(res, []string{
 			val.Time.Format(time.RFC3339Nano),
 			val.Topic,
 			val.Schema,
-			formatDataForPrinting(val),
+			str,
 		})
 	}
 
 	return res
-}
-
-func formatDataForPrinting(entry database.Entry) string {
-	var output string
-	s, err := schema.Parse(entry.Schema)
-	if err != nil {
-		panic(err)
-	}
-	data := entry.Data
-
-	switch t := s.(type) {
-	case *schema.Type:
-		switch t.Name {
-		case "string":
-			output = string(data)
-		case "binary":
-			output = fmt.Sprintf("binary(...%d bytes...)", len(data))
-		case "boolean":
-			b := "true"
-			if data[0] == 0 {
-				b = "false"
-			}
-			output = fmt.Sprintf("boolean(%s)", b)
-		case "uint8":
-			output = fmt.Sprintf("uint8(%d)", data[0])
-		case "uint16":
-			output = fmt.Sprintf("uint16(%d)", binary.LittleEndian.Uint16(data))
-		case "uint32":
-			output = fmt.Sprintf("uint32(%d)", binary.LittleEndian.Uint32(data))
-		case "uint64":
-			output = fmt.Sprintf("uint64(%d)", binary.LittleEndian.Uint64(data))
-		case "int16":
-			output = fmt.Sprintf("int16(%d)", int16(binary.LittleEndian.Uint16(data)))
-		case "int32":
-			output = fmt.Sprintf("int32(%d)", int32(binary.LittleEndian.Uint32(data)))
-		case "int64":
-			output = fmt.Sprintf("int64(%d)", int64(binary.LittleEndian.Uint64(data)))
-		case "float32":
-			output = fmt.Sprintf("float32(%f)", math.Float32frombits(binary.LittleEndian.Uint32(data)))
-		case "float64":
-			output = fmt.Sprintf("float64(%f)", math.Float64frombits(binary.LittleEndian.Uint64(data)))
-		}
-	case *schema.Array:
-		// arr, _ := fossil.DecodeStringForSchema(data, s)
-		// output = fmt.Sprintf("%s(%s)", t.ToSchema(), arr)
-	}
-
-	return output
 }
 
 // StatsRequest
