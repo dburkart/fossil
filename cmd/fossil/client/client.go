@@ -11,11 +11,12 @@ import (
 	"bufio"
 	"encoding/binary"
 	"fmt"
-	"github.com/dburkart/fossil/pkg/schema"
 	"math"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/dburkart/fossil/pkg/schema"
 
 	"github.com/chzyer/readline"
 	fossil "github.com/dburkart/fossil/api"
@@ -23,8 +24,6 @@ import (
 	"github.com/dburkart/fossil/pkg/proto"
 	"github.com/dburkart/fossil/pkg/query"
 	"github.com/dburkart/fossil/pkg/repl"
-	"github.com/dustin/go-humanize"
-	"github.com/olekukonko/tablewriter"
 	"github.com/rs/zerolog"
 
 	"github.com/spf13/cobra"
