@@ -7,6 +7,7 @@
 package fossil
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/dburkart/fossil/cmd/fossil/client"
@@ -17,16 +18,24 @@ import (
 	"github.com/spf13/viper"
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "fossil",
-	Short: "Fossil is a small and fast tsdb",
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		initLogging()
-		initConfig(cmd.Root().PersistentFlags().Lookup("config").Value.String())
-		initLogLevel()
-		traceConfig()
-	},
-}
+var (
+	Version        = "develop"
+	CommitHash     = "n/a"
+	BuildTimestamp = "n/a"
+
+	rootCmd = &cobra.Command{
+		Use:   "fossil",
+		Short: "Fossil is a small and fast tsdb",
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			initLogging()
+			initLogLevel()
+			initConfig(cmd.Root().PersistentFlags().Lookup("config").Value.String())
+			initLogLevel()
+			traceConfig()
+		},
+		Version: Version,
+	}
+)
 
 func init() {
 	// Configure the root binary options
@@ -41,12 +50,16 @@ func init() {
 	viper.BindPFlag("fossil.host", rootCmd.PersistentFlags().Lookup("host"))
 	viper.BindPFlag("config", rootCmd.PersistentFlags().Lookup("config"))
 
+	rootCmd.SetVersionTemplate(fmt.Sprintf("fossil version: %s git_commit: %s build_time: %s\n", Version, CommitHash, BuildTimestamp))
+
 	// Bind viper flags to ENV variables
 	// viper.SetEnvPrefix("FOSSIL")
 	// viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	viper.AutomaticEnv()
 
 	// Register commands on the root binary command
+	server.Command.Version = rootCmd.Version
+	client.Command.Version = rootCmd.Version
 	rootCmd.AddCommand(server.Command)
 	rootCmd.AddCommand(test.Command)
 	rootCmd.AddCommand(client.Command)
