@@ -209,9 +209,6 @@ func completeCreateTopic(c fossil.Client) func(string) []string {
 		lineTopic = strings.TrimPrefix(lineTopic[1:], fields[2])
 		lineTopic = strings.TrimPrefix(lineTopic, " ")
 
-		fmt.Printf("'%s'", lineTopic)
-		fmt.Println(fields)
-		fmt.Println(resp.ObjectList)
 		options := filterStringSlice(resp.ObjectList, lineTopic)
 		if len(fields[2]) > 0 {
 			options = append(options, fields[2])
