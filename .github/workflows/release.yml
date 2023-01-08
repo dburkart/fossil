@@ -23,3 +23,4 @@ jobs:
           goversion: 1.19
           sha256sum: true
           extra_files: LICENSE README.md docs
+          ldflags: "-X 'github.com/dburkart/fossil/cmd/fossil.Version=${GITHUB_REF}' -X 'github.com/dburkart/fossil/cmd/fossil.CommitHash=$(echo $GITHUB_SHA | cut -c1-8)' -X 'github.com/dburkart/fossil/cmd/fossil.BuildTimestamp=$(date +%FT%TZ)'"
