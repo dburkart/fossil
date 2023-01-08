@@ -474,10 +474,12 @@ func (v QueryResponse) Headers() []string {
 func (v QueryResponse) Values() [][]string {
 	res := [][]string{}
 	for _, val := range v.Results {
-		obj := schema.TypeFromString(val.Schema)
+		obj, err := schema.Parse(val.Schema)
+		if err != nil {
+			continue
+		}
 		str, err := schema.DecodeStringForSchema(val.Data, obj)
 		if err != nil {
-			fmt.Println(err, obj.(schema.Type).Name, val.Schema)
 			continue
 		}
 		res = append(res, []string{
