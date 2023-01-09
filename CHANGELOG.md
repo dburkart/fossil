@@ -1,3 +1,8 @@
+# v0.1.5
+
+Adds a --version flag to make it easier to distinguish between different
+versions of fossil.
+
 # v0.1.4
 
 One small enhancement, and a security fix around message size.
