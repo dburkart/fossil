@@ -15,6 +15,15 @@ jobs:
             goos: windows
     steps:
       - uses: actions/checkout@v3
+      - name: Get the version
+        id: get_version
+        run: echo ::set-output name=VERSION::$(echo $GITHUB_REF_NAME)
+      - name: Get the sha
+        id: get_sha
+        run: echo ::set-output name=SHA::$(echo $GITHUB_SHA | cut -c1-8)
+      - name: Get the date
+        id: get_date
+        run: echo ::set-output name=DATE::$(date +%FT%TZ)
       - uses: wangyoucao577/go-release-action@v1.34
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -23,4 +32,4 @@ jobs:
           goversion: 1.19
           sha256sum: true
           extra_files: LICENSE README.md docs
-          ldflags: "-X 'github.com/dburkart/fossil/cmd/fossil.Version=${GITHUB_REF_NAME}' -X 'github.com/dburkart/fossil/cmd/fossil.CommitHash=$(echo $GITHUB_SHA | cut -c1-8)' -X 'github.com/dburkart/fossil/cmd/fossil.BuildTimestamp=$(date +%FT%TZ)'"
+          ldflags: "-X 'github.com/dburkart/fossil/cmd/fossil.Version=${{ steps.get_version.outputs.VERSION }}' -X 'github.com/dburkart/fossil/cmd/fossil.CommitHash=${{ steps.get_sha.outputs.SHA }}' -X 'github.com/dburkart/fossil/cmd/fossil.BuildTimestamp=${{ steps.get_date.outputs.DATE }}'"
