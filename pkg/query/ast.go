@@ -54,12 +54,40 @@ type ASTNode interface {
 	Val() string
 }
 
+type Visitor interface {
+	Visit(ASTNode) error
+}
+
 type FilterGenerator interface {
 	GenerateFilter(*database.Database) database.Filter
 }
 
 type Numeric interface {
 	DerivedValue() int64
+}
+
+func WalkTree(root ASTNode, v Visitor) error {
+	if len(root.Children()) == 0 {
+		err := v.Visit(root)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	for _, child := range root.Children() {
+		err := WalkTree(child, v)
+		if err != nil {
+			return err
+		}
+	}
+
+	err := v.Visit(root)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type (
