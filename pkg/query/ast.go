@@ -50,9 +50,12 @@ func ASTToStringInternal(ast ASTNode, indent int) string {
 
 type ASTNode interface {
 	Children() []ASTNode
-	GenerateFilter(*database.Database) database.Filter
 	Walk(*database.Database) []database.Filter
 	Val() string
+}
+
+type FilterGenerator interface {
+	GenerateFilter(*database.Database) database.Filter
 }
 
 type Numeric interface {
@@ -142,22 +145,24 @@ func (b *BaseNode) Children() []ASTNode {
 	return b.children
 }
 
-func (b *BaseNode) GenerateFilter(_ *database.Database) database.Filter {
-	return nil
-}
-
 func (b *BaseNode) AddChild(child ASTNode) {
 	b.children = append(b.children, child)
 }
 
 func (b *BaseNode) descend(d *database.Database, n ASTNode) []database.Filter {
-	f := n.GenerateFilter(d)
+	var t FilterGenerator
+	var isFilter bool
+	var f database.Filter
+
+	if t, isFilter = n.(FilterGenerator); isFilter {
+		f = t.GenerateFilter(d)
+	}
 
 	if len(n.Children()) == 0 {
-		if f == nil {
-			return []database.Filter{}
-		} else {
+		if isFilter {
 			return []database.Filter{f}
+		} else {
+			return []database.Filter{}
 		}
 	}
 
