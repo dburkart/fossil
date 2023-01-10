@@ -52,7 +52,7 @@ func (p *Parser) Parse() (query ASTNode, err error) {
 //
 // Grammar:
 //
-//	query           = quantifier [ topic-selector ] [ time-predicate ] [ data-predicate ] [ data-pipeline ]
+//	query           = quantifier [ identifier ] [ topic-selector ] [ time-predicate ] [ data-predicate ] [ data-pipeline ]
 func (p *Parser) query() ASTNode {
 	q := QueryNode{BaseNode{
 		Value: p.Scanner.Input,
@@ -60,6 +60,14 @@ func (p *Parser) query() ASTNode {
 
 	// Queries must start with a Quantifier
 	q.AddChild(p.quantifier())
+
+	// Identifier
+	t := p.Scanner.Emit()
+	if t.Type == TOK_IDENTIFIER {
+		q.AddChild(&IdentifierNode{BaseNode{Value: t.Lexeme}})
+	} else {
+		p.Scanner.Rewind()
+	}
 
 	// Check for topic-selector
 	topicSelector := p.topicSelector()
