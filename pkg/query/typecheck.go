@@ -139,6 +139,8 @@ func (t *TypeAnnotator) Visit(n ASTNode) error {
 				t.Symbols[arg.Val()] = argType
 			}
 		}
+	case *DataPipelineNode:
+		nt.TypeI = nt.Children()[len(nt.Children())-1].Type()
 	}
 
 	return nil
