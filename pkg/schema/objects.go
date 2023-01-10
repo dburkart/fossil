@@ -13,6 +13,7 @@ import (
 type Object interface {
 	Validate([]byte) bool
 	ToSchema() string
+	IsNumeric() bool
 }
 
 type (
@@ -98,6 +99,15 @@ func (t Type) ToSchema() string {
 	return t.Name
 }
 
+func (t Type) IsNumeric() bool {
+	switch t.Name {
+	case "int8", "uint8", "int16", "uint16", "int32", "uint32", "int64", "uint64", "float32", "float64":
+		return true
+	default:
+		return false
+	}
+}
+
 func (a Array) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf(`"%s"`, a.ToSchema())), nil
 }
@@ -123,6 +133,10 @@ func (a Array) Validate(val []byte) bool {
 
 func (a Array) ToSchema() string {
 	return fmt.Sprintf("[%d]%s", a.Length, a.Type.ToSchema())
+}
+
+func (a Array) IsNumeric() bool {
+	return false
 }
 
 func (c Composite) MarshalJSON() ([]byte, error) {
@@ -167,4 +181,8 @@ func (c Composite) ToSchema() string {
 
 	schema += "}"
 	return schema
+}
+
+func (c Composite) IsNumeric() bool {
+	return false
 }

@@ -8,6 +8,7 @@ package query
 
 import (
 	"fmt"
+	"github.com/dburkart/fossil/pkg/schema"
 	"reflect"
 	"strconv"
 	"strings"
@@ -50,18 +51,51 @@ func ASTToStringInternal(ast ASTNode, indent int) string {
 
 type ASTNode interface {
 	Children() []ASTNode
-	GenerateFilter(*database.Database) database.Filter
 	Walk(*database.Database) []database.Filter
 	Val() string
+	Type() schema.Object
+}
+
+type Visitor interface {
+	Visit(ASTNode) error
+}
+
+type FilterGenerator interface {
+	GenerateFilter(*database.Database) database.Filter
 }
 
 type Numeric interface {
 	DerivedValue() int64
 }
 
+func WalkTree(root ASTNode, v Visitor) error {
+	if len(root.Children()) == 0 {
+		err := v.Visit(root)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	for _, child := range root.Children() {
+		err := WalkTree(child, v)
+		if err != nil {
+			return err
+		}
+	}
+
+	err := v.Visit(root)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 type (
 	BaseNode struct {
 		Value    string
+		TypeI    schema.Object
 		children []ASTNode
 	}
 
@@ -129,6 +163,7 @@ type (
 	DataFunctionNode struct {
 		BaseNode
 		Arguments []IdentifierNode
+		Next      *DataFunctionNode
 	}
 
 	BuiltinFunctionNode struct {
@@ -142,22 +177,28 @@ func (b *BaseNode) Children() []ASTNode {
 	return b.children
 }
 
-func (b *BaseNode) GenerateFilter(_ *database.Database) database.Filter {
-	return nil
-}
-
 func (b *BaseNode) AddChild(child ASTNode) {
 	b.children = append(b.children, child)
 }
 
+func (b *BaseNode) Type() schema.Object {
+	return b.TypeI
+}
+
 func (b *BaseNode) descend(d *database.Database, n ASTNode) []database.Filter {
-	f := n.GenerateFilter(d)
+	var t FilterGenerator
+	var isFilter bool
+	var f database.Filter
+
+	if t, isFilter = n.(FilterGenerator); isFilter {
+		f = t.GenerateFilter(d)
+	}
 
 	if len(n.Children()) == 0 {
-		if f == nil {
-			return []database.Filter{}
-		} else {
+		if isFilter {
 			return []database.Filter{f}
+		} else {
+			return []database.Filter{}
 		}
 	}
 

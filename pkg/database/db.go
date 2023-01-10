@@ -410,6 +410,23 @@ func (db *Database) serializeInternal() error {
 
 //-- Public Interfaces
 
+func (d *Database) SchemaForTopic(topic string) schema.Object {
+	var index int
+	var exists bool
+
+	topic = normalizeTopicName(topic)
+
+	d.topicLock.RLock()
+	index, exists = d.topics[topic]
+	d.topicLock.RUnlock()
+
+	if !exists {
+		return nil
+	}
+
+	return d.SchemaLookup[index]
+}
+
 func (d *Database) AddTopic(topic string, schema string) int {
 	topic = normalizeTopicName(topic)
 

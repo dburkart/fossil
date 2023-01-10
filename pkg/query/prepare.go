@@ -17,7 +17,19 @@ func Prepare(d *database.Database, statement string) (database.Filters, error) {
 
 	ast, err := p.Parse()
 	if err != nil {
-		return []database.Filter{}, err
+		return nil, err
+	}
+
+	// Pre-validation
+	validations := []Visitor{
+		NewTypeAnnotator(d),
+	}
+
+	for _, validation := range validations {
+		err = WalkTree(ast, validation)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Walk the tree
