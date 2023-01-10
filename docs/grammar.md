@@ -1,7 +1,7 @@
 # Query Grammar
 
 ```abnf
-query           = quantifier [ topic-selector ] [ time-predicate ] [ data-pipeline ]
+query           = quantifier [identifier] [ topic-selector ] [ time-predicate ] [ data-pipeline ]
 
 ; Quantifier
 quantifier      = "all" / sample
