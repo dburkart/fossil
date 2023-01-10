@@ -8,6 +8,7 @@ package query
 
 import (
 	"fmt"
+	"github.com/dburkart/fossil/pkg/schema"
 	"reflect"
 	"strconv"
 	"strings"
@@ -52,6 +53,7 @@ type ASTNode interface {
 	Children() []ASTNode
 	Walk(*database.Database) []database.Filter
 	Val() string
+	Type() schema.Object
 }
 
 type Visitor interface {
@@ -93,6 +95,7 @@ func WalkTree(root ASTNode, v Visitor) error {
 type (
 	BaseNode struct {
 		Value    string
+		TypeI    schema.Object
 		children []ASTNode
 	}
 
@@ -160,6 +163,7 @@ type (
 	DataFunctionNode struct {
 		BaseNode
 		Arguments []IdentifierNode
+		Next      *DataFunctionNode
 	}
 
 	BuiltinFunctionNode struct {
@@ -175,6 +179,10 @@ func (b *BaseNode) Children() []ASTNode {
 
 func (b *BaseNode) AddChild(child ASTNode) {
 	b.children = append(b.children, child)
+}
+
+func (b *BaseNode) Type() schema.Object {
+	return b.TypeI
 }
 
 func (b *BaseNode) descend(d *database.Database, n ASTNode) []database.Filter {
