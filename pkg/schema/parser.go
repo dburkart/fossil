@@ -40,13 +40,13 @@ func (p *Parser) Parse() (schema Object, err error) {
 	if schema == nil {
 		syntaxError := parse.NewSyntaxError(parse.Token{
 			Type:     TOK_INVALID,
-			Location: [2]int{p.Scanner.Pos, len(p.Scanner.Input) - 1},
+			Location: parse.Location{Start: p.Scanner.Pos, End: len(p.Scanner.Input) - 1},
 		}, "Error: Unrecognized schema")
 		err = errors.New(syntaxError.FormatError(p.Scanner.Input))
 	} else if p.Scanner.Pos != len(p.Scanner.Input) {
 		syntaxError := parse.NewSyntaxError(parse.Token{
 			Type:     TOK_INVALID,
-			Location: [2]int{p.Scanner.Pos, len(p.Scanner.Input) - 1},
+			Location: parse.Location{Start: p.Scanner.Pos, End: len(p.Scanner.Input) - 1},
 		}, "Error: Schema not valid, starting here")
 		err = errors.New(syntaxError.FormatError(p.Scanner.Input))
 	}

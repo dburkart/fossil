@@ -8,6 +8,7 @@ package query
 
 import (
 	"fmt"
+	"github.com/dburkart/fossil/pkg/common/parse"
 	"github.com/dburkart/fossil/pkg/schema"
 	"reflect"
 	"strconv"
@@ -29,14 +30,14 @@ func ASTToString(ast ASTNode) string {
 func ASTToStringInternal(ast ASTNode, indent int) string {
 	level := strings.Repeat("    ", indent)
 
-	value := ast.Val()
+	value := ast.Value()
 	switch t := ast.(type) {
 	case *DataFunctionNode:
 		var args string
 		for _, a := range t.Arguments {
-			args += a.Val() + ", "
+			args += a.Value() + ", "
 		}
-		value = "name(" + ast.Val() + ") args(" + args[:len(args)-2] + ")"
+		value = "name(" + ast.Value() + ") args(" + args[:len(args)-2] + ")"
 	}
 
 	t := reflect.TypeOf(ast)
@@ -52,7 +53,7 @@ func ASTToStringInternal(ast ASTNode, indent int) string {
 type ASTNode interface {
 	Children() []ASTNode
 	Walk(*database.Database) []database.Filter
-	Val() string
+	Value() string
 	Type() schema.Object
 }
 
@@ -94,13 +95,14 @@ func WalkTree(root ASTNode, v Visitor) error {
 
 type (
 	BaseNode struct {
-		Value    string
+		Token    parse.Token
 		TypeI    schema.Object
 		children []ASTNode
 	}
 
 	QueryNode struct {
 		BaseNode
+		Input string
 	}
 
 	QuantifierNode struct {
@@ -219,11 +221,15 @@ func (b *BaseNode) Walk(d *database.Database) []database.Filter {
 	return b.descend(d, b)
 }
 
-func (b *BaseNode) Val() string {
-	return b.Value
+func (b *BaseNode) Value() string {
+	return b.Token.Lexeme
 }
 
 //-- QueryNode
+
+func (q QueryNode) Value() string {
+	return q.Input
+}
 
 func (q QueryNode) GenerateFilter(_ *database.Database) database.Filter {
 	return nil
@@ -234,10 +240,10 @@ func (q QueryNode) GenerateFilter(_ *database.Database) database.Filter {
 func (q QuantifierNode) GenerateFilter(db *database.Database) database.Filter {
 	return func(data database.Entries) database.Entries {
 		if data == nil {
-			data = db.Retrieve(database.Query{Quantifier: q.Value, Range: nil})
+			data = db.Retrieve(database.Query{Quantifier: q.Value(), Range: nil})
 		}
 
-		switch q.Value {
+		switch q.Value() {
 		case "all":
 			return data
 		case "sample":
@@ -267,12 +273,16 @@ func (q QuantifierNode) GenerateFilter(db *database.Database) database.Filter {
 
 //-- TopicSelectorNode
 
+func (t TopicSelectorNode) Value() string {
+	return "in"
+}
+
 func (q TopicSelectorNode) GenerateFilter(db *database.Database) database.Filter {
 	topic, ok := q.Children()[0].(*TopicNode)
 	if !ok {
 		panic("Expected child to be of type *TopicNode")
 	}
-	topicName := topic.Value
+	topicName := topic.Value()
 
 	// Capture the desired topics in our closure
 	var topicFilter = make(map[string]bool)
@@ -306,7 +316,7 @@ func (q TopicSelectorNode) GenerateFilter(db *database.Database) database.Filter
 func (t TimePredicateNode) GenerateFilter(db *database.Database) database.Filter {
 	var startTime, endTime time.Time
 
-	switch t.Value {
+	switch t.Value() {
 	case "before":
 		endTime = t.Children()[0].(*TimeExpressionNode).Time()
 		startTime = db.Segments[0].HeadTime
@@ -322,7 +332,7 @@ func (t TimePredicateNode) GenerateFilter(db *database.Database) database.Filter
 
 	return func(data database.Entries) database.Entries {
 		if data == nil {
-			return db.Retrieve(database.Query{Range: &timeRange, RangeSemantics: t.Value})
+			return db.Retrieve(database.Query{Range: &timeRange, RangeSemantics: t.Value()})
 		}
 
 		// TODO: Handle non-nil case! Let's factor out some of the Retrieve functionality for
@@ -337,7 +347,7 @@ func (t TimeExpressionNode) Time() time.Time {
 	lh := t.Children()[0].(*TimeWhenceNode)
 	tm := lh.Time()
 
-	switch t.Value {
+	switch t.Value() {
 	case "-":
 		rh := t.Children()[1].(Numeric)
 		return tm.Add(time.Duration(rh.DerivedValue() * -1))
@@ -360,7 +370,7 @@ func (t TimeWhenceNode) Time() time.Time {
 func (b BinaryOpNode) DerivedValue() int64 {
 	lh, rh := b.Children()[0].(Numeric), b.Children()[1].(Numeric)
 
-	switch b.Value {
+	switch b.Value() {
 	case "*":
 		return lh.DerivedValue() * rh.DerivedValue()
 	case "-":
@@ -369,13 +379,13 @@ func (b BinaryOpNode) DerivedValue() int64 {
 		return lh.DerivedValue() + rh.DerivedValue()
 	}
 
-	panic(fmt.Sprintf("Unknown operator '%s'", b.Value))
+	panic(fmt.Sprintf("Unknown operator '%s'", b.Value()))
 }
 
 //-- TimespanNode
 
 func (t TimespanNode) DerivedValue() int64 {
-	switch t.Value {
+	switch t.Value() {
 	case "@year":
 		return int64(time.Hour * 24 * 365)
 	case "@month":
@@ -395,9 +405,9 @@ func (t TimespanNode) DerivedValue() int64 {
 //-- NumberNode
 
 func (n NumberNode) DerivedValue() int64 {
-	i, err := strconv.ParseInt(n.Value, 10, 64)
+	i, err := strconv.ParseInt(n.Value(), 10, 64)
 	if err != nil {
-		panic(fmt.Sprintf("NumberNode had unexpected non-numerical value: %s", n.Value))
+		panic(fmt.Sprintf("NumberNode had unexpected non-numerical value: %s", n.Value()))
 	}
 	return i
 }

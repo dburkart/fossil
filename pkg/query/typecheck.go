@@ -29,7 +29,7 @@ func NewTypeAnnotator(db *database.Database) *TypeAnnotator {
 func (t *TypeAnnotator) Visit(n ASTNode) error {
 	switch nt := n.(type) {
 	case *TopicNode:
-		topic := nt.Val()
+		topic := nt.Value()
 		s := t.db.SchemaForTopic(topic)
 		if s == nil {
 			return errors.New(fmt.Sprintf("Topic '%s' does not exist in the database.", topic))
@@ -42,22 +42,22 @@ func (t *TypeAnnotator) Visit(n ASTNode) error {
 		nt.TypeI = schema.Type{Name: "int64"}
 	case *IdentifierNode:
 		if t.origin == nil {
-			t.initialSymbol = nt.Value
+			t.initialSymbol = nt.Value()
 		} else {
 			// Check to make sure we exist in the symbol map
-			typeInfo, ok := t.Symbols[nt.Val()]
+			typeInfo, ok := t.Symbols[nt.Value()]
 			if !ok {
-				return errors.New(fmt.Sprintf("Unknown identifier '%s'.", nt.Val()))
+				return errors.New(fmt.Sprintf("Unknown identifier '%s'.", nt.Value()))
 			}
 			nt.TypeI = typeInfo
 		}
 	case *BinaryOpNode:
 		// Both operands must be numeric
 		if !nt.Children()[0].Type().IsNumeric() || !nt.Children()[1].Type().IsNumeric() {
-			return errors.New(fmt.Sprintf("Operands of '%s' must be numeric", nt.Val()))
+			return errors.New(fmt.Sprintf("Operands of '%s' must be numeric", nt.Value()))
 		}
 
-		switch nt.Val() {
+		switch nt.Value() {
 		case "-", "+", "*":
 			nt.TypeI = nt.Children()[0].Type()
 			// If one operand is a float, prefer that return type
@@ -101,19 +101,19 @@ func (t *TypeAnnotator) Visit(n ASTNode) error {
 			nt.TypeI = c.TypeI
 		case *IdentifierNode:
 			if c.Type() == nil {
-				return errors.New(fmt.Sprintf("Unknown identifier '%s'.", c.Val()))
+				return errors.New(fmt.Sprintf("Unknown identifier '%s'.", c.Value()))
 			}
 			if !c.Type().IsNumeric() {
-				return errors.New(fmt.Sprintf("Identifier '%s' has invalid type (%s) for operand '%s'", c.Val(), c.Type().ToSchema(), nt.Val()))
+				return errors.New(fmt.Sprintf("Identifier '%s' has invalid type (%s) for operand '%s'", c.Value(), c.Type().ToSchema(), nt.Value()))
 			}
 			nt.TypeI = c.TypeI
 		default:
-			return errors.New(fmt.Sprintf("Invalid type (%s) for operand '%s', expected a numeric type.", c.Type().ToSchema(), nt.Val()))
+			return errors.New(fmt.Sprintf("Invalid type (%s) for operand '%s', expected a numeric type.", c.Type().ToSchema(), nt.Value()))
 		}
 	case *DataFunctionNode:
 		nt.TypeI = nt.Children()[0].Type()
 		// Reduce must have 2 arguments
-		if nt.Val() == "reduce" && len(nt.Arguments) != 2 {
+		if nt.Value() == "reduce" && len(nt.Arguments) != 2 {
 			return errors.New(fmt.Sprintf("The reduce function expects 2 arguments, %d provided", len(nt.Arguments)))
 		}
 
@@ -129,14 +129,14 @@ func (t *TypeAnnotator) Visit(n ASTNode) error {
 				} else if nextNumArgs == array.Length {
 					argType = array.Type
 				} else {
-					return errors.New(fmt.Sprintf("Argument mismatch: %s stage expected %d arguments, but got %d", nt.Next.Val(), nextNumArgs, array.Length))
+					return errors.New(fmt.Sprintf("Argument mismatch: %s stage expected %d arguments, but got %d", nt.Next.Value(), nextNumArgs, array.Length))
 				}
 			} else {
 				argType = nt.TypeI
 			}
 
 			for _, arg := range nt.Next.Arguments {
-				t.Symbols[arg.Val()] = argType
+				t.Symbols[arg.Value()] = argType
 			}
 		}
 	case *DataPipelineNode:
