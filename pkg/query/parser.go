@@ -40,7 +40,7 @@ func (p *Parser) Parse() (query ASTNode, err error) {
 	if p.Scanner.Pos != len(p.Scanner.Input) {
 		syntaxError := parse.NewSyntaxError(parse.Token{
 			Type:     TOK_INVALID,
-			Location: [2]int{p.Scanner.Pos, len(p.Scanner.Input) - 1},
+			Location: parse.Location{Start: p.Scanner.Pos, End: len(p.Scanner.Input) - 1},
 		}, "Error: query is not valid, starting here")
 		err = errors.New(syntaxError.FormatError(p.Scanner.Input))
 	}
@@ -54,9 +54,7 @@ func (p *Parser) Parse() (query ASTNode, err error) {
 //
 //	query           = quantifier [ identifier ] [ topic-selector ] [ time-predicate ] [ data-predicate ] [ data-pipeline ]
 func (p *Parser) query() ASTNode {
-	q := QueryNode{BaseNode{
-		Value: p.Scanner.Input,
-	}}
+	q := QueryNode{BaseNode{}, p.Scanner.Input}
 
 	// Queries must start with a Quantifier
 	q.AddChild(p.quantifier())
@@ -64,7 +62,7 @@ func (p *Parser) query() ASTNode {
 	// Identifier
 	t := p.Scanner.Emit()
 	if t.Type == TOK_IDENTIFIER {
-		q.AddChild(&IdentifierNode{BaseNode{Value: t.Lexeme}})
+		q.AddChild(&IdentifierNode{BaseNode{Token: t}})
 	} else {
 		p.Scanner.Rewind()
 	}
@@ -102,7 +100,7 @@ func (p *Parser) quantifier() ASTNode {
 	}
 
 	q := QuantifierNode{BaseNode{
-		Value: tok.Lexeme,
+		Token: tok,
 	}}
 
 	if tok.Lexeme == "sample" {
@@ -139,10 +137,7 @@ func (p *Parser) topicSelector() ASTNode {
 	}
 
 	topic := p.topic()
-	t := TopicSelectorNode{BaseNode{
-		// TODO: this should be the full in ... selection statement
-		Value: "in",
-	}}
+	t := TopicSelectorNode{BaseNode{}}
 	t.AddChild(topic)
 
 	return &t
@@ -161,7 +156,7 @@ func (p *Parser) topic() ASTNode {
 	}
 
 	t := TopicNode{BaseNode{
-		Value: tok.Lexeme,
+		Token: tok,
 	}}
 
 	return &t
@@ -186,7 +181,7 @@ func (p *Parser) timePredicate() ASTNode {
 	lh := p.timeExpression()
 
 	t := TimePredicateNode{BaseNode{
-		Value: tok.Lexeme,
+		Token: tok,
 	}}
 	t.AddChild(lh)
 
@@ -212,14 +207,12 @@ func (p *Parser) timePredicate() ASTNode {
 func (p *Parser) timeExpression() ASTNode {
 	whence := p.timeWhence()
 
-	t := TimeExpressionNode{BaseNode{
-		Value: "",
-	}}
+	t := TimeExpressionNode{BaseNode{}}
 	t.AddChild(whence)
 
 	tok := p.Scanner.Emit()
 	if tok.Lexeme == "-" || tok.Lexeme == "+" {
-		t.Value = tok.Lexeme
+		t.Token = tok
 		t.AddChild(p.timeQuantity())
 	} else {
 		p.Scanner.Rewind()
@@ -256,7 +249,7 @@ func (p *Parser) timeWhence() ASTNode {
 
 	return &TimeWhenceNode{
 		BaseNode: BaseNode{
-			Value: tok.Lexeme,
+			Token: tok,
 		},
 		When: when,
 	}
@@ -277,7 +270,7 @@ func (p *Parser) timeQuantity() ASTNode {
 	}
 
 	node := BinaryOpNode{BaseNode{
-		Value: tok.Lexeme,
+		Token: tok,
 	}}
 
 	rh := p.timeTerm()
@@ -302,7 +295,7 @@ func (p *Parser) timeTerm() ASTNode {
 	}
 
 	node := BinaryOpNode{BaseNode{
-		Value: tok.Lexeme,
+		Token: tok,
 	}}
 
 	rh := p.timeAtom()
@@ -323,11 +316,11 @@ func (p *Parser) timeAtom() ASTNode {
 	switch tok.Type {
 	case TOK_NUMBER:
 		return &NumberNode{BaseNode{
-			Value: tok.Lexeme,
+			Token: tok,
 		}}
 	case TOK_TIMESPAN:
 		return &TimespanNode{BaseNode{
-			Value: tok.Lexeme,
+			Token: tok,
 		}}
 	}
 
@@ -388,7 +381,7 @@ func (p *Parser) dataFunction() ASTNode {
 		panic(parse.NewSyntaxError(t, fmt.Sprintf("Error: Unexpected token '%s', expected 'filter', 'map', or 'reduce'", t.Lexeme)))
 	}
 
-	fn := DataFunctionNode{BaseNode: BaseNode{Value: t.Lexeme}}
+	fn := DataFunctionNode{BaseNode: BaseNode{Token: t}}
 
 	// First, parse arguments
 	t = p.Scanner.Emit()
@@ -402,7 +395,7 @@ func (p *Parser) dataFunction() ASTNode {
 			panic(parse.NewSyntaxError(t, fmt.Sprintf("Error: Unexpected token '%s', expected an identifier", t.Lexeme)))
 		}
 
-		fn.Arguments = append(fn.Arguments, IdentifierNode{BaseNode: BaseNode{Value: t.Lexeme}})
+		fn.Arguments = append(fn.Arguments, IdentifierNode{BaseNode: BaseNode{Token: t}})
 
 		// Pull off a comma if one exists
 		t = p.Scanner.Emit()
@@ -430,7 +423,7 @@ func (p *Parser) expression() ASTNode {
 
 	t := p.Scanner.Emit()
 	if t.Type == TOK_NOT_EQ || t.Type == TOK_EQ_EQ {
-		op := BinaryOpNode{BaseNode{Value: t.Lexeme}}
+		op := BinaryOpNode{BaseNode{Token: t}}
 		op.children = append(op.children, c)
 		op.children = append(op.children, p.expression())
 		return &op
@@ -451,7 +444,7 @@ func (p *Parser) comparison() ASTNode {
 	c := p.Scanner.Emit()
 	if c.Type == TOK_GREATER || c.Type == TOK_GREATER_EQ ||
 		c.Type == TOK_LESS || c.Type == TOK_LESS_EQ {
-		op := BinaryOpNode{BaseNode{Value: c.Lexeme}}
+		op := BinaryOpNode{BaseNode{Token: c}}
 		op.children = append(op.children, t)
 		op.children = append(op.children, p.comparison())
 		return &op
@@ -471,7 +464,7 @@ func (p *Parser) term() ASTNode {
 
 	c := p.Scanner.Emit()
 	if c.Type == TOK_MINUS || c.Type == TOK_PLUS {
-		op := BinaryOpNode{BaseNode{Value: c.Lexeme}}
+		op := BinaryOpNode{BaseNode{Token: c}}
 		op.children = append(op.children, t)
 		op.children = append(op.children, p.term())
 		return &op
@@ -491,7 +484,7 @@ func (p *Parser) termMD() ASTNode {
 
 	c := p.Scanner.Emit()
 	if c.Type == TOK_SLASH || c.Type == TOK_STAR {
-		op := BinaryOpNode{BaseNode{Value: c.Lexeme}}
+		op := BinaryOpNode{BaseNode{Token: c}}
 		op.children = append(op.children, u)
 		op.children = append(op.children, p.termMD())
 		return &op
@@ -509,13 +502,13 @@ func (p *Parser) termMD() ASTNode {
 func (p *Parser) unary() ASTNode {
 	t := p.Scanner.Emit()
 	if t.Type == TOK_MINUS || t.Type == TOK_PLUS {
-		op := UnaryOpNode{BaseNode{Value: t.Lexeme}}
+		op := UnaryOpNode{BaseNode{Token: t}}
 		t = p.Scanner.Emit()
 
 		if t.Type == TOK_NUMBER {
-			op.children = append(op.children, &NumberNode{BaseNode{Value: t.Lexeme}})
+			op.children = append(op.children, &NumberNode{BaseNode{Token: t}})
 		} else if t.Type == TOK_IDENTIFIER {
-			op.children = append(op.children, &IdentifierNode{BaseNode{Value: t.Lexeme}})
+			op.children = append(op.children, &IdentifierNode{BaseNode{Token: t}})
 		} else {
 			panic(parse.NewSyntaxError(t, fmt.Sprintf("Error: Unexpected token '%s'. Expected a number or identifier.", t.Lexeme)))
 		}
@@ -542,9 +535,9 @@ func (p *Parser) primary() ASTNode {
 
 	switch t.Type {
 	case TOK_NUMBER:
-		return &NumberNode{BaseNode{Value: t.Lexeme}}
+		return &NumberNode{BaseNode{Token: t}}
 	case TOK_STRING:
-		return &StringNode{BaseNode{Value: t.Lexeme}}
+		return &StringNode{BaseNode{Token: t}}
 	default:
 		panic(parse.NewSyntaxError(t, fmt.Sprintf("Error: Unexpected token '%s'. Expected identifier, number, string, tuple or builtin.", t.Lexeme)))
 	}
@@ -563,12 +556,12 @@ func (p *Parser) builtin() ASTNode {
 		return nil
 	}
 
-	node := BuiltinFunctionNode{BaseNode{Value: t.Lexeme}}
+	node := BuiltinFunctionNode{BaseNode{Token: t}}
 
 	t = p.Scanner.Emit()
 	if t.Type != TOK_PAREN_L {
 		p.Scanner.Rewind()
-		return &IdentifierNode{BaseNode{Value: node.Value}}
+		return &IdentifierNode{BaseNode{Token: node.Token}}
 	}
 
 	tuple := p.tuple()

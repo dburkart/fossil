@@ -194,7 +194,7 @@ func (s *Scanner) Emit() parse.Token {
 	}
 
 	t.Lexeme = s.Input[s.Start:s.Pos]
-	t.Location = [2]int{s.Start, s.Pos}
+	t.Location = parse.Location{Start: s.Start, End: s.Pos}
 	s.Start = s.Pos
 
 	s.LastWidth = s.Start - oldStart
