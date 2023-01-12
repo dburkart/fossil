@@ -265,6 +265,8 @@ func (p *Parser) timeQuantity() ast.ASTNode {
 		Token: tok,
 	}}
 
+	node.Op = tok
+
 	rh := p.timeTerm()
 
 	node.Left = lh

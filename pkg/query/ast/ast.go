@@ -82,6 +82,7 @@ type (
 	BinaryOpNode struct {
 		BaseNode
 		Left  ASTNode
+		Op    parse.Token
 		Right ASTNode
 	}
 
