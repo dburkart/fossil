@@ -9,11 +9,11 @@ package query
 import (
 	"errors"
 	"github.com/dburkart/fossil/pkg/database"
+	"github.com/dburkart/fossil/pkg/query/analysis"
 	"github.com/dburkart/fossil/pkg/query/ast"
 	"github.com/dburkart/fossil/pkg/query/parser"
 	"github.com/dburkart/fossil/pkg/query/plan"
 	"github.com/dburkart/fossil/pkg/query/scanner"
-	"github.com/dburkart/fossil/pkg/query/validation"
 )
 
 type Query struct {
@@ -38,7 +38,7 @@ func Prepare(d *database.Database, statement string) (Query, error) {
 	}
 
 	// Type checking
-	checker := validation.MakeTypeAnnotator(d)
+	checker := analysis.MakeTypeAnnotator(d)
 	ast.Walk(checker, root)
 
 	if len(checker.Errors) > 0 {
