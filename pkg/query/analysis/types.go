@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-package validation
+package analysis
 
 import (
 	"fmt"
