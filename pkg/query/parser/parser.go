@@ -307,9 +307,7 @@ func (p *Parser) timeAtom() ast.ASTNode {
 
 	switch tok.Type {
 	case scanner.TOK_NUMBER:
-		return &ast.NumberNode{BaseNode: ast.BaseNode{
-			Token: tok,
-		}}
+		return ast.MakeNumberNode(tok)
 	case scanner.TOK_TIMESPAN:
 		return &ast.TimespanNode{BaseNode: ast.BaseNode{
 			Token: tok,
@@ -498,7 +496,7 @@ func (p *Parser) unary() ast.ASTNode {
 		t = p.Scanner.Emit()
 
 		if t.Type == scanner.TOK_NUMBER {
-			op.Operand = &ast.NumberNode{BaseNode: ast.BaseNode{Token: t}}
+			op.Operand = ast.MakeNumberNode(t)
 		} else if t.Type == scanner.TOK_IDENTIFIER {
 			op.Operand = &ast.IdentifierNode{ast.BaseNode{Token: t}}
 		} else {
@@ -527,9 +525,9 @@ func (p *Parser) primary() ast.ASTNode {
 
 	switch t.Type {
 	case scanner.TOK_NUMBER:
-		return &ast.NumberNode{ast.BaseNode{Token: t}}
+		return ast.MakeNumberNode(t)
 	case scanner.TOK_STRING:
-		return &ast.StringNode{ast.BaseNode{Token: t}}
+		return ast.MakeStringNode(t)
 	default:
 		panic(parse.NewSyntaxError(t, fmt.Sprintf("Error: Unexpected token '%s'. Expected identifier, number, string, tuple or builtin.", t.Lexeme)))
 	}
