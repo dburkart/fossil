@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"github.com/dburkart/fossil/pkg/common/parse"
 	"github.com/dburkart/fossil/pkg/query/scanner"
-	"strconv"
+	"github.com/dburkart/fossil/pkg/query/types"
 	"time"
 
 	"github.com/dburkart/fossil/pkg/database"
@@ -101,10 +101,12 @@ type (
 
 	NumberNode struct {
 		BaseNode
+		Val types.Value
 	}
 
 	StringNode struct {
 		BaseNode
+		Val types.Value
 	}
 
 	TupleNode struct {
@@ -213,12 +215,18 @@ func (t TimespanNode) DerivedValue() int64 {
 	return 0
 }
 
+//-- StringNode
+
+func MakeStringNode(tok parse.Token) *StringNode {
+	return &StringNode{BaseNode: BaseNode{Token: tok}, Val: types.MakeFromToken(tok)}
+}
+
 //-- NumberNode
 
+func MakeNumberNode(tok parse.Token) *NumberNode {
+	return &NumberNode{BaseNode: BaseNode{Token: tok}, Val: types.MakeFromToken(tok)}
+}
+
 func (n NumberNode) DerivedValue() int64 {
-	i, err := strconv.ParseInt(n.Value(), 10, 64)
-	if err != nil {
-		panic(fmt.Sprintf("NumberNode had unexpected non-numerical value: %s", n.Value()))
-	}
-	return i
+	return types.IntVal(n.Val)
 }
