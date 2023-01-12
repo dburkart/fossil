@@ -38,7 +38,7 @@ func Prepare(d *database.Database, statement string) (Query, error) {
 	}
 
 	// Type checking
-	checker := analysis.MakeTypeAnnotator(d)
+	checker := analysis.MakeTypeChecker(d)
 	ast.Walk(checker, root)
 
 	if len(checker.Errors) > 0 {
