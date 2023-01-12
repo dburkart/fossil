@@ -93,6 +93,8 @@ func (t *TypeChecker) Visit(node ast.ASTNode) ast.Visitor {
 				}
 			case scanner.TOK_SLASH:
 				t.typeLookup[n] = schema.Type{Name: "float64"}
+			case scanner.TOK_LESS, scanner.TOK_LESS_EQ, scanner.TOK_EQ_EQ, scanner.TOK_NOT_EQ, scanner.TOK_GREATER, scanner.TOK_GREATER_EQ:
+				t.typeLookup[n] = schema.Type{Name: "boolean"}
 			}
 			t.locations[n] = parse.Location{Start: t.locations[n.Left].Start, End: t.locations[n.Right].End}
 		case *ast.UnaryOpNode:

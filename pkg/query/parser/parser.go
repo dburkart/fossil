@@ -291,6 +291,7 @@ func (p *Parser) timeTerm() ast.ASTNode {
 	node := ast.BinaryOpNode{BaseNode: ast.BaseNode{
 		Token: tok,
 	}}
+	node.Op = tok
 
 	rh := p.timeAtom()
 
@@ -416,6 +417,7 @@ func (p *Parser) expression() ast.ASTNode {
 	t := p.Scanner.Emit()
 	if t.Type == scanner.TOK_NOT_EQ || t.Type == scanner.TOK_EQ_EQ {
 		op := ast.BinaryOpNode{BaseNode: ast.BaseNode{Token: t}}
+		op.Op = t
 		op.Left = c
 		op.Right = p.expression()
 		return &op
@@ -437,6 +439,7 @@ func (p *Parser) comparison() ast.ASTNode {
 	if c.Type == scanner.TOK_GREATER || c.Type == scanner.TOK_GREATER_EQ ||
 		c.Type == scanner.TOK_LESS || c.Type == scanner.TOK_LESS_EQ {
 		op := ast.BinaryOpNode{BaseNode: ast.BaseNode{Token: c}}
+		op.Op = c
 		op.Left = t
 		op.Right = p.comparison()
 		return &op
@@ -457,6 +460,7 @@ func (p *Parser) term() ast.ASTNode {
 	c := p.Scanner.Emit()
 	if c.Type == scanner.TOK_MINUS || c.Type == scanner.TOK_PLUS {
 		op := ast.BinaryOpNode{BaseNode: ast.BaseNode{Token: c}}
+		op.Op = c
 		op.Left = t
 		op.Right = p.term()
 		return &op
@@ -477,6 +481,7 @@ func (p *Parser) termMD() ast.ASTNode {
 	c := p.Scanner.Emit()
 	if c.Type == scanner.TOK_SLASH || c.Type == scanner.TOK_STAR {
 		op := ast.BinaryOpNode{BaseNode: ast.BaseNode{Token: c}}
+		op.Op = c
 		op.Left = u
 		op.Right = p.termMD()
 		return &op
