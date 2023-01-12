@@ -9,8 +9,7 @@ package ast
 import (
 	"fmt"
 	"github.com/dburkart/fossil/pkg/common/parse"
-	"github.com/dburkart/fossil/pkg/schema"
-	"reflect"
+	"github.com/dburkart/fossil/pkg/query/scanner"
 	"strconv"
 	"strings"
 	"time"
@@ -18,45 +17,12 @@ import (
 	"github.com/dburkart/fossil/pkg/database"
 )
 
-func (b *BaseNode) ToString() string {
-	t := reflect.TypeOf(b)
-	return t.Elem().Name()
-}
-
-func ASTToString(ast ASTNode) string {
-	return ASTToStringInternal(ast, 0)
-}
-
-func ASTToStringInternal(ast ASTNode, indent int) string {
-	level := strings.Repeat("    ", indent)
-
-	value := ast.Value()
-	switch t := ast.(type) {
-	case *DataFunctionNode:
-		var args string
-		for _, a := range t.Arguments {
-			args += a.Value() + ", "
-		}
-		value = "name(" + ast.Value() + ") args(" + args[:len(args)-2] + ")"
-	}
-
-	t := reflect.TypeOf(ast)
-	output := level + t.Elem().Name() + "[" + value + "]" + "\n"
-
-	for _, child := range ast.Children() {
-		output += ASTToStringInternal(child, indent+1)
-	}
-
-	return output
-}
-
 type ASTNode interface {
 	Value() string
-	Type() schema.Object
 }
 
 type Visitor interface {
-	Visit(ASTNode) error
+	Visit(ASTNode) Visitor
 }
 
 type FilterGenerator interface {
@@ -67,34 +33,9 @@ type Numeric interface {
 	DerivedValue() int64
 }
 
-func WalkTree(root ASTNode, v Visitor) error {
-	if len(root.Children()) == 0 {
-		err := v.Visit(root)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
-
-	for _, child := range root.Children() {
-		err := WalkTree(child, v)
-		if err != nil {
-			return err
-		}
-	}
-
-	err := v.Visit(root)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 type (
 	BaseNode struct {
 		Token parse.Token
-		TypeI schema.Object
 	}
 
 	QueryNode struct {
@@ -194,10 +135,6 @@ type (
 
 // -- BaseNode
 
-func (b *BaseNode) Type() schema.Object {
-	return b.TypeI
-}
-
 func (b *BaseNode) Value() string {
 	return b.Token.Lexeme
 }
@@ -224,7 +161,7 @@ func (q QuantifierNode) GenerateFilter(db *database.Database) database.Filter {
 		case "all":
 			return data
 		case "sample":
-			quantity, ok := q.Children()[0].(Numeric)
+			quantity, ok := q.TimeQuantity.(Numeric)
 			if !ok {
 				panic("Expected child to be of type *TimespanNode")
 			}
@@ -255,19 +192,15 @@ func (t TopicSelectorNode) Value() string {
 }
 
 func (q TopicSelectorNode) GenerateFilter(db *database.Database) database.Filter {
-	topic, ok := q.Children()[0].(*TopicNode)
-	if !ok {
-		panic("Expected child to be of type *TopicNode")
-	}
-	topicName := topic.Value()
+	topic := q.Topic.Lexeme
 
 	// Capture the desired topics in our closure
 	var topicFilter = make(map[string]bool)
 
 	// Since topics are hierarchical, we want any topic which has the desired prefix
-	for _, topic := range db.TopicLookup {
-		if strings.HasPrefix(topic, topicName) {
-			topicFilter[topic] = true
+	for _, t := range db.TopicLookup {
+		if strings.HasPrefix(t, topic) {
+			topicFilter[t] = true
 		}
 	}
 
@@ -295,14 +228,14 @@ func (t TimePredicateNode) GenerateFilter(db *database.Database) database.Filter
 
 	switch t.Value() {
 	case "before":
-		endTime = t.Children()[0].(*TimeExpressionNode).Time()
+		endTime = t.Begin.(*TimeExpressionNode).Time()
 		startTime = db.Segments[0].HeadTime
 	case "since":
-		startTime = t.Children()[0].(*TimeExpressionNode).Time()
+		startTime = t.Begin.(*TimeExpressionNode).Time()
 		endTime = time.Now()
 	case "between":
-		startTime = t.Children()[0].(*TimeExpressionNode).Time()
-		endTime = t.Children()[1].(*TimeExpressionNode).Time()
+		startTime = t.Begin.(*TimeExpressionNode).Time()
+		endTime = t.End.(*TimeExpressionNode).Time()
 	}
 
 	timeRange := database.TimeRange{Start: startTime, End: endTime}
@@ -321,15 +254,15 @@ func (t TimePredicateNode) GenerateFilter(db *database.Database) database.Filter
 //-- TimeExpressionNode
 
 func (t TimeExpressionNode) Time() time.Time {
-	lh := t.Children()[0].(*TimeWhenceNode)
+	lh := t.Whence.(*TimeWhenceNode)
 	tm := lh.Time()
 
-	switch t.Value() {
-	case "-":
-		rh := t.Children()[1].(Numeric)
+	switch t.Op.Type {
+	case scanner.TOK_MINUS:
+		rh := t.Quantity.(Numeric)
 		return tm.Add(time.Duration(rh.DerivedValue() * -1))
-	case "+":
-		rh := t.Children()[1].(Numeric)
+	case scanner.TOK_PLUS:
+		rh := t.Quantity.(Numeric)
 		return tm.Add(time.Duration(rh.DerivedValue()))
 	}
 
@@ -345,7 +278,7 @@ func (t TimeWhenceNode) Time() time.Time {
 //-- BinaryOpNode
 
 func (b BinaryOpNode) DerivedValue() int64 {
-	lh, rh := b.Children()[0].(Numeric), b.Children()[1].(Numeric)
+	lh, rh := b.Left.(Numeric), b.Right.(Numeric)
 
 	switch b.Value() {
 	case "*":

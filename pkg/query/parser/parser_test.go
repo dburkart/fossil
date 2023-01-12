@@ -10,6 +10,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/andreyvit/diff"
+	"github.com/dburkart/fossil/pkg/query/ast"
 	"github.com/dburkart/fossil/pkg/query/scanner"
 	"os"
 	"path"
@@ -27,21 +28,21 @@ func TestTimeWhence(t *testing.T) {
 		},
 	}
 
-	ast := p.timeWhence()
-	if fmt.Sprint(reflect.TypeOf(ast)) != "*query.TimeWhenceNode" {
-		t.Errorf("wanted first child to be *query.TimeWhenceNode, found %s", reflect.TypeOf(ast))
+	root := p.timeWhence()
+	if fmt.Sprint(reflect.TypeOf(root)) != "*ast.TimeWhenceNode" {
+		t.Errorf("wanted first child to be *ast.TimeWhenceNode, found %s", reflect.TypeOf(root))
 	}
 
 	want, _ := time.Parse(time.RFC3339, "1996-12-19T16:39:57-08:00")
 
-	tm := ast.(*ast.TimeWhenceNode).Time()
+	tm := root.(*ast.TimeWhenceNode).Time()
 	if !tm.Equal(want) {
 		t.Errorf("wanted time-whence to parse to %s, got %s", want, tm)
 	}
 }
 
 func TestParse(t *testing.T) {
-	testDirectory, err := filepath.Abs("../../test/parsing/query")
+	testDirectory, err := filepath.Abs("../../../test/parsing/query")
 	if err != nil {
 		panic(err)
 	}
@@ -65,34 +66,36 @@ func TestParse(t *testing.T) {
 				t.Errorf("Error opening test: %s", test)
 			}
 
-			scanner := bufio.NewScanner(file)
+			s := bufio.NewScanner(file)
 
 			shouldPass := false
-			scanner.Scan()
-			if strings.ToUpper(scanner.Text()) == "PASS" {
+			s.Scan()
+			if strings.ToUpper(s.Text()) == "PASS" {
 				shouldPass = true
 			}
 
 			actual := ""
-			for scanner.Scan() {
+			for s.Scan() {
+				var d ast.Dumper
 				p := Parser{
 					scanner.Scanner{
-						Input: scanner.Text(),
+						Input: s.Text(),
 					},
 				}
 
-				ast, err := p.Parse()
+				root, err := p.Parse()
 				if shouldPass && err != nil {
 					t.Error(err)
 					continue
 				}
 				if !shouldPass && err == nil {
-					t.Errorf("Expected query to fail: %s", scanner.Text())
+					t.Errorf("Expected query to fail: %s", s.Text())
 					continue
 				}
 
 				if shouldPass {
-					actual += ast.ASTToString(ast)
+					ast.Walk(&d, root)
+					actual += d.Output
 				}
 			}
 
