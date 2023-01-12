@@ -8,10 +8,8 @@ package query
 
 import (
 	"github.com/dburkart/fossil/pkg/database"
-	ast2 "github.com/dburkart/fossil/pkg/query/ast"
 	"github.com/dburkart/fossil/pkg/query/parser"
 	"github.com/dburkart/fossil/pkg/query/scanner"
-	"github.com/dburkart/fossil/pkg/query/types"
 )
 
 func Prepare(d *database.Database, statement string) (database.Filters, error) {
@@ -21,25 +19,25 @@ func Prepare(d *database.Database, statement string) (database.Filters, error) {
 		},
 	}
 
-	ast, err := p.Parse()
+	_, err := p.Parse()
 	if err != nil {
 		return nil, err
 	}
 
 	// Pre-validation
-	validations := []ast2.Visitor{
-		types.NewTypeAnnotator(d),
-	}
-
-	for _, validation := range validations {
-		err = ast2.WalkTree(ast, validation)
-		if err != nil {
-			return nil, err
-		}
-	}
+	//validations := []root.Visitor{
+	//	types.NewTypeAnnotator(d),
+	//}
+	//
+	//for _, validation := range validations {
+	//	err = root.WalkTree(root, validation)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//}
 
 	// Walk the tree
-	filters := ast.Walk(d)
+	//filters := root.Walk(d)
 
-	return filters, err
+	return nil, err
 }
