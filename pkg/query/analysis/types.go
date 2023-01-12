@@ -34,6 +34,7 @@ func MakeTypeChecker(db *database.Database) *TypeChecker {
 	return &t
 }
 
+// FIXME: Factor out stack into it's own thing
 func (t *TypeChecker) push(node ast.ASTNode) {
 	t.nodes = append(t.nodes, node)
 }

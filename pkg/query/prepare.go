@@ -17,11 +17,17 @@ import (
 )
 
 type Query struct {
-	Filters database.Filters
+	Filters  database.Filters
+	Pipeline plan.DataPipeline
 }
 
 func (q *Query) Execute() database.Result {
 	result := q.Filters.Execute()
+
+	if q.Pipeline != nil {
+		result.Data = q.Pipeline.Execute(result.Data)
+	}
+
 	return result
 }
 
@@ -50,5 +56,14 @@ func Prepare(d *database.Database, statement string) (Query, error) {
 	builder := plan.MetaDataFilterBuilder{DB: d}
 	ast.Walk(&builder, root)
 
-	return Query{Filters: builder.Filters}, err
+	q := Query{Filters: builder.Filters}
+
+	// Data Pipeline
+	pipelineNode := root.(*ast.QueryNode).DataPipeline
+	if pipelineNode != nil {
+		pipeline := plan.MakePipelineFromNode(pipelineNode.(*ast.DataPipelineNode))
+		q.Pipeline = &pipeline
+	}
+
+	return q, err
 }
