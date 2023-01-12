@@ -8,7 +8,9 @@ package query
 
 import (
 	"github.com/dburkart/fossil/pkg/database"
+	"github.com/dburkart/fossil/pkg/query/ast"
 	"github.com/dburkart/fossil/pkg/query/parser"
+	"github.com/dburkart/fossil/pkg/query/plan"
 	"github.com/dburkart/fossil/pkg/query/scanner"
 )
 
@@ -19,7 +21,7 @@ func Prepare(d *database.Database, statement string) (database.Filters, error) {
 		},
 	}
 
-	_, err := p.Parse()
+	root, err := p.Parse()
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +39,8 @@ func Prepare(d *database.Database, statement string) (database.Filters, error) {
 	//}
 
 	// Walk the tree
-	//filters := root.Walk(d)
+	builder := plan.MetaDataFilterBuilder{DB: d}
+	ast.Walk(&builder, root)
 
-	return nil, err
+	return builder.Filters, err
 }
