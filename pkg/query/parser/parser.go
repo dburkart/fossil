@@ -139,13 +139,13 @@ func (p *Parser) topicSelector() ast.ASTNode {
 		p.Scanner.Rewind()
 		return nil
 	}
+	t := ast.TopicSelectorNode{In: tok.Location}
 
 	tok = p.Scanner.Emit()
 	if tok.Type != scanner.TOK_TOPIC && tok.Type != scanner.TOK_SLASH {
 		panic(parse.NewSyntaxError(tok, fmt.Sprintf("Error: unexpected token '%s', expected a topic after 'in' keyword", tok.Lexeme)))
 	}
 
-	t := ast.TopicSelectorNode{}
 	t.Topic = tok
 
 	return &t
@@ -373,7 +373,7 @@ func (p *Parser) dataFunction() ast.ASTNode {
 		panic(parse.NewSyntaxError(t, fmt.Sprintf("Error: Unexpected token '%s', expected 'filter', 'map', or 'reduce'", t.Lexeme)))
 	}
 
-	fn := ast.DataFunctionNode{BaseNode: ast.BaseNode{Token: t}}
+	fn := ast.DataFunctionNode{BaseNode: ast.BaseNode{Token: t}, Name: t}
 
 	// First, parse arguments
 	t = p.Scanner.Emit()

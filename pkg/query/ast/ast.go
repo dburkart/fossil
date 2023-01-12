@@ -11,7 +11,6 @@ import (
 	"github.com/dburkart/fossil/pkg/common/parse"
 	"github.com/dburkart/fossil/pkg/query/scanner"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/dburkart/fossil/pkg/database"
@@ -56,6 +55,7 @@ type (
 
 	TopicSelectorNode struct {
 		BaseNode
+		In    parse.Location
 		Topic parse.Token
 	}
 
@@ -119,6 +119,7 @@ type (
 
 	DataFunctionNode struct {
 		BaseNode
+		Name       parse.Token
 		Arguments  []IdentifierNode
 		Next       *DataFunctionNode
 		Expression ASTNode
@@ -145,110 +146,10 @@ func (q QueryNode) Value() string {
 	return q.Input
 }
 
-func (q QueryNode) GenerateFilter(_ *database.Database) database.Filter {
-	return nil
-}
-
-//-- QuantifierNode
-
-func (q QuantifierNode) GenerateFilter(db *database.Database) database.Filter {
-	return func(data database.Entries) database.Entries {
-		if data == nil {
-			data = db.Retrieve(database.Query{Quantifier: q.Value(), Range: nil})
-		}
-
-		switch q.Value() {
-		case "all":
-			return data
-		case "sample":
-			quantity, ok := q.TimeQuantity.(Numeric)
-			if !ok {
-				panic("Expected child to be of type *TimespanNode")
-			}
-
-			sampleDuration := quantity.DerivedValue()
-			nextTime := data[0].Time
-			filtered := database.Entries{}
-
-			for _, val := range data {
-				if val.Time.After(nextTime) || val.Time.Equal(nextTime) {
-					filtered = append(filtered, val)
-					nextTime = val.Time.Add(time.Duration(sampleDuration))
-				}
-			}
-
-			return filtered
-
-		}
-		// TODO: What's the right thing to return here? Maybe we should panic?
-		return database.Entries{}
-	}
-}
-
 //-- TopicSelectorNode
 
 func (t TopicSelectorNode) Value() string {
 	return "in"
-}
-
-func (q TopicSelectorNode) GenerateFilter(db *database.Database) database.Filter {
-	topic := q.Topic.Lexeme
-
-	// Capture the desired topics in our closure
-	var topicFilter = make(map[string]bool)
-
-	// Since topics are hierarchical, we want any topic which has the desired prefix
-	for _, t := range db.TopicLookup {
-		if strings.HasPrefix(t, topic) {
-			topicFilter[t] = true
-		}
-	}
-
-	return func(data database.Entries) database.Entries {
-		if data == nil {
-			data = db.Retrieve(database.Query{Range: nil})
-		}
-
-		filtered := database.Entries{}
-
-		for _, val := range data {
-			if _, ok := topicFilter[val.Topic]; ok {
-				filtered = append(filtered, val)
-			}
-		}
-
-		return filtered
-	}
-}
-
-//-- TimePredicateNode
-
-func (t TimePredicateNode) GenerateFilter(db *database.Database) database.Filter {
-	var startTime, endTime time.Time
-
-	switch t.Value() {
-	case "before":
-		endTime = t.Begin.(*TimeExpressionNode).Time()
-		startTime = db.Segments[0].HeadTime
-	case "since":
-		startTime = t.Begin.(*TimeExpressionNode).Time()
-		endTime = time.Now()
-	case "between":
-		startTime = t.Begin.(*TimeExpressionNode).Time()
-		endTime = t.End.(*TimeExpressionNode).Time()
-	}
-
-	timeRange := database.TimeRange{Start: startTime, End: endTime}
-
-	return func(data database.Entries) database.Entries {
-		if data == nil {
-			return db.Retrieve(database.Query{Range: &timeRange, RangeSemantics: t.Value()})
-		}
-
-		// TODO: Handle non-nil case! Let's factor out some of the Retrieve functionality for
-		//       filtering ranges.
-		return nil
-	}
 }
 
 //-- TimeExpressionNode
