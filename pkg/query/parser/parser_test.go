@@ -4,12 +4,13 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-package query
+package parser
 
 import (
 	"bufio"
 	"fmt"
 	"github.com/andreyvit/diff"
+	"github.com/dburkart/fossil/pkg/query/scanner"
 	"os"
 	"path"
 	"path/filepath"
@@ -21,7 +22,7 @@ import (
 
 func TestTimeWhence(t *testing.T) {
 	p := Parser{
-		Scanner: Scanner{
+		Scanner: scanner.Scanner{
 			Input: "~(1996-12-19T16:39:57-08:00)",
 		},
 	}
@@ -33,7 +34,7 @@ func TestTimeWhence(t *testing.T) {
 
 	want, _ := time.Parse(time.RFC3339, "1996-12-19T16:39:57-08:00")
 
-	tm := ast.(*TimeWhenceNode).Time()
+	tm := ast.(*ast.TimeWhenceNode).Time()
 	if !tm.Equal(want) {
 		t.Errorf("wanted time-whence to parse to %s, got %s", want, tm)
 	}
@@ -75,7 +76,7 @@ func TestParse(t *testing.T) {
 			actual := ""
 			for scanner.Scan() {
 				p := Parser{
-					Scanner{
+					scanner.Scanner{
 						Input: scanner.Text(),
 					},
 				}
@@ -91,7 +92,7 @@ func TestParse(t *testing.T) {
 				}
 
 				if shouldPass {
-					actual += ASTToString(ast)
+					actual += ast.ASTToString(ast)
 				}
 			}
 

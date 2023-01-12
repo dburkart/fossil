@@ -4,12 +4,13 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-package query
+package types
 
 import (
 	"errors"
 	"fmt"
 	"github.com/dburkart/fossil/pkg/database"
+	"github.com/dburkart/fossil/pkg/query/ast"
 	"github.com/dburkart/fossil/pkg/schema"
 	"strings"
 )
@@ -26,9 +27,9 @@ func NewTypeAnnotator(db *database.Database) *TypeAnnotator {
 	return &TypeAnnotator{Symbols: make(map[string]schema.Object), db: db}
 }
 
-func (t *TypeAnnotator) Visit(n ASTNode) error {
+func (t *TypeAnnotator) Visit(n ast.ASTNode) error {
 	switch nt := n.(type) {
-	case *TopicNode:
+	case *ast.TopicNode:
 		topic := nt.Value()
 		s := t.db.SchemaForTopic(topic)
 		if s == nil {
@@ -38,9 +39,9 @@ func (t *TypeAnnotator) Visit(n ASTNode) error {
 		if t.initialSymbol != "" {
 			t.Symbols[t.initialSymbol] = t.origin
 		}
-	case *NumberNode:
+	case *ast.NumberNode:
 		nt.TypeI = schema.Type{Name: "int64"}
-	case *IdentifierNode:
+	case *ast.IdentifierNode:
 		if t.origin == nil {
 			t.initialSymbol = nt.Value()
 		} else {
@@ -51,7 +52,7 @@ func (t *TypeAnnotator) Visit(n ASTNode) error {
 			}
 			nt.TypeI = typeInfo
 		}
-	case *BinaryOpNode:
+	case *ast.BinaryOpNode:
 		// Both operands must be numeric
 		if !nt.Children()[0].Type().IsNumeric() || !nt.Children()[1].Type().IsNumeric() {
 			return errors.New(fmt.Sprintf("Operands of '%s' must be numeric", nt.Value()))
@@ -73,7 +74,7 @@ func (t *TypeAnnotator) Visit(n ASTNode) error {
 				nt.TypeI = schema.Type{Name: "float64"}
 			}
 		}
-	case *TupleNode:
+	case *ast.TupleNode:
 		var innerType schema.Object
 		// Each item must have a compatible type
 		for _, item := range nt.Children() {
@@ -94,12 +95,12 @@ func (t *TypeAnnotator) Visit(n ASTNode) error {
 			// FIXME: Up-sample to largest numeric
 		}
 		nt.TypeI = schema.Array{Type: *innerType.(*schema.Type), Length: len(nt.Children())}
-	case *UnaryOpNode:
+	case *ast.UnaryOpNode:
 		// Child should be numeric
 		switch c := nt.Children()[0].(type) {
-		case *NumberNode:
+		case *ast.NumberNode:
 			nt.TypeI = c.TypeI
-		case *IdentifierNode:
+		case *ast.IdentifierNode:
 			if c.Type() == nil {
 				return errors.New(fmt.Sprintf("Unknown identifier '%s'.", c.Value()))
 			}
@@ -110,7 +111,7 @@ func (t *TypeAnnotator) Visit(n ASTNode) error {
 		default:
 			return errors.New(fmt.Sprintf("Invalid type (%s) for operand '%s', expected a numeric type.", c.Type().ToSchema(), nt.Value()))
 		}
-	case *DataFunctionNode:
+	case *ast.DataFunctionNode:
 		nt.TypeI = nt.Children()[0].Type()
 		// Reduce must have 2 arguments
 		if nt.Value() == "reduce" && len(nt.Arguments) != 2 {
@@ -139,7 +140,7 @@ func (t *TypeAnnotator) Visit(n ASTNode) error {
 				t.Symbols[arg.Value()] = argType
 			}
 		}
-	case *DataPipelineNode:
+	case *ast.DataPipelineNode:
 		nt.TypeI = nt.Children()[len(nt.Children())-1].Type()
 	}
 
