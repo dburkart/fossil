@@ -7,6 +7,7 @@
 package types
 
 import (
+	"fmt"
 	"github.com/dburkart/fossil/pkg/common/parse"
 	"github.com/dburkart/fossil/pkg/query/scanner"
 	"strconv"
@@ -68,5 +69,28 @@ func IntVal(v Value) int64 {
 		return int64(x)
 	default:
 		panic("Not an int")
+	}
+}
+
+func UnaryOp(operator parse.Token, operand Value) Value {
+	switch operator.Type {
+	case scanner.TOK_MINUS:
+		switch operand := operand.(type) {
+		case intVal:
+			return MakeInt(-int64(operand))
+		case floatVal:
+			return MakeFloat(-float64(operand))
+		default:
+			return MakeUnknown()
+		}
+	case scanner.TOK_PLUS:
+		switch operand := operand.(type) {
+		case intVal, floatVal:
+			return operand
+		default:
+			return MakeUnknown()
+		}
+	default:
+		panic(fmt.Sprintf("Unknown operator %s", operator.Lexeme))
 	}
 }

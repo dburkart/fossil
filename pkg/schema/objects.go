@@ -17,6 +17,8 @@ type Object interface {
 }
 
 type (
+	Unknown struct{}
+
 	Type struct {
 		Name string
 	}
@@ -94,6 +96,10 @@ func (t Type) Validate(val []byte) bool {
 
 	return true
 }
+
+func (u Unknown) Validate(_ []byte) bool { return false }
+func (u Unknown) ToSchema() string       { return "Unknown" }
+func (u Unknown) IsNumeric() bool        { return false }
 
 func (t Type) ToSchema() string {
 	return t.Name
