@@ -25,7 +25,7 @@ type TypeChecker struct {
 	db         *database.Database
 }
 
-func MakeTypeAnnotator(db *database.Database) *TypeChecker {
+func MakeTypeChecker(db *database.Database) *TypeChecker {
 	t := TypeChecker{}
 	t.symbols = make(map[string]schema.Object)
 	t.typeLookup = make(map[ast.ASTNode]schema.Object)
