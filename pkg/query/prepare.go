@@ -6,11 +6,17 @@
 
 package query
 
-import "github.com/dburkart/fossil/pkg/database"
+import (
+	"github.com/dburkart/fossil/pkg/database"
+	ast2 "github.com/dburkart/fossil/pkg/query/ast"
+	"github.com/dburkart/fossil/pkg/query/parser"
+	"github.com/dburkart/fossil/pkg/query/scanner"
+	"github.com/dburkart/fossil/pkg/query/types"
+)
 
 func Prepare(d *database.Database, statement string) (database.Filters, error) {
-	p := Parser{
-		Scanner{
+	p := parser.Parser{
+		scanner.Scanner{
 			Input: statement,
 		},
 	}
@@ -21,12 +27,12 @@ func Prepare(d *database.Database, statement string) (database.Filters, error) {
 	}
 
 	// Pre-validation
-	validations := []Visitor{
-		NewTypeAnnotator(d),
+	validations := []ast2.Visitor{
+		types.NewTypeAnnotator(d),
 	}
 
 	for _, validation := range validations {
-		err = WalkTree(ast, validation)
+		err = ast2.WalkTree(ast, validation)
 		if err != nil {
 			return nil, err
 		}

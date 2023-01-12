@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-package query
+package ast
 
 import (
 	"fmt"
@@ -51,8 +51,6 @@ func ASTToStringInternal(ast ASTNode, indent int) string {
 }
 
 type ASTNode interface {
-	Children() []ASTNode
-	Walk(*database.Database) []database.Filter
 	Value() string
 	Type() schema.Object
 }
@@ -95,34 +93,44 @@ func WalkTree(root ASTNode, v Visitor) error {
 
 type (
 	BaseNode struct {
-		Token    parse.Token
-		TypeI    schema.Object
-		children []ASTNode
+		Token parse.Token
+		TypeI schema.Object
 	}
 
 	QueryNode struct {
 		BaseNode
-		Input string
+		Input         string
+		Quantifier    ASTNode
+		Identifier    ASTNode
+		Topic         ASTNode
+		TimePredicate ASTNode
+		DataPipeline  ASTNode
 	}
 
 	QuantifierNode struct {
 		BaseNode
+		Type         parse.Token
+		TimeQuantity ASTNode
 	}
 
 	TopicSelectorNode struct {
 		BaseNode
-	}
-
-	TopicNode struct {
-		BaseNode
+		Topic parse.Token
 	}
 
 	TimePredicateNode struct {
 		BaseNode
+		Specifier parse.Token
+		Begin     ASTNode
+		Comma     parse.Location
+		End       ASTNode
 	}
 
 	TimeExpressionNode struct {
 		BaseNode
+		Whence   ASTNode
+		Op       parse.Token
+		Quantity ASTNode
 	}
 
 	TimeWhenceNode struct {
@@ -132,10 +140,14 @@ type (
 
 	BinaryOpNode struct {
 		BaseNode
+		Left  ASTNode
+		Right ASTNode
 	}
 
 	UnaryOpNode struct {
 		BaseNode
+		Operator parse.Token
+		Operand  ASTNode
 	}
 
 	TimespanNode struct {
@@ -156,69 +168,34 @@ type (
 
 	TupleNode struct {
 		BaseNode
+		Elements []ASTNode
 	}
 
 	DataPipelineNode struct {
 		BaseNode
+		Stages []ASTNode
 	}
 
 	DataFunctionNode struct {
 		BaseNode
-		Arguments []IdentifierNode
-		Next      *DataFunctionNode
+		Arguments  []IdentifierNode
+		Next       *DataFunctionNode
+		Expression ASTNode
 	}
 
 	BuiltinFunctionNode struct {
 		BaseNode
+		Name       parse.Token
+		LParen     parse.Location
+		Expression ASTNode
+		RParen     parse.Location
 	}
 )
 
-//-- BaseNode
-
-func (b *BaseNode) Children() []ASTNode {
-	return b.children
-}
-
-func (b *BaseNode) AddChild(child ASTNode) {
-	b.children = append(b.children, child)
-}
+// -- BaseNode
 
 func (b *BaseNode) Type() schema.Object {
 	return b.TypeI
-}
-
-func (b *BaseNode) descend(d *database.Database, n ASTNode) []database.Filter {
-	var t FilterGenerator
-	var isFilter bool
-	var f database.Filter
-
-	if t, isFilter = n.(FilterGenerator); isFilter {
-		f = t.GenerateFilter(d)
-	}
-
-	if len(n.Children()) == 0 {
-		if isFilter {
-			return []database.Filter{f}
-		} else {
-			return []database.Filter{}
-		}
-	}
-
-	var chain []database.Filter
-
-	if f != nil {
-		chain = append(chain, f)
-	}
-
-	for _, child := range n.Children() {
-		chain = append(chain, b.descend(d, child)...)
-	}
-
-	return chain
-}
-
-func (b *BaseNode) Walk(d *database.Database) []database.Filter {
-	return b.descend(d, b)
 }
 
 func (b *BaseNode) Value() string {
