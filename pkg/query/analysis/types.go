@@ -141,17 +141,23 @@ func (t *TypeChecker) Visit(node ast.ASTNode) ast.Visitor {
 				// arguments
 				nextNumArgs := len(n.Next.Arguments)
 				var argType schema.Object
-				if array, ok := t.typeForNode(n.Expression).(schema.Array); ok {
-					if nextNumArgs == 1 {
-						argType = array
-					} else if nextNumArgs == array.Length {
-						argType = array.Type
-					} else {
-						txt := fmt.Sprintf("Argument mismatch: %s stage expected %d arguments, but got %d", n.Next.Value(), nextNumArgs, array.Length)
-						t.Errors = append(t.Errors, parse.NewSyntaxError(parse.Token{Location: t.locations[n.Expression]}, txt))
-					}
+
+				// Filter operations don't mutate the input, and simply pass it along
+				if n.Name.Lexeme == "filter" {
+					argType = t.symbols[n.Arguments[0].Value()]
 				} else {
-					argType = t.typeForNode(n.Expression)
+					if array, ok := t.typeForNode(n.Expression).(schema.Array); ok {
+						if nextNumArgs == 1 {
+							argType = array
+						} else if nextNumArgs == array.Length {
+							argType = array.Type
+						} else {
+							txt := fmt.Sprintf("Argument mismatch: %s stage expected %d arguments, but got %d", n.Next.Value(), nextNumArgs, array.Length)
+							t.Errors = append(t.Errors, parse.NewSyntaxError(parse.Token{Location: t.locations[n.Expression]}, txt))
+						}
+					} else {
+						argType = t.typeForNode(n.Expression)
+					}
 				}
 
 				for _, arg := range n.Next.Arguments {
