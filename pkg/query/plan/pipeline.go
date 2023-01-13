@@ -105,8 +105,11 @@ func (w *WrappedEntry) Copy(v types.Value) WrappedEntry {
 }
 
 func (w *WrappedEntry) Entry() database.Entry {
-	// FIXME: Synthesize a new Entry instead
-	return *w.entry
+	if w.val == nil {
+		return *w.entry
+	}
+	e := types.EntryFromValue(w.Value())
+	return e
 }
 
 type Stage interface {
@@ -188,12 +191,11 @@ func (f *FilterStage) Execute() {
 		fn := MakeFunction(symbols)
 		ast.Walk(&fn, f.root)
 
-		var newEntries []WrappedEntry
-		for _, r := range fn.Result {
-			newEntries = append(newEntries, entries[0].Copy(r))
-		}
+		allowed := types.BooleanVal(fn.Result[0])
 
-		f.Next().Add(newEntries)
+		if allowed {
+			f.Next().Add(entries)
+		}
 	}
 	f.Next().Finish()
 }
