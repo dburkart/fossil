@@ -36,6 +36,8 @@ func MakePipelineFromNode(node *ast.DataPipelineNode) Pipeline {
 			p.Add(MakeFilterStage(stage))
 		case "map":
 			p.Add(MakeMapStage(stage))
+		case "reduce":
+			p.Add(MakeReduceStage(stage))
 		default:
 			panic(fmt.Sprintf("Unsupported stage type: %s", stage.Name.Lexeme))
 		}
