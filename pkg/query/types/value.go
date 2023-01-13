@@ -73,6 +73,30 @@ func MakeFromEntry(entry database.Entry) Value {
 	return MakeUnknown()
 }
 
+func EntryFromValue(v Value) database.Entry {
+	entry := database.Entry{Data: []byte{}}
+
+	switch v := v.(type) {
+	case intVal:
+		entry.Data = binary.LittleEndian.AppendUint64(entry.Data, uint64(v))
+		entry.Schema = "int64"
+	case floatVal:
+		entry.Data = binary.LittleEndian.AppendUint64(entry.Data, math.Float64bits(float64(v)))
+		entry.Schema = "float64"
+	case stringVal:
+		entry.Data = []byte(v)
+		entry.Schema = "string"
+	case booleanVal:
+		if v {
+			entry.Data = []byte{1}
+		} else {
+			entry.Data = []byte{0}
+		}
+		entry.Schema = "boolean"
+	}
+	return entry
+}
+
 func MakeFromToken(tok parse.Token) Value {
 	switch tok.Type {
 	case scanner.TOK_NUMBER:
@@ -86,6 +110,19 @@ func MakeFromToken(tok parse.Token) Value {
 	}
 
 	return MakeUnknown()
+}
+
+func BooleanVal(v Value) bool {
+	switch x := v.(type) {
+	case booleanVal:
+		return bool(x)
+	case intVal:
+		return x != 0
+	case floatVal:
+		return x != 0.0
+	default:
+		panic("Not a bool")
+	}
 }
 
 func IntVal(v Value) int64 {
@@ -118,4 +155,85 @@ func UnaryOp(operator parse.Token, operand Value) Value {
 	default:
 		panic(fmt.Sprintf("Unknown operator %s", operator.Lexeme))
 	}
+}
+
+func BinaryOp(left Value, operator parse.Token, right Value) Value {
+	left, right = upcast(left, right)
+
+	switch left := left.(type) {
+	case unknownVal:
+		return left
+
+	case intVal:
+		right := right.(intVal)
+		switch operator.Type {
+		case scanner.TOK_LESS:
+			return MakeBoolean(left < right)
+		case scanner.TOK_LESS_EQ:
+			return MakeBoolean(left <= right)
+		case scanner.TOK_EQ_EQ:
+			return MakeBoolean(left == right)
+		case scanner.TOK_GREATER:
+			return MakeBoolean(left > right)
+		case scanner.TOK_GREATER_EQ:
+			return MakeBoolean(left >= right)
+		}
+	case floatVal:
+		right := right.(floatVal)
+		switch operator.Type {
+		case scanner.TOK_LESS:
+			return MakeBoolean(left < right)
+		case scanner.TOK_LESS_EQ:
+			return MakeBoolean(left <= right)
+		case scanner.TOK_EQ_EQ:
+			return MakeBoolean(left == right)
+		case scanner.TOK_GREATER:
+			return MakeBoolean(left > right)
+		case scanner.TOK_GREATER_EQ:
+			return MakeBoolean(left >= right)
+		}
+	}
+
+	panic(fmt.Sprintf("Unsupported comparison %s", operator.Lexeme))
+}
+
+func complexity(v Value) int {
+	switch v.(type) {
+	case unknownVal:
+		return 0
+	case booleanVal:
+		return 1
+	case *stringVal:
+		return 2
+	case intVal:
+		return 3
+	case floatVal:
+		return 4
+	}
+	panic("Unknown type")
+}
+
+func upcast(a, b Value) (Value, Value) {
+	switch ca, cb := complexity(a), complexity(b); {
+	case ca < cb:
+		a, b = upcastInternal(a, b)
+	case ca > cb:
+		b, a = upcastInternal(b, a)
+	}
+	return a, b
+}
+
+func upcastInternal(a, b Value) (Value, Value) {
+	switch b.(type) {
+	case intVal:
+		return a, b
+	case floatVal:
+		switch aa := a.(type) {
+		case intVal:
+			return MakeFloat(float64(aa)), b
+		}
+		return a, b
+	}
+
+	panic("Could not upcast")
 }
