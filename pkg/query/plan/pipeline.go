@@ -60,6 +60,7 @@ func (p *Pipeline) Finalize() {
 
 func (p *Pipeline) Execute(entries database.Entries) database.Entries {
 	var results database.Entries
+	var wg sync.WaitGroup
 
 	// Start our pipeline stages
 	for _, stage := range p.stages {
@@ -69,16 +70,22 @@ func (p *Pipeline) Execute(entries database.Entries) database.Entries {
 	first := p.stages[0]
 	last := p.stages[len(p.stages)-1].(*CollectStage)
 
+	// Start our reader for output
+	wg.Add(1)
+	go func() {
+		for result := range last.Output {
+			results = append(results, result.Entry())
+		}
+		wg.Done()
+	}()
+
 	// Pass in everything to the first stage
 	for _, entry := range entries {
-		first.Add([]WrappedEntry{Wrap(&entry)})
+		first.Add([]WrappedEntry{Wrap(entry)})
 	}
 	first.Finish()
 
-	for result := range last.Output {
-		results = append(results, result.Entry())
-	}
-
+	wg.Wait()
 	return results
 }
 
@@ -87,8 +94,8 @@ type WrappedEntry struct {
 	val   types.Value
 }
 
-func Wrap(entry *database.Entry) WrappedEntry {
-	return WrappedEntry{entry: entry}
+func Wrap(entry database.Entry) WrappedEntry {
+	return WrappedEntry{entry: &entry}
 }
 
 func (w *WrappedEntry) Value() types.Value {
