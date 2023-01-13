@@ -116,6 +116,8 @@ func (w *WrappedEntry) Entry() database.Entry {
 		return *w.entry
 	}
 	e := types.EntryFromValue(w.Value())
+	e.Time = w.entry.Time
+	e.Topic = w.entry.Topic
 	return e
 }
 
