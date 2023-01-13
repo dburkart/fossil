@@ -70,7 +70,10 @@ func (r *ReduceStage) Execute() {
 		fn := MakeFunction(symbols)
 		ast.Walk(&fn, r.root)
 
-		b = []WrappedEntry{b[0].Copy(fn.Result[0])}
+		entry := a[0].Copy(fn.Result[0])
+		entry.SetTopic("N/A")
+		b = []WrappedEntry{a[0].Copy(fn.Result[0])}
+
 	}
 	r.Next().Finish()
 }

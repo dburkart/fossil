@@ -115,6 +115,10 @@ func (w *WrappedEntry) Copy(v types.Value) WrappedEntry {
 	return WrappedEntry{entry: w.entry, val: v}
 }
 
+func (w *WrappedEntry) SetTopic(t string) {
+	w.entry.Topic = t
+}
+
 func (w *WrappedEntry) Entry() database.Entry {
 	if w.val == nil {
 		return *w.entry
