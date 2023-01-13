@@ -167,6 +167,7 @@ func BinaryOp(left Value, operator parse.Token, right Value) Value {
 	case intVal:
 		right := right.(intVal)
 		switch operator.Type {
+		// Comparisons
 		case scanner.TOK_LESS:
 			return MakeBoolean(left < right)
 		case scanner.TOK_LESS_EQ:
@@ -177,10 +178,21 @@ func BinaryOp(left Value, operator parse.Token, right Value) Value {
 			return MakeBoolean(left > right)
 		case scanner.TOK_GREATER_EQ:
 			return MakeBoolean(left >= right)
+
+		// Arithmetic
+		case scanner.TOK_MINUS:
+			return left - right
+		case scanner.TOK_PLUS:
+			return left + right
+		case scanner.TOK_STAR:
+			return left * right
+		case scanner.TOK_SLASH:
+			return MakeFloat(float64(left) / float64(right))
 		}
 	case floatVal:
 		right := right.(floatVal)
 		switch operator.Type {
+		// Comparisons
 		case scanner.TOK_LESS:
 			return MakeBoolean(left < right)
 		case scanner.TOK_LESS_EQ:
@@ -191,6 +203,16 @@ func BinaryOp(left Value, operator parse.Token, right Value) Value {
 			return MakeBoolean(left > right)
 		case scanner.TOK_GREATER_EQ:
 			return MakeBoolean(left >= right)
+
+		// Arithmetic
+		case scanner.TOK_MINUS:
+			return left - right
+		case scanner.TOK_PLUS:
+			return left + right
+		case scanner.TOK_STAR:
+			return left * right
+		case scanner.TOK_SLASH:
+			return left / right
 		}
 	}
 
