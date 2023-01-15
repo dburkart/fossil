@@ -26,12 +26,12 @@ type TypeChecker struct {
 }
 
 func MakeTypeChecker(db *database.Database) *TypeChecker {
-	t := TypeChecker{}
-	t.symbols = make(map[string]schema.Object)
-	t.typeLookup = make(map[ast.ASTNode]schema.Object)
-	t.locations = make(map[ast.ASTNode]parse.Location)
-	t.db = db
-	return &t
+		return &TypeChecker{
+		symbols:    make(map[string]schema.Object),
+		typeLookup: make(map[ast.ASTNode]schema.Object),
+		locations:  make(map[ast.ASTNode]parse.Location),
+		db:         db,
+	}
 }
 
 // FIXME: Factor out stack into it's own thing
