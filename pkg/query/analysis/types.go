@@ -26,7 +26,7 @@ type TypeChecker struct {
 }
 
 func MakeTypeChecker(db *database.Database) *TypeChecker {
-		return &TypeChecker{
+	return &TypeChecker{
 		symbols:    make(map[string]schema.Object),
 		typeLookup: make(map[ast.ASTNode]schema.Object),
 		locations:  make(map[ast.ASTNode]parse.Location),
