@@ -355,7 +355,7 @@ func readlinePrompt(c fossil.Client, output string) {
 				log.Error().Err(err).Send()
 				continue
 			}
-			writer.Write(t)
+			fmt.Println(t.Code, t.Err)
 		case proto.CommandOk:
 			t := proto.OkResponse{}
 			err = t.Unmarshal(msg.Data())
