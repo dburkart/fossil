@@ -8,10 +8,12 @@ package types
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"github.com/dburkart/fossil/pkg/common/parse"
 	"github.com/dburkart/fossil/pkg/database"
 	"github.com/dburkart/fossil/pkg/query/scanner"
+	"github.com/dburkart/fossil/pkg/schema"
 	"math"
 	"strconv"
 )
@@ -25,6 +27,7 @@ const (
 	String
 	Int
 	Float
+	Tuple
 )
 
 type Value interface {
@@ -37,6 +40,7 @@ type (
 	stringVal  string
 	intVal     int64
 	floatVal   float64
+	tupleVal   []Value
 )
 
 func (unknownVal) Kind() Kind { return Unknown }
@@ -44,36 +48,61 @@ func (booleanVal) Kind() Kind { return Boolean }
 func (stringVal) Kind() Kind  { return String }
 func (intVal) Kind() Kind     { return Int }
 func (floatVal) Kind() Kind   { return Float }
+func (tupleVal) Kind() Kind   { return Tuple }
 
 func MakeUnknown() Value        { return unknownVal{} }
 func MakeBoolean(b bool) Value  { return booleanVal(b) }
 func MakeString(s string) Value { return stringVal(s) }
 func MakeInt(i int64) Value     { return intVal(i) }
 func MakeFloat(f float64) Value { return floatVal(f) }
+func MakeTuple(t []Value) Value { return tupleVal(t) }
+
+func MakeFromSchemaType(b []byte, t schema.Type) Value {
+	switch t.Name {
+	case "uint16", "int16":
+		return MakeInt(int64(binary.LittleEndian.Uint16(b)))
+	case "uint32", "int32":
+		return MakeInt(int64(binary.LittleEndian.Uint32(b)))
+	case "uint64", "int64":
+		return MakeInt(int64(binary.LittleEndian.Uint64(b)))
+	case "float32":
+		return MakeFloat(float64(math.Float32frombits(binary.LittleEndian.Uint32(b))))
+	case "float64":
+		return MakeFloat(math.Float64frombits(binary.LittleEndian.Uint64(b)))
+	case "boolean":
+		return MakeBoolean(b[0] != 0)
+	case "string":
+		return MakeString(string(b))
+	default:
+		panic("Unknown type!")
+	}
+}
 
 func MakeFromEntry(entry database.Entry) Value {
-	// FIXME: Handle more than just Types here
-	switch entry.Schema {
-	case "uint16", "int16":
-		return MakeInt(int64(binary.LittleEndian.Uint16(entry.Data)))
-	case "uint32", "int32":
-		return MakeInt(int64(binary.LittleEndian.Uint32(entry.Data)))
-	case "uint64", "int64":
-		return MakeInt(int64(binary.LittleEndian.Uint64(entry.Data)))
-	case "float32":
-		return MakeFloat(float64(math.Float32frombits(binary.LittleEndian.Uint32(entry.Data))))
-	case "float64":
-		return MakeFloat(math.Float64frombits(binary.LittleEndian.Uint64(entry.Data)))
-	case "boolean":
-		return MakeBoolean(entry.Data[0] != 0)
-	case "string":
-		return MakeString(string(entry.Data))
+	object, err := schema.Parse(entry.Schema)
+	if err != nil {
+		panic(err)
+	}
+
+	// FIXME: Handle composite types
+	switch t := object.(type) {
+	case schema.Type:
+		return MakeFromSchemaType(entry.Data, t)
+	case schema.Array:
+		var values []Value
+
+		for i := 0; i < t.Length; i++ {
+			values = append(values, MakeFromSchemaType(entry.Data[i*t.Type.Size():], t.Type))
+		}
+
+		return MakeTuple(values)
 	}
 
 	return MakeUnknown()
 }
 
-func EntryFromValue(v Value) database.Entry {
+func EntryFromValue(v Value) (database.Entry, error) {
+	var err error
 	entry := database.Entry{Data: []byte{}}
 
 	switch v := v.(type) {
@@ -93,8 +122,45 @@ func EntryFromValue(v Value) database.Entry {
 			entry.Data = []byte{0}
 		}
 		entry.Schema = "boolean"
+	case tupleVal:
+		// First, we assert that all values have the same sub-value type.
+		// We also ensure that it's a valid "array" type
+		var lastType Value
+		var t schema.Type
+		var ok bool
+		for _, ix := range v {
+			if lastType == nil {
+				lastType = ix
+			}
+
+			switch ix.(type) {
+			case intVal:
+				_, ok = lastType.(intVal)
+				t = schema.Type{Name: "int64"}
+			case floatVal:
+				_, ok = lastType.(floatVal)
+				t = schema.Type{Name: "float64"}
+			case booleanVal:
+				_, ok = lastType.(booleanVal)
+				t = schema.Type{Name: "boolean"}
+			default:
+				ok = false
+			}
+
+			if !ok {
+				err = errors.New("could not convert heterogeneous tuple to array")
+				break
+			}
+
+			entry.Schema = schema.Array{Type: t, Length: len(v)}.ToSchema()
+		}
+
+		if !ok {
+			break
+		}
+
 	}
-	return entry
+	return entry, err
 }
 
 func MakeFromToken(tok parse.Token) Value {
