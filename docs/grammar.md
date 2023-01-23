@@ -36,7 +36,7 @@ comparison      = term *( ( ">" / ">=" / "<" / "<=" ) comparison )
 term            = term_md *( ( "-" / "+" ) term )
 term_md         = unary *( ( "/" / "*" ) term_md )
 unary           = ( "-" / "+" ) ( number / identifier ) / primary
-primary         = identifier / number / string / builtin
+primary         = identifier / number / string / builtin / "(" expression ")"
 
 ; Built in functions
 builtin         = identifier "(" expression  ")"

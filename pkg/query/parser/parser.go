@@ -535,6 +535,17 @@ func (p *Parser) primary() ast.ASTNode {
 		return ast.MakeNumberNode(t)
 	case scanner.TOK_STRING:
 		return ast.MakeStringNode(t)
+	case scanner.TOK_PAREN_L:
+		// We're an expression group, so call expression
+		expr := p.expression()
+
+		// Expect a closing paren
+		t = p.Scanner.Emit()
+		if t.Type != scanner.TOK_PAREN_R {
+			panic(parse.NewSyntaxError(t, fmt.Sprintf("Error: Unexpected token '%s'. Expected a ')'", t.Lexeme)))
+		}
+
+		return expr
 	default:
 		panic(parse.NewSyntaxError(t, fmt.Sprintf("Error: Unexpected token '%s'. Expected identifier, number, string, tuple or builtin.", t.Lexeme)))
 	}
