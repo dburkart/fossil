@@ -3,3 +3,4 @@ foo
 all and then some garbage
 
 all in /12
+all : map x -> (x * 3 + 4 : reduce a, b -> a + b
