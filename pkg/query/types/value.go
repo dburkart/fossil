@@ -7,6 +7,7 @@
 package types
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -86,9 +87,9 @@ func MakeFromEntry(entry database.Entry) Value {
 
 	// FIXME: Handle composite types
 	switch t := object.(type) {
-	case schema.Type:
-		return MakeFromSchemaType(entry.Data, t)
-	case schema.Array:
+	case *schema.Type:
+		return MakeFromSchemaType(entry.Data, *t)
+	case *schema.Array:
 		var values []Value
 
 		for i := 0; i < t.Length; i++ {
@@ -126,6 +127,7 @@ func EntryFromValue(v Value) (database.Entry, error) {
 		// First, we assert that all values have the same sub-value type.
 		// We also ensure that it's a valid "array" type
 		var lastType Value
+		var buffer bytes.Buffer
 		var t schema.Type
 		var ok bool
 		for _, ix := range v {
@@ -137,12 +139,27 @@ func EntryFromValue(v Value) (database.Entry, error) {
 			case intVal:
 				_, ok = lastType.(intVal)
 				t = schema.Type{Name: "int64"}
+				b, err := schema.EncodeType(IntVal(ix))
+				if err != nil {
+					return entry, err
+				}
+				buffer.Write(b)
 			case floatVal:
 				_, ok = lastType.(floatVal)
 				t = schema.Type{Name: "float64"}
+				b, err := schema.EncodeType(FloatVal(ix))
+				if err != nil {
+					return entry, err
+				}
+				buffer.Write(b)
 			case booleanVal:
 				_, ok = lastType.(booleanVal)
 				t = schema.Type{Name: "boolean"}
+				b, err := schema.EncodeType(BooleanVal(ix))
+				if err != nil {
+					return entry, err
+				}
+				buffer.Write(b)
 			default:
 				ok = false
 			}
@@ -153,6 +170,7 @@ func EntryFromValue(v Value) (database.Entry, error) {
 			}
 
 			entry.Schema = schema.Array{Type: t, Length: len(v)}.ToSchema()
+			entry.Data = buffer.Bytes()
 		}
 
 		if !ok {
@@ -197,6 +215,23 @@ func IntVal(v Value) int64 {
 		return int64(x)
 	default:
 		panic("Not an int")
+	}
+}
+
+func FloatVal(v Value) float64 {
+	switch x := v.(type) {
+	case intVal:
+		return float64(x)
+	case floatVal:
+		return float64(x)
+	case booleanVal:
+		if x {
+			return 1.0
+		} else {
+			return 0.0
+		}
+	default:
+		panic("Not a float")
 	}
 }
 

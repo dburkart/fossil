@@ -57,8 +57,13 @@ func (f *Function) Visit(node ast.ASTNode) ast.Visitor {
 			f.results[n] = types.UnaryOp(n.Operator, f.results[n.Operand])
 		case *ast.BinaryOpNode:
 			f.results[n] = types.BinaryOp(f.results[n.Left], n.Op, f.results[n.Right])
+		case *ast.TupleNode:
+			var values []types.Value
+			for _, v := range n.Elements {
+				values = append(values, f.results[v])
+			}
+			f.results[n] = types.MakeTuple(values)
 		case *ast.DataFunctionNode:
-			// FIXME: Handle tuples
 			f.Result = append(f.Result, f.results[n.Expression])
 		}
 
@@ -66,7 +71,7 @@ func (f *Function) Visit(node ast.ASTNode) ast.Visitor {
 	}
 
 	switch n := node.(type) {
-	case *ast.DataFunctionNode, *ast.IdentifierNode, *ast.NumberNode, *ast.UnaryOpNode, *ast.BinaryOpNode:
+	case *ast.DataFunctionNode, *ast.IdentifierNode, *ast.NumberNode, *ast.UnaryOpNode, *ast.BinaryOpNode, *ast.TupleNode:
 		f.push(n)
 		return f
 	}
