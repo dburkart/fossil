@@ -65,10 +65,10 @@ func (t *TypeChecker) Visit(node ast.ASTNode) ast.Visitor {
 
 		switch n := node.(type) {
 		case *ast.NumberNode:
-			t.typeLookup[n] = schema.Type{Name: "int64"}
+			t.typeLookup[n] = &schema.Type{Name: "int64"}
 			t.locations[n] = n.Token.Location
 		case *ast.StringNode:
-			t.typeLookup[n] = schema.Type{Name: "string"}
+			t.typeLookup[n] = &schema.Type{Name: "string"}
 			t.locations[n] = n.Token.Location
 		case *ast.IdentifierNode:
 			s, ok := t.symbols[n.Value()]
@@ -88,14 +88,14 @@ func (t *TypeChecker) Visit(node ast.ASTNode) ast.Visitor {
 			case scanner.TOK_MINUS, scanner.TOK_PLUS, scanner.TOK_STAR:
 				if strings.HasPrefix(t.typeForNode(n.Left).ToSchema(), "float") ||
 					strings.HasPrefix(t.typeForNode(n.Right).ToSchema(), "float") {
-					t.typeLookup[n] = schema.Type{Name: "float64"}
+					t.typeLookup[n] = &schema.Type{Name: "float64"}
 				} else {
-					t.typeLookup[n] = schema.Type{Name: "int64"}
+					t.typeLookup[n] = &schema.Type{Name: "int64"}
 				}
 			case scanner.TOK_SLASH:
-				t.typeLookup[n] = schema.Type{Name: "float64"}
+				t.typeLookup[n] = &schema.Type{Name: "float64"}
 			case scanner.TOK_LESS, scanner.TOK_LESS_EQ, scanner.TOK_EQ_EQ, scanner.TOK_NOT_EQ, scanner.TOK_GREATER, scanner.TOK_GREATER_EQ:
-				t.typeLookup[n] = schema.Type{Name: "boolean"}
+				t.typeLookup[n] = &schema.Type{Name: "boolean"}
 			}
 			t.locations[n] = parse.Location{Start: t.locations[n.Left].Start, End: t.locations[n.Right].End}
 		case *ast.UnaryOpNode:
@@ -127,7 +127,7 @@ func (t *TypeChecker) Visit(node ast.ASTNode) ast.Visitor {
 
 				// FIXME: Up-sample to largest numeric
 			}
-			t.typeLookup[n] = schema.Array{Type: *innerType.(*schema.Type), Length: len(n.Elements)}
+			t.typeLookup[n] = &schema.Array{Type: *innerType.(*schema.Type), Length: len(n.Elements)}
 			t.locations[n] = parse.Location{Start: t.locations[n.Elements[0]].Start, End: t.locations[n.Elements[len(n.Elements)-1]].End}
 		case *ast.DataFunctionNode:
 			t.typeLookup[n] = t.typeForNode(n.Expression)
