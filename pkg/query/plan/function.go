@@ -57,6 +57,12 @@ func (f *Function) Visit(node ast.ASTNode) ast.Visitor {
 			f.results[n] = types.UnaryOp(n.Operator, f.results[n.Operand])
 		case *ast.BinaryOpNode:
 			f.results[n] = types.BinaryOp(f.results[n.Left], n.Op, f.results[n.Right])
+		case *ast.TupleElementNode:
+			result, ok := f.symbols[n.Identifier.Value()]
+			if !ok {
+				panic(fmt.Sprintf("Symbol %s did not resolve!", n.Identifier.Value()))
+			}
+			f.results[n] = types.TupleVal(result)[types.IntVal(n.Subscript.Val)]
 		case *ast.TupleNode:
 			var values []types.Value
 			for _, v := range n.Elements {
@@ -71,7 +77,7 @@ func (f *Function) Visit(node ast.ASTNode) ast.Visitor {
 	}
 
 	switch n := node.(type) {
-	case *ast.DataFunctionNode, *ast.IdentifierNode, *ast.NumberNode, *ast.UnaryOpNode, *ast.BinaryOpNode, *ast.TupleNode:
+	case *ast.DataFunctionNode, *ast.IdentifierNode, *ast.NumberNode, *ast.UnaryOpNode, *ast.BinaryOpNode, *ast.TupleNode, *ast.TupleElementNode:
 		f.push(n)
 		return f
 	}

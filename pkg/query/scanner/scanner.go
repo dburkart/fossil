@@ -229,6 +229,12 @@ func (s *Scanner) Emit() parse.Token {
 		case r == ')':
 			t.Type = TOK_PAREN_R
 			skip = width
+		case r == '[':
+			t.Type = TOK_BRACKET_L
+			skip = width
+		case r == ']':
+			t.Type = TOK_BRACKET_R
+			skip = width
 		case r == '=':
 			if strings.HasPrefix(s.Input[s.Pos:], "==") {
 				t.Type = TOK_EQ_EQ

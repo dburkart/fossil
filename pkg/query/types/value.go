@@ -235,6 +235,15 @@ func FloatVal(v Value) float64 {
 	}
 }
 
+func TupleVal(v Value) []Value {
+	switch x := v.(type) {
+	case tupleVal:
+		return x
+	default:
+		panic("Not a tuple")
+	}
+}
+
 func UnaryOp(operator parse.Token, operand Value) Value {
 	switch operator.Type {
 	case scanner.TOK_MINUS:
