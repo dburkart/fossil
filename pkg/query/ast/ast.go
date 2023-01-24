@@ -115,6 +115,12 @@ type (
 		Elements []ASTNode
 	}
 
+	TupleElementNode struct {
+		BaseNode
+		Identifier IdentifierNode
+		Subscript  NumberNode
+	}
+
 	DataPipelineNode struct {
 		BaseNode
 		Stages []ASTNode

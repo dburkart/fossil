@@ -35,8 +35,9 @@ expression      = comparison *( ( "!=" / "==" ) expression )
 comparison      = term *( ( ">" / ">=" / "<" / "<=" ) comparison )
 term            = term_md *( ( "-" / "+" ) term )
 term_md         = unary *( ( "/" / "*" ) term_md )
-unary           = ( "-" / "+" ) ( number / identifier ) / primary
-primary         = identifier / number / string / builtin / "(" expression ")"
+unary           = ( "-" / "+" ) ( number / tuple-value / identifier ) / primary
+primary         = builtin / tuple-value / identifier / number / string / "(" expression ")"
+tuple-value     = identifier "[" number "]"
 
 ; Built in functions
 builtin         = identifier "(" expression  ")"

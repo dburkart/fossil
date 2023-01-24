@@ -63,7 +63,7 @@ func Walk(v Visitor, node ASTNode) {
 	case *UnaryOpNode:
 		Walk(v, n.Operand)
 
-	case *TimespanNode, *IdentifierNode, *NumberNode, *StringNode:
+	case *TimespanNode, *IdentifierNode, *NumberNode, *StringNode, *TupleElementNode:
 		// Skip, leaf nodes
 
 	case *TupleNode:

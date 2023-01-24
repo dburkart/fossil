@@ -495,11 +495,18 @@ func (p *Parser) termMD() ast.ASTNode {
 //
 // Grammar:
 //
-//	unary           = ( "-" / "+" ) ( number / identifier ) / primary
+//	unary           = ( "-" / "+" ) ( number / tuple-value / identifier ) / primary
 func (p *Parser) unary() ast.ASTNode {
 	t := p.Scanner.Emit()
 	if t.Type == scanner.TOK_MINUS || t.Type == scanner.TOK_PLUS {
 		op := ast.UnaryOpNode{BaseNode: ast.BaseNode{Token: t}, Operator: t}
+
+		tupleVal := p.tupleValue()
+		if tupleVal != nil {
+			op.Operand = tupleVal
+			return &op
+		}
+
 		t = p.Scanner.Emit()
 
 		if t.Type == scanner.TOK_NUMBER {
@@ -521,11 +528,16 @@ func (p *Parser) unary() ast.ASTNode {
 //
 // Grammar:
 //
-//	primary         = identifier / number / string / tuple / builtin
+//	primary         = builtin / tuple-value / identifier / number / string / "(" expression ")"
 func (p *Parser) primary() ast.ASTNode {
 	builtin := p.builtin()
 	if builtin != nil {
 		return builtin
+	}
+
+	tupleVal := p.tupleValue()
+	if tupleVal != nil {
+		return tupleVal
 	}
 
 	t := p.Scanner.Emit()
@@ -551,12 +563,53 @@ func (p *Parser) primary() ast.ASTNode {
 	}
 }
 
+// tupleValue returns a TupleElementNode, or Identifier if there is no subscript.
+//
+// Grammar:
+//
+//  tuple-value     = identifier "[" number "]"
+func (p *Parser) tupleValue() ast.ASTNode {
+	t := p.Scanner.Emit()
+
+	if t.Type != scanner.TOK_IDENTIFIER {
+		p.Scanner.Rewind()
+		return nil
+	}
+
+	identifier := ast.IdentifierNode{BaseNode: ast.BaseNode{Token: t}}
+
+	t = p.Scanner.Emit()
+
+	// If we're not a tuple value, return the identifier
+	if t.Type != scanner.TOK_BRACKET_L {
+		p.Scanner.Rewind()
+		return &identifier
+	}
+
+	t = p.Scanner.Emit()
+
+	if t.Type != scanner.TOK_NUMBER {
+		panic(parse.NewSyntaxError(t, fmt.Sprintf("Error: Invalid tuple subscript '%s', expected a number.", t.Lexeme)))
+	}
+
+	subscript := *ast.MakeNumberNode(t)
+
+	t = p.Scanner.Emit()
+
+	if t.Type != scanner.TOK_BRACKET_R {
+		panic(parse.NewSyntaxError(t, fmt.Sprintf("Error: Expected ']'")))
+	}
+
+	return &ast.TupleElementNode{Identifier: identifier, Subscript: subscript}
+}
+
 // builtin returns a BuiltinFunctionNode or an IdentifierNode or nil
 //
 // Grammar:
 //
 //	builtin         = identifier "(" expression  ")"
 func (p *Parser) builtin() ast.ASTNode {
+	start, pos := p.Scanner.Start, p.Scanner.Pos
 	t := p.Scanner.Emit()
 
 	if t.Type != scanner.TOK_IDENTIFIER {
@@ -568,8 +621,8 @@ func (p *Parser) builtin() ast.ASTNode {
 
 	t = p.Scanner.Emit()
 	if t.Type != scanner.TOK_PAREN_L {
-		p.Scanner.Rewind()
-		return &ast.IdentifierNode{BaseNode: ast.BaseNode{Token: node.Token}}
+		p.Scanner.Start, p.Scanner.Pos = start, pos
+		return nil
 	}
 	node.LParen = t.Location
 

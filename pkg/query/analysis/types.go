@@ -12,6 +12,7 @@ import (
 	"github.com/dburkart/fossil/pkg/database"
 	"github.com/dburkart/fossil/pkg/query/ast"
 	"github.com/dburkart/fossil/pkg/query/scanner"
+	"github.com/dburkart/fossil/pkg/query/types"
 	"github.com/dburkart/fossil/pkg/schema"
 	"strings"
 )
@@ -78,6 +79,25 @@ func (t *TypeChecker) Visit(node ast.ASTNode) ast.Visitor {
 			}
 			t.typeLookup[n] = s
 			t.locations[n] = n.Token.Location
+		case *ast.TupleElementNode:
+			var array *schema.Array
+			s, ok := t.symbols[n.Identifier.Value()]
+			if !ok {
+				t.Errors = append(t.Errors, parse.NewSyntaxError(n.Identifier.Token, fmt.Sprintf("Unable to infer type of identifier '%s'", n.Identifier.Value())))
+				return nil
+			}
+
+			if array, ok = s.(*schema.Array); !ok {
+				t.Errors = append(t.Errors, parse.NewSyntaxError(n.Identifier.Token, fmt.Sprintf("Type of '%s' is not a tuple, subscripting not allowed", n.Identifier.Value())))
+				return nil
+			}
+
+			if types.IntVal(n.Subscript.Val) > int64(array.Length-1) {
+				t.Errors = append(t.Errors, parse.NewSyntaxError(n.Subscript.Token, fmt.Sprintf("Tuple index out of bounds, '%s' has a schema of '%s'", n.Identifier.Value(), array.ToSchema())))
+			}
+
+			t.typeLookup[n] = s.(*schema.Array).Type
+			t.locations[n] = n.Identifier.Token.Location
 		case *ast.BinaryOpNode:
 			if !t.typeForNode(n.Left).IsNumeric() || !t.typeForNode(n.Right).IsNumeric() {
 				t.Errors = append(t.Errors, parse.NewSyntaxError(n.Op, "Both operands must be numeric"))
@@ -195,7 +215,7 @@ func (t *TypeChecker) Visit(node ast.ASTNode) ast.Visitor {
 		}
 		return nil
 
-	case *ast.NumberNode, *ast.StringNode, *ast.IdentifierNode, *ast.BinaryOpNode, *ast.UnaryOpNode, *ast.TupleNode, *ast.DataFunctionNode, *ast.DataPipelineNode:
+	case *ast.NumberNode, *ast.StringNode, *ast.IdentifierNode, *ast.BinaryOpNode, *ast.UnaryOpNode, *ast.TupleNode, *ast.DataFunctionNode, *ast.DataPipelineNode, *ast.TupleElementNode:
 		t.push(n)
 		return t
 	}
