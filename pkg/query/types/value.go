@@ -183,7 +183,7 @@ func EntryFromValue(v Value) (database.Entry, error) {
 
 func MakeFromToken(tok parse.Token) Value {
 	switch tok.Type {
-	case scanner.TOK_NUMBER:
+	case scanner.TOK_INTEGER:
 		if x, err := strconv.ParseInt(tok.Lexeme, 0, 64); err == nil {
 			return MakeInt(x)
 		}

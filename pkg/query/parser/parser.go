@@ -309,7 +309,7 @@ func (p *Parser) timeAtom() ast.ASTNode {
 	tok := p.Scanner.Emit()
 
 	switch tok.Type {
-	case scanner.TOK_NUMBER:
+	case scanner.TOK_INTEGER:
 		return ast.MakeNumberNode(tok)
 	case scanner.TOK_TIMESPAN:
 		return &ast.TimespanNode{BaseNode: ast.BaseNode{
@@ -509,7 +509,7 @@ func (p *Parser) unary() ast.ASTNode {
 
 		t = p.Scanner.Emit()
 
-		if t.Type == scanner.TOK_NUMBER {
+		if t.Type == scanner.TOK_INTEGER {
 			op.Operand = ast.MakeNumberNode(t)
 		} else if t.Type == scanner.TOK_IDENTIFIER {
 			op.Operand = &ast.IdentifierNode{ast.BaseNode{Token: t}}
@@ -543,7 +543,7 @@ func (p *Parser) primary() ast.ASTNode {
 	t := p.Scanner.Emit()
 
 	switch t.Type {
-	case scanner.TOK_NUMBER:
+	case scanner.TOK_INTEGER:
 		return ast.MakeNumberNode(t)
 	case scanner.TOK_STRING:
 		return ast.MakeStringNode(t)

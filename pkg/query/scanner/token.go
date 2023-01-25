@@ -15,7 +15,7 @@ const (
 
 	TOK_IDENTIFIER
 	TOK_KEYWORD
-	TOK_NUMBER
+	TOK_INTEGER
 	TOK_STRING
 	TOK_TOPIC
 	TOK_COMMA
@@ -57,8 +57,8 @@ func (t TokenType) ToString() string {
 		return "TOK_IDENTIFIER"
 	case TOK_KEYWORD:
 		return "TOK_KEYWORD"
-	case TOK_NUMBER:
-		return "TOK_NUMBER"
+	case TOK_INTEGER:
+		return "TOK_INTEGER"
 	case TOK_STRING:
 		return "TOK_STRING"
 	case TOK_TOPIC:

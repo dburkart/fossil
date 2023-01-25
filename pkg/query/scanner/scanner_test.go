@@ -46,8 +46,8 @@ func TestEmitNumber(t *testing.T) {
 
 	tok := s.Emit()
 
-	if tok.Type != TOK_NUMBER {
-		t.Error("wanted TOK_NUMBER, got", tok.Type.ToString())
+	if tok.Type != TOK_INTEGER {
+		t.Error("wanted TOK_INTEGER, got", tok.Type.ToString())
 	}
 
 	if tok.Lexeme != "12345" {
