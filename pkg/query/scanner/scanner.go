@@ -318,7 +318,7 @@ func (s *Scanner) Emit() parse.Token {
 				skip = s.SkipToBoundary(isDelimiter)
 			}
 		case unicode.IsDigit(r):
-			t.Type = TOK_NUMBER
+			t.Type = TOK_INTEGER
 			skip = s.MatchNumber()
 		case r == 'a':
 			if strings.HasPrefix(s.Input[s.Pos:], "all") {
