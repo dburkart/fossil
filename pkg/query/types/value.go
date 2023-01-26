@@ -187,6 +187,10 @@ func MakeFromToken(tok parse.Token) Value {
 		if x, err := strconv.ParseInt(tok.Lexeme, 0, 64); err == nil {
 			return MakeInt(x)
 		}
+	case scanner.TOK_FLOAT:
+		if x, err := strconv.ParseFloat(tok.Lexeme, 64); err == nil {
+			return MakeFloat(x)
+		}
 	case scanner.TOK_STRING:
 		if s, err := strconv.Unquote(tok.Lexeme); err == nil {
 			return MakeString(s)
