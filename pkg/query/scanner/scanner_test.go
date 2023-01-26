@@ -55,6 +55,25 @@ func TestEmitNumber(t *testing.T) {
 	}
 }
 
+func TestEmitFloat(t *testing.T) {
+	s := Scanner{Input: "1.5 .3 6.0 54"}
+
+	wantTypes := []TokenType{TOK_FLOAT, TOK_FLOAT, TOK_FLOAT, TOK_INTEGER}
+	wantLexemes := []string{"1.5", ".3", "6.0", "54"}
+
+	for i := 0; i < len(wantTypes); i++ {
+		tok := s.Emit()
+
+		if tok.Type != wantTypes[i] {
+			t.Error("wanted", wantTypes[i].ToString(), ", got", tok.Type.ToString())
+		}
+
+		if tok.Lexeme != wantLexemes[i] {
+			t.Error("wanted", wantLexemes[i], ", got", tok.Lexeme)
+		}
+	}
+}
+
 func TestEmitKeyword(t *testing.T) {
 	s := Scanner{Input: "   all in sample"}
 

@@ -81,6 +81,42 @@ func (s *Scanner) MatchNumber() int {
 	return size
 }
 
+// MatchFloat returns the length of the next token, assuming it is a
+// floating point number
+//
+// Grammar:
+//
+//  float           = *DIGIT "." 1*DIGIT
+func (s *Scanner) MatchFloat() int {
+	r, width := utf8.DecodeRuneInString(s.Input[s.Pos:])
+	lsize := 0
+	rsize := 0
+
+	for i := s.Pos; unicode.IsDigit(r); {
+		lsize += width
+		i += width
+		r, width = utf8.DecodeRuneInString(s.Input[i:])
+	}
+
+	if r != '.' {
+		return 0
+	}
+
+	r, width = utf8.DecodeRuneInString(s.Input[s.Pos+lsize+1:])
+
+	for i := s.Pos + lsize + 1; unicode.IsDigit(r); {
+		rsize += width
+		i += width
+		r, width = utf8.DecodeRuneInString(s.Input[i:])
+	}
+
+	if rsize == 0 {
+		return 0
+	}
+
+	return lsize + rsize + 1
+}
+
 // MatchString returns the length of the next token, assuming it is a
 // string
 //
@@ -317,9 +353,22 @@ func (s *Scanner) Emit() parse.Token {
 				t.Type = TOK_INVALID
 				skip = s.SkipToBoundary(isDelimiter)
 			}
+		case r == '.':
+			skip = s.MatchFloat()
+			if skip > 0 {
+				t.Type = TOK_FLOAT
+			} else {
+				t.Type = TOK_INVALID
+				skip = s.SkipToBoundary(isDelimiter)
+			}
 		case unicode.IsDigit(r):
-			t.Type = TOK_INTEGER
-			skip = s.MatchNumber()
+			skip = s.MatchFloat()
+			if skip > 0 {
+				t.Type = TOK_FLOAT
+			} else {
+				skip = s.MatchNumber()
+				t.Type = TOK_INTEGER
+			}
 		case r == 'a':
 			if strings.HasPrefix(s.Input[s.Pos:], "all") {
 				t.Type = TOK_KEYWORD
