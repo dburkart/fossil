@@ -35,15 +35,15 @@ expression      = comparison *( ( "!=" / "==" ) expression )
 comparison      = term *( ( ">" / ">=" / "<" / "<=" ) comparison )
 term            = term_md *( ( "-" / "+" ) term )
 term_md         = unary *( ( "/" / "*" ) term_md )
-unary           = ( "-" / "+" ) ( number / tuple-value / identifier ) / primary
-primary         = builtin / tuple-value / identifier / number / float / string / "(" expression ")"
+unary           = ( "-" / "+" ) ( integer / tuple-value / identifier ) / primary
+primary         = builtin / tuple-value / identifier / integer / float / string / "(" expression ")"
 tuple-value     = identifier "[" number "]"
 
 ; Built in functions
 builtin         = identifier "(" expression  ")"
 
 ; Data Types
-number          = 1*DIGIT
+integer         = 1*DIGIT
 float           = *DIGIT "." 1*DIGIT
 string          = DQUOTE *ALPHANUM DQUOTE / SQUOTE *ALPHANUM SQUOTE
 tuple           = expression 1*( "," expression )

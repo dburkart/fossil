@@ -62,13 +62,13 @@ func (s *Scanner) MatchTopic() int {
 	return size
 }
 
-// MatchNumber returns the length of the next token, assuming it is a
+// MatchInteger returns the length of the next token, assuming it is a
 // number
 //
 // Grammar:
 //
-//	number          = 1*DIGIT
-func (s *Scanner) MatchNumber() int {
+//	integer          = 1*DIGIT
+func (s *Scanner) MatchInteger() int {
 	r, width := utf8.DecodeRuneInString(s.Input[s.Pos:])
 	size := 0
 
@@ -366,7 +366,7 @@ func (s *Scanner) Emit() parse.Token {
 			if skip > 0 {
 				t.Type = TOK_FLOAT
 			} else {
-				skip = s.MatchNumber()
+				skip = s.MatchInteger()
 				t.Type = TOK_INTEGER
 			}
 		case r == 'a':
