@@ -495,7 +495,7 @@ func (p *Parser) termMD() ast.ASTNode {
 //
 // Grammar:
 //
-//	unary           = ( "-" / "+" ) ( number / tuple-value / identifier ) / primary
+//	unary           = ( "-" / "+" ) ( tuple-value / integer / float / identifier ) / primary
 func (p *Parser) unary() ast.ASTNode {
 	t := p.Scanner.Emit()
 	if t.Type == scanner.TOK_MINUS || t.Type == scanner.TOK_PLUS {
@@ -509,7 +509,7 @@ func (p *Parser) unary() ast.ASTNode {
 
 		t = p.Scanner.Emit()
 
-		if t.Type == scanner.TOK_INTEGER {
+		if t.Type == scanner.TOK_INTEGER || t.Type == scanner.TOK_FLOAT {
 			op.Operand = ast.MakeNumberNode(t)
 		} else if t.Type == scanner.TOK_IDENTIFIER {
 			op.Operand = &ast.IdentifierNode{ast.BaseNode{Token: t}}
@@ -528,7 +528,7 @@ func (p *Parser) unary() ast.ASTNode {
 //
 // Grammar:
 //
-//	primary         = builtin / tuple-value / identifier / number / string / "(" expression ")"
+//	primary         = builtin / tuple-value / identifier / integer / float / string / "(" expression ")"
 func (p *Parser) primary() ast.ASTNode {
 	builtin := p.builtin()
 	if builtin != nil {
@@ -543,7 +543,7 @@ func (p *Parser) primary() ast.ASTNode {
 	t := p.Scanner.Emit()
 
 	switch t.Type {
-	case scanner.TOK_INTEGER:
+	case scanner.TOK_INTEGER, scanner.TOK_FLOAT:
 		return ast.MakeNumberNode(t)
 	case scanner.TOK_STRING:
 		return ast.MakeStringNode(t)
