@@ -567,7 +567,7 @@ func (p *Parser) primary() ast.ASTNode {
 //
 // Grammar:
 //
-//  tuple-value     = identifier "[" number "]"
+//	tuple-value     = identifier "[" number "]"
 func (p *Parser) tupleValue() ast.ASTNode {
 	t := p.Scanner.Emit()
 
@@ -588,7 +588,7 @@ func (p *Parser) tupleValue() ast.ASTNode {
 
 	t = p.Scanner.Emit()
 
-	if t.Type != scanner.TOK_NUMBER {
+	if t.Type != scanner.TOK_INTEGER {
 		panic(parse.NewSyntaxError(t, fmt.Sprintf("Error: Invalid tuple subscript '%s', expected a number.", t.Lexeme)))
 	}
 
