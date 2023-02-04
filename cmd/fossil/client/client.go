@@ -8,7 +8,6 @@
 package client
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"strings"
@@ -18,9 +17,7 @@ import (
 
 	"github.com/chzyer/readline"
 	fossil "github.com/dburkart/fossil/api"
-	"github.com/dburkart/fossil/pkg/database"
 	"github.com/dburkart/fossil/pkg/proto"
-	"github.com/dburkart/fossil/pkg/query"
 	"github.com/dburkart/fossil/pkg/repl"
 	"github.com/rs/zerolog"
 
@@ -73,29 +70,6 @@ func init() {
 
 	// Bind flags to viper
 	viper.BindPFlag("fossil.output", Command.Flags().Lookup("output"))
-}
-
-func localPrompt(db *database.Database, output string) {
-	reader := bufio.NewReader(os.Stdin)
-	for {
-		fmt.Print("\n> ")
-		line, err := reader.ReadString('\n')
-		if err != nil {
-			log.Fatal().Err(err)
-		}
-
-		stmt, err := query.Prepare(db, line)
-		if err != nil {
-			fmt.Println(err.Error())
-			continue
-		}
-
-		result := stmt.Execute()
-
-		for _, val := range result.Data {
-			fmt.Println(val.ToString())
-		}
-	}
 }
 
 func listDatabases(c fossil.Client) func(string) []string {
