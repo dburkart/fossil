@@ -60,7 +60,7 @@ func connect(c net.Conn, dbName string) (proto.OkResponse, error) {
 	return ok, nil
 }
 
-func (c *RemoteClient) reconnectWithBackoff() (net.Conn, error) {
+func (client *RemoteClient) reconnectWithBackoff() (net.Conn, error) {
 	var conn net.Conn
 	var err error
 
@@ -68,10 +68,10 @@ func (c *RemoteClient) reconnectWithBackoff() (net.Conn, error) {
 	for i := 0; i < 3; i++ {
 		delay := time.Duration(math.Exp2(float64(i)))
 		time.Sleep(delay * time.Second)
-		conn, err = net.Dial("tcp4", c.target.Address)
+		conn, err = net.Dial("tcp4", client.target.Address)
 
 		if err == nil {
-			_, err = connect(conn, c.target.Database)
+			_, err = connect(conn, client.target.Database)
 			if err != nil {
 				conn.Close()
 				continue
@@ -83,28 +83,47 @@ func (c *RemoteClient) reconnectWithBackoff() (net.Conn, error) {
 	return conn, err
 }
 
-func (c *RemoteClient) Close() error {
-	for i := 0; i < len(c.conn); i++ {
-		conn := <-c.conn
+func (client *RemoteClient) Open(connectionString proto.ConnectionString, size uint) error {
+	client.target = connectionString
+	client.conn = make(chan net.Conn, size)
+
+	for i := uint(0); i < size; i++ {
+		c, err := net.Dial("tcp4", client.target.Address)
+		if err != nil {
+			return err
+		}
+		_, err = connect(c, client.target.Database)
+		if err != nil {
+			return err
+		}
+		client.conn <- c
+	}
+
+	return nil
+}
+
+func (client *RemoteClient) Close() error {
+	for i := 0; i < len(client.conn); i++ {
+		conn := <-client.conn
 		err := conn.Close()
 		if err != nil {
 			return err
 		}
 	}
-	c.conn = nil
+	client.conn = nil
 	return nil
 }
 
 // Send a general message to the fossil server.
-func (c *RemoteClient) Send(m proto.Message) (proto.Message, error) {
+func (client *RemoteClient) Send(m proto.Message) (proto.Message, error) {
 	data, err := m.Marshal()
 	if err != nil {
 		return nil, err
 	}
 
-	conn := <-c.conn
+	conn := <-client.conn
 	defer func() {
-		c.conn <- conn
+		client.conn <- conn
 	}()
 
 retry:
@@ -112,7 +131,7 @@ retry:
 	if err != nil {
 		// Handle peer reset with reconnect logic
 		if errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.EPIPE) {
-			conn, err = c.reconnectWithBackoff()
+			conn, err = client.reconnectWithBackoff()
 			if err != nil {
 				return nil, err
 			}
@@ -128,7 +147,7 @@ retry:
 	resp, err := proto.ReadMessageFull(conn)
 	if err != nil {
 		if errors.Is(err, io.EOF) {
-			conn, err = c.reconnectWithBackoff()
+			conn, err = client.reconnectWithBackoff()
 			if err != nil {
 				return nil, err
 			}
@@ -143,14 +162,14 @@ retry:
 }
 
 // Append data to the specified topic.
-func (c *RemoteClient) Append(topic string, data []byte) error {
+func (client *RemoteClient) Append(topic string, data []byte) error {
 	appendMsg := proto.NewMessageWithType(proto.CommandAppend,
 		proto.AppendRequest{
 			Topic: topic,
 			Data:  data,
 		})
 
-	resp, err := c.Send(appendMsg)
+	resp, err := client.Send(appendMsg)
 	if err != nil {
 		return err
 	}
@@ -165,13 +184,13 @@ func (c *RemoteClient) Append(topic string, data []byte) error {
 }
 
 // Query the database for some time-series data.
-func (c *RemoteClient) Query(q string) (database.Entries, error) {
+func (client *RemoteClient) Query(q string) (database.Entries, error) {
 	queryMsg := proto.NewMessageWithType(proto.CommandQuery,
 		proto.QueryRequest{
 			Query: q,
 		})
 
-	resp, err := c.Send(queryMsg)
+	resp, err := client.Send(queryMsg)
 	if err != nil {
 		return nil, err
 	}

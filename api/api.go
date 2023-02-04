@@ -9,10 +9,10 @@ package fossil
 import (
 	"github.com/dburkart/fossil/pkg/database"
 	"github.com/dburkart/fossil/pkg/proto"
-	"net"
 )
 
 type Client interface {
+	Open(proto.ConnectionString, uint) error
 	Close() error
 	Send(proto.Message) (proto.Message, error)
 	Append(string, []byte) error
@@ -35,27 +35,24 @@ func NewClient(connstr string) (Client, error) {
 // resources open to a remote fossil database. This is useful for sending large
 // volumes of data to fossil.
 func NewClientPool(connstr string, size uint) (Client, error) {
-	var client RemoteClient
+	var client Client
 	var err error
 
-	client.target, err = proto.ParseConnectionString(connstr)
+	target, err := proto.ParseConnectionString(connstr)
 	if err != nil {
 		return nil, err
 	}
 
-	client.conn = make(chan net.Conn, size)
-
-	for i := uint(0); i < size; i++ {
-		c, err := net.Dial("tcp4", client.target.Address)
-		if err != nil {
-			return nil, err
-		}
-		_, err = connect(c, client.target.Database)
-		if err != nil {
-			return nil, err
-		}
-		client.conn <- c
+	if target.Local == true {
+		client = &LocalClient{}
+	} else {
+		client = &RemoteClient{}
 	}
 
-	return &client, nil
+	err = client.Open(target, size)
+	if err != nil {
+		return nil, err
+	}
+
+	return client, nil
 }
