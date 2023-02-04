@@ -629,7 +629,7 @@ func (d *Database) Retrieve(q Query) []Entry {
 // NewDatabase creates a new database object in memory and creates the
 // directory and files on disk for storing the data
 // location is the base directory for creating the database
-func NewDatabase(log zerolog.Logger, name string, location string) (*Database, error) {
+func NewDatabase(name string, location string) (*Database, error) {
 	var db Database
 
 	// If the path does not exist, create a new directory

@@ -15,7 +15,6 @@ import (
 
 	"github.com/dburkart/fossil/pkg/database"
 	"github.com/dburkart/fossil/pkg/proto"
-	"github.com/dburkart/fossil/pkg/query"
 	"github.com/rs/zerolog"
 )
 
@@ -46,7 +45,7 @@ func New(log zerolog.Logger, dbConfigs map[string]DatabaseConfig, port, metricsP
 	for k, v := range dbConfigs {
 		log.Info().Str("name", v.Name).Str("directory", v.Directory).Msg("initializing database")
 		dbLogger := log.With().Str("db", v.Name).Logger()
-		db, err := database.NewDatabase(dbLogger, v.Name, path.Join(v.Directory, v.Name))
+		db, err := database.NewDatabase(v.Name, path.Join(v.Directory, v.Name))
 		if err != nil {
 			dbLogger.Fatal().Err(err).Msg("error initializing database")
 		}
@@ -134,10 +133,7 @@ func (s *Server) HandleVersion(rw proto.ResponseWriter, r *proto.Request) {
 		return
 	}
 	s.log.Trace().Str("client-version", version.Version).Msg("got client version")
-	// We don't currently reject any versions, so proceed to send our own version
-	// announcement with an OK code.
-	versionResponse := proto.VersionResponse{Code: 200}
-	rw.WriteMessage(proto.NewMessageWithType(proto.CommandVersion, versionResponse))
+	rw.WriteMessage(VersionResponse(version))
 }
 
 func (s *Server) HandleAppend(rw proto.ResponseWriter, r *proto.Request) {
@@ -150,12 +146,7 @@ func (s *Server) HandleAppend(rw proto.ResponseWriter, r *proto.Request) {
 	}
 
 	s.log.Trace().Str("topic", a.Topic).Msg("append")
-	err = r.Database().Append(a.Data, a.Topic)
-	if err != nil {
-		rw.WriteMessage(proto.NewMessageWithType(proto.CommandError, proto.ErrResponse{Code: 503, Err: err}))
-	} else {
-		rw.WriteMessage(proto.MessageOk)
-	}
+	rw.WriteMessage(AppendResponse(a, r.Database()))
 }
 
 func (s *Server) HandleQuery(rw proto.ResponseWriter, r *proto.Request) {
@@ -168,17 +159,7 @@ func (s *Server) HandleQuery(rw proto.ResponseWriter, r *proto.Request) {
 		return
 	}
 
-	stmt, err := query.Prepare(r.Database(), q.Query)
-	if err != nil {
-		rw.WriteMessage(proto.NewMessageWithType(proto.CommandError, proto.ErrResponse{Code: 504, Err: err}))
-		return
-	}
-	result := stmt.Execute()
-
-	resp := proto.QueryResponse{}
-	resp.Results = result.Data
-
-	_, err = rw.WriteMessage(proto.NewMessageWithType(proto.CommandQuery, resp))
+	_, err = rw.WriteMessage(QueryResponse(q, r.Database()))
 	if err != nil {
 		s.log.Error().Err(err).Msg("unable to write response")
 		rw.WriteMessage(proto.MessageErrorUnmarshaling)
@@ -210,30 +191,7 @@ func (s *Server) HandleList(rw proto.ResponseWriter, r *proto.Request) {
 		return
 	}
 
-	resp := proto.ListResponse{
-		ObjectList: []string{},
-	}
-
-	if l.Object == "databases" {
-		for k := range s.dbMap {
-			resp.ObjectList = append(resp.ObjectList, k)
-		}
-	} else if l.Object == "topics" {
-		for _, v := range r.Database().TopicLookup {
-			resp.ObjectList = append(resp.ObjectList, v)
-		}
-	} else if l.Object == "schemas" {
-		// Get our string object
-		str := r.Database().SchemaLookup[0]
-		for idx, v := range r.Database().TopicLookup {
-			schema := r.Database().SchemaLookup[idx]
-			if schema != str {
-				resp.ObjectList = append(resp.ObjectList, fmt.Sprintf("%s %s", v, schema.ToSchema()))
-			}
-		}
-	}
-
-	rw.WriteMessage(proto.NewMessageWithType(proto.CommandList, resp))
+	rw.WriteMessage(ListResponse(l, r.Database(), s.dbMap))
 }
 
 func (s *Server) HandleCreate(rw proto.ResponseWriter, r *proto.Request) {
@@ -246,6 +204,5 @@ func (s *Server) HandleCreate(rw proto.ResponseWriter, r *proto.Request) {
 		return
 	}
 
-	r.Database().AddTopic(c.Topic, c.Schema)
-	rw.WriteMessage(proto.MessageOk)
+	rw.WriteMessage(CreateResponse(c, r.Database()))
 }
