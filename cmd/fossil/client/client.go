@@ -48,22 +48,12 @@ var (
 				log.Fatal().Err(err).Msg("error parsing URL")
 			}
 
-			if target.Local {
-				db, err := database.NewDatabase(log, target.Database, target.Database)
-				if err != nil {
-					log.Fatal().Err(err).Msg("error creating new database")
-				}
-
-				localPrompt(db, output)
-			} else {
-				client, err := fossil.NewClient(host)
-				if err != nil {
-					log.Error().Err(err).Str("address", target.Address).Msg("unable to connect to server")
-				}
-
-				// REPL
-				readlinePrompt(client, output)
+			client, err := fossil.NewClient(host)
+			if err != nil {
+				log.Error().Err(err).Str("address", target.Address).Msg("unable to connect to server")
 			}
+
+			readlinePrompt(client, output)
 		},
 	}
 )
@@ -78,7 +68,7 @@ func init() {
 		Caller().
 		Logger()
 
-		// Flags for this command
+	// Flags for this command
 	Command.Flags().StringP("output", "o", "text", "Output format of results in pipe mode [csv, json, text]")
 
 	// Bind flags to viper
@@ -218,7 +208,7 @@ func completeCreateTopic(c fossil.Client) func(string) []string {
 	}
 }
 
-func makeSchemaOptions(c fossil.Client) []readline.PrefixCompleterInterface {
+func makeSchemaOptions() []readline.PrefixCompleterInterface {
 	schemaSlice := []string{
 		"string",
 		"binary",
@@ -259,7 +249,7 @@ func readlinePrompt(c fossil.Client, output string) {
 		readline.PcItem("exit"),
 		readline.PcItem("list", listItems...),
 		readline.PcItem("create",
-			readline.PcItem("topic", readline.PcItemDynamic(completeCreateTopic(c), makeSchemaOptions(c)...)),
+			readline.PcItem("topic", readline.PcItemDynamic(completeCreateTopic(c), makeSchemaOptions()...)),
 		),
 	)
 

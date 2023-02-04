@@ -19,34 +19,34 @@ import (
 	"github.com/pkg/errors"
 )
 
-// A Client holds the data needed to interact with a fossil database.
-type Client struct {
+// A RemoteClient holds the data needed to interact with a fossil database.
+type RemoteClient struct {
 	target proto.ConnectionString
 	conn   chan net.Conn
 }
 
-// NewClient creates a new Client struct which can be used to interact with a
+// NewClient creates a new RemoteClient struct which can be used to interact with a
 // remote fossil database. The client is thread safe, but only holds one
 // connection at a time. For a client pool, use NewClientPool instead.
 func NewClient(connstr string) (Client, error) {
 	client, err := NewClientPool(connstr, 1)
 	if err != nil {
-		return Client{}, err
+		return nil, err
 	}
 
 	return client, nil
 }
 
-// NewClientPool creates a new Client struct which holds a pool of net.Conn
+// NewClientPool creates a new RemoteClient struct which holds a pool of net.Conn
 // resources open to a remote fossil database. This is useful for sending large
 // volumes of data to fossil.
 func NewClientPool(connstr string, size uint) (Client, error) {
-	var client Client
+	var client RemoteClient
 	var err error
 
 	client.target, err = proto.ParseConnectionString(connstr)
 	if err != nil {
-		return Client{}, err
+		return nil, err
 	}
 
 	client.conn = make(chan net.Conn, size)
@@ -54,16 +54,16 @@ func NewClientPool(connstr string, size uint) (Client, error) {
 	for i := uint(0); i < size; i++ {
 		c, err := net.Dial("tcp4", client.target.Address)
 		if err != nil {
-			return Client{}, err
+			return nil, err
 		}
 		_, err = connect(c, client.target.Database)
 		if err != nil {
-			return Client{}, err
+			return nil, err
 		}
 		client.conn <- c
 	}
 
-	return client, nil
+	return &client, nil
 }
 
 // FIXME: Refactor this into a common Use() API
@@ -103,7 +103,7 @@ func connect(c net.Conn, dbName string) (proto.OkResponse, error) {
 	return ok, nil
 }
 
-func (c *Client) reconnectWithBackoff() (net.Conn, error) {
+func (c *RemoteClient) reconnectWithBackoff() (net.Conn, error) {
 	var conn net.Conn
 	var err error
 
@@ -126,7 +126,7 @@ func (c *Client) reconnectWithBackoff() (net.Conn, error) {
 	return conn, err
 }
 
-func (c *Client) Close() error {
+func (c *RemoteClient) Close() error {
 	for i := 0; i < len(c.conn); i++ {
 		conn := <-c.conn
 		err := conn.Close()
@@ -139,7 +139,7 @@ func (c *Client) Close() error {
 }
 
 // Send a general message to the fossil server.
-func (c *Client) Send(m proto.Message) (proto.Message, error) {
+func (c *RemoteClient) Send(m proto.Message) (proto.Message, error) {
 	data, err := m.Marshal()
 	if err != nil {
 		return nil, err
@@ -186,7 +186,7 @@ retry:
 }
 
 // Append data to the specified topic.
-func (c *Client) Append(topic string, data []byte) error {
+func (c *RemoteClient) Append(topic string, data []byte) error {
 	appendMsg := proto.NewMessageWithType(proto.CommandAppend,
 		proto.AppendRequest{
 			Topic: topic,
@@ -208,7 +208,7 @@ func (c *Client) Append(topic string, data []byte) error {
 }
 
 // Query the database for some time-series data.
-func (c *Client) Query(q string) (database.Entries, error) {
+func (c *RemoteClient) Query(q string) (database.Entries, error) {
 	queryMsg := proto.NewMessageWithType(proto.CommandQuery,
 		proto.QueryRequest{
 			Query: q,
