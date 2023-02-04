@@ -19,7 +19,7 @@ type Client interface {
 	Query(string) (database.Entries, error)
 }
 
-// NewClient creates a new RemoteClient struct which can be used to interact with a
+// NewClient creates a new Client struct which can be used to interact with a
 // remote fossil database. The client is thread safe, but only holds one
 // connection at a time. For a client pool, use NewClientPool instead.
 func NewClient(connstr string) (Client, error) {
@@ -31,7 +31,7 @@ func NewClient(connstr string) (Client, error) {
 	return client, nil
 }
 
-// NewClientPool creates a new RemoteClient struct which holds a pool of net.Conn
+// NewClientPool creates a new Client struct which holds a pool of net.Conn
 // resources open to a remote fossil database. This is useful for sending large
 // volumes of data to fossil.
 func NewClientPool(connstr string, size uint) (Client, error) {
