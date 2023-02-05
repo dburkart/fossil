@@ -4,7 +4,7 @@
 
 🚨🐞 Fossil is under active development, please read the [caveats](#caveats) below 🐞🚨
 
-A simple and efficient time-series database. See [Overview](./docs/overview.md) for a high-level overview on current design.
+A simple and expressive time-series database. See [Overview](./docs/overview.md) for a high-level overview on current design.
 
 - [Fossil](#fossil)
   - [Overview](#overview)
@@ -19,7 +19,6 @@ A simple and efficient time-series database. See [Overview](./docs/overview.md) 
     - [Config](#config)
       - [Root `fossil` config block](#root-fossil-config-block)
       - [`database` config block](#database-config-block)
-  - [Development Notice](#development-notice)
 
 
 ## Overview
