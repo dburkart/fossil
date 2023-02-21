@@ -69,6 +69,13 @@ func (f *Function) Visit(node ast.ASTNode) ast.Visitor {
 				values = append(values, f.results[v])
 			}
 			f.results[n] = types.MakeTuple(values)
+		case *ast.BuiltinFunctionNode:
+			fn, ok := types.LookupBuiltinFunction(n.Name.Lexeme)
+			if !ok {
+				panic("We should never have an invalid builtin name here")
+			}
+
+			f.results[n] = fn.Execute(f.results[n.Expression])
 		case *ast.DataFunctionNode:
 			f.Result = append(f.Result, f.results[n.Expression])
 		}
@@ -77,7 +84,8 @@ func (f *Function) Visit(node ast.ASTNode) ast.Visitor {
 	}
 
 	switch n := node.(type) {
-	case *ast.DataFunctionNode, *ast.IdentifierNode, *ast.NumberNode, *ast.UnaryOpNode, *ast.BinaryOpNode, *ast.TupleNode, *ast.TupleElementNode:
+	case *ast.DataFunctionNode, *ast.IdentifierNode, *ast.NumberNode, *ast.UnaryOpNode, *ast.BinaryOpNode,
+		*ast.TupleNode, *ast.TupleElementNode, *ast.BuiltinFunctionNode:
 		f.push(n)
 		return f
 	}
