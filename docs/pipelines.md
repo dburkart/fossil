@@ -43,7 +43,7 @@ We could later use this map to compute an average (more on that in the next sect
 retrieve temperature data, but convert it to Celsius (assuming it's stored in Fahrenheit):
 
 ```
-all F in /sensors/temp since ~now - @day * 7: map F -> 5/9 * (F-32)
+all in /sensors/temp since ~now - @day * 7: map F -> 5/9 * (F-32)
 ```
 
 
@@ -57,19 +57,19 @@ In our example above, we mapped a value `x` onto a count (1), and the value itse
 function to add everything up and then compute an average:
 
 ```
-all x in /latency : map x -> 1, x : reduce a, b -> a[0] + b[0], a[1] + b[1] : ⏎
+all in /latency : map x -> 1, x : reduce a, b -> a[0] + b[0], a[1] + b[1] : ⏎
                     map  count, sum -> sum / count
 ```
 
 Number of log bytes written:
 
 ```
-all log in /logs: map log -> len(log): reduce s_a, s_b -> s_a + s_b
+all in /logs: map log -> len(log): reduce s_a, s_b -> s_a + s_b
 ```
 
 Number of events in the last day:
 
 ```
-all event in /events since ~now - @day: map event -> 1: reduce x, y -> x + y
+all in /events since ~now - @day: map event -> 1: reduce x, y -> x + y
 ```
 
