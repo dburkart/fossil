@@ -18,12 +18,13 @@ import (
 )
 
 type TypeChecker struct {
-	Errors     []parse.SyntaxError
-	symbols    map[string]schema.Object
-	typeLookup map[ast.ASTNode]schema.Object
-	locations  map[ast.ASTNode]parse.Location
-	nodes      []ast.ASTNode
-	db         *database.Database
+	Errors      []parse.SyntaxError
+	initialType schema.Object
+	symbols     map[string]schema.Object
+	typeLookup  map[ast.ASTNode]schema.Object
+	locations   map[ast.ASTNode]parse.Location
+	nodes       []ast.ASTNode
+	db          *database.Database
 }
 
 func MakeTypeChecker(db *database.Database) *TypeChecker {
@@ -209,11 +210,6 @@ func (t *TypeChecker) Visit(node ast.ASTNode) ast.Visitor {
 	switch n := node.(type) {
 	case *ast.QueryNode:
 		if n.DataPipeline != nil {
-			if n.Identifier == nil {
-				t.Errors = append(t.Errors, parse.NewSyntaxError(n.Token, "Expected identifier in query, since a data pipeline is used."))
-				return nil
-			}
-
 			var s schema.Object
 			if n.Topic == nil {
 				s = schema.Type{Name: "string"}
@@ -226,13 +222,22 @@ func (t *TypeChecker) Visit(node ast.ASTNode) ast.Visitor {
 				}
 			}
 
-			t.symbols[n.Identifier.Value()] = s
+			t.initialType = s
 			return t
 		}
 		return nil
 
+	case *ast.DataPipelineNode:
+		first := n.Stages[0].(*ast.DataFunctionNode)
+
+		for _, arg := range first.Arguments {
+			t.symbols[arg.Value()] = t.initialType
+		}
+
+		return t
+
 	case *ast.NumberNode, *ast.StringNode, *ast.IdentifierNode, *ast.BinaryOpNode, *ast.UnaryOpNode, *ast.TupleNode,
-		*ast.DataFunctionNode, *ast.DataPipelineNode, *ast.TupleElementNode, *ast.BuiltinFunctionNode:
+		*ast.DataFunctionNode, *ast.TupleElementNode, *ast.BuiltinFunctionNode:
 		t.push(n)
 		return t
 	}
