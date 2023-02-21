@@ -617,7 +617,7 @@ func (p *Parser) builtin() ast.ASTNode {
 		return nil
 	}
 
-	node := ast.BuiltinFunctionNode{BaseNode: ast.BaseNode{Token: t}}
+	node := ast.BuiltinFunctionNode{BaseNode: ast.BaseNode{Token: t}, Name: t}
 
 	t = p.Scanner.Emit()
 	if t.Type != scanner.TOK_PAREN_L {

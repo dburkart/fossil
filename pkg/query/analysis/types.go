@@ -185,6 +185,22 @@ func (t *TypeChecker) Visit(node ast.ASTNode) ast.Visitor {
 					t.symbols[arg.Value()] = argType
 				}
 			}
+		case *ast.BuiltinFunctionNode:
+			builtin, ok := types.LookupBuiltinFunction(n.Name.Lexeme)
+			if !ok {
+				t.Errors = append(t.Errors, parse.NewSyntaxError(n.Name, fmt.Sprintf("Unknown builtin function: '%s'", n.Name.Lexeme)))
+				return nil
+			}
+
+			argType := t.typeForNode(n.Expression)
+			retType, err := builtin.Validate(argType)
+
+			if err != nil {
+				t.Errors = append(t.Errors, parse.NewSyntaxError(parse.Token{Location: t.locations[n.Expression]}, err.Error()))
+				return nil
+			}
+
+			t.typeLookup[n] = retType
 		}
 
 		return nil
@@ -215,7 +231,8 @@ func (t *TypeChecker) Visit(node ast.ASTNode) ast.Visitor {
 		}
 		return nil
 
-	case *ast.NumberNode, *ast.StringNode, *ast.IdentifierNode, *ast.BinaryOpNode, *ast.UnaryOpNode, *ast.TupleNode, *ast.DataFunctionNode, *ast.DataPipelineNode, *ast.TupleElementNode:
+	case *ast.NumberNode, *ast.StringNode, *ast.IdentifierNode, *ast.BinaryOpNode, *ast.UnaryOpNode, *ast.TupleNode,
+		*ast.DataFunctionNode, *ast.DataPipelineNode, *ast.TupleElementNode, *ast.BuiltinFunctionNode:
 		t.push(n)
 		return t
 	}
