@@ -1,14 +1,11 @@
 # Query Grammar
 
 ```abnf
-query           = quantifier [identifier] [ topic-selector ] [ time-predicate ] [ data-pipeline ]
+query           = quantifier [ topic-selector ] [ time-predicate ] [ data-pipeline ]
 
 ; Quantifier
 quantifier      = "all" / sample
 sample          = "sample(" time-quantity ")"
-
-; Identifier
-identifier      = 1*(ALPHA / DIGIT / '_' / '-')
 
 ; Topic selection
 topic-selector  = "in" topic
