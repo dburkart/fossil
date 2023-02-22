@@ -2,4 +2,3 @@ PASS
 all
 all
 all in /foo since ~now - 1 * @year
-all X in /foo
