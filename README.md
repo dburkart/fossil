@@ -1,4 +1,4 @@
-# Fossil
+<img src="docs/images/fossil.png" width="800">
 
 [![Go](https://github.com/dburkart/fossil/actions/workflows/go.yml/badge.svg)](https://github.com/dburkart/fossil/actions/workflows/go.yml)
 
