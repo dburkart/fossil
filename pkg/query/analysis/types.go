@@ -212,7 +212,7 @@ func (t *TypeChecker) Visit(node ast.ASTNode) ast.Visitor {
 		if n.DataPipeline != nil {
 			var s schema.Object
 			if n.Topic == nil {
-				s = schema.Type{Name: "string"}
+				s = &schema.Type{Name: "string"}
 			} else {
 				topic := n.Topic.(*ast.TopicSelectorNode).Topic
 				s = t.db.SchemaForTopic(topic.Lexeme)
