@@ -1,3 +1,3 @@
 PASS
-all in /sensors/temp : map C -> C * 9 / 5 + 32
-all in /sensors/temp since ~now - @day * 7 : map t -> 1, t
+all in /sensors/temp | map C -> C * 9 / 5 + 32
+all in /sensors/temp since ~now - @day * 7 | map t -> 1, t

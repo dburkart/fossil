@@ -21,6 +21,7 @@ const (
 	TOK_TOPIC
 	TOK_COMMA
 	TOK_COLON
+	TOK_PIPE
 
 	// Expressions
 	TOK_EQ_EQ
@@ -100,6 +101,8 @@ func (t TokenType) ToString() string {
 		return "TOK_PAREN_R"
 	case TOK_ARROW:
 		return "TOK_ARROW"
+	case TOK_PIPE:
+		return "TOK_PIPE"
 	}
 	return "TOK_UNKNOWN"
 }

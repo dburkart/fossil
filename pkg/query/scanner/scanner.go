@@ -259,6 +259,9 @@ func (s *Scanner) Emit() parse.Token {
 		case r == ':':
 			t.Type = TOK_COLON
 			skip = width
+		case r == '|':
+			t.Type = TOK_PIPE
+			skip = width
 		case r == '(':
 			t.Type = TOK_PAREN_L
 			skip = width

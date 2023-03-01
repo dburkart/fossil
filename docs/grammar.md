@@ -23,7 +23,7 @@ timespan        = "@second" / "@minute" / "@hour" / "@day" / "@week" / "@month" 
 
 ; Data Pipeline
 data-pipeline   = 1*data-stage
-data-stage      = ":" data-function
+data-stage      = "|" data-function
 data-function   = ( "filter" / "map" / "reduce" ) data-args "->" ( expression / tuple )
 data-args       = identifier [ "," data-args ]
 

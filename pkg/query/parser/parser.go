@@ -342,10 +342,10 @@ func (p *Parser) dataPipeline() ast.ASTNode {
 //
 // Grammar:
 //
-//	data-stage      = ":" data-function
+//	data-stage      = "|" data-function
 func (p *Parser) dataStage() ast.ASTNode {
 	t := p.Scanner.Emit()
-	if t.Type != scanner.TOK_COLON {
+	if t.Type != scanner.TOK_PIPE {
 		p.Scanner.Rewind()
 		return nil
 	}

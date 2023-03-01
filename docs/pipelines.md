@@ -16,7 +16,7 @@ Where the result of everything to the right of `->` is returned.
 
 ## Chaining Operator
 
-Functions can be chained together using the `:` operator. Each stage of the pipeline that is staged together 
+Functions can be chained together using the pipe (`|`) operator. Each stage of the pipeline that is staged together 
 "feeds" the next in the pipeline. Under the hood Fossil uses a Go `chan` to connect each stage to the next, 
 allowing functions to operate in parallel.
 
@@ -43,7 +43,7 @@ We could later use this map to compute an average (more on that in the next sect
 retrieve temperature data, but convert it to Celsius (assuming it's stored in Fahrenheit):
 
 ```
-all in /sensors/temp since ~now - @day * 7: map F -> 5/9 * (F-32)
+all in /sensors/temp since ~now - @day * 7 | map F -> 5/9 * (F-32)
 ```
 
 
@@ -57,19 +57,19 @@ In our example above, we mapped a value `x` onto a count (1), and the value itse
 function to add everything up and then compute an average:
 
 ```
-all in /latency : map x -> 1, x : reduce a, b -> a[0] + b[0], a[1] + b[1] : ⏎
+all in /latency | map x -> 1, x | reduce a, b -> a[0] + b[0], a[1] + b[1] | ⏎
                     map  count, sum -> sum / count
 ```
 
 Number of log bytes written:
 
 ```
-all in /logs: map log -> len(log): reduce s_a, s_b -> s_a + s_b
+all in /logs | map log -> len(log) | reduce s_a, s_b -> s_a + s_b
 ```
 
 Number of events in the last day:
 
 ```
-all in /events since ~now - @day: map event -> 1: reduce x, y -> x + y
+all in /events since ~now - @day | map event -> 1 | reduce x, y -> x + y
 ```
 

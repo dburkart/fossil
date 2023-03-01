@@ -1,12 +1,12 @@
 PASS
-all : map x -> x / 32 * 24
-all : map x -> 3 * x + 4
-all : map x -> -x
-all : map x -> x * -1
-all : map x -> 1, x
-all : map x -> 1, x * 2
-all in /logs : map l -> len(l)
-all : map x -> pow(x, 2)
-all : map x -> x + 40 * 10
-all : map x -> (x + 40) * 10
-all : map x -> x * 3.4
+all | map x -> x / 32 * 24
+all | map x -> 3 * x + 4
+all | map x -> -x
+all | map x -> x * -1
+all | map x -> 1, x
+all | map x -> 1, x * 2
+all in /logs | map l -> len(l)
+all | map x -> pow(x, 2)
+all | map x -> x + 40 * 10
+all | map x -> (x + 40) * 10
+all | map x -> x * 3.4
