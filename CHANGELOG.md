@@ -1,3 +1,18 @@
+# v0.2.0
+
+This release adds powerful data processing capabilities to the database,
+as well as many other improvements.
+
+  * Adds data processing capabilities in the form of pipelines.
+  * Adds support for data schemas on topics.
+  * Adds prometheus metrics.
+  * Enhanced REPL experience.
+  * Improved on-disk data structure.
+  * Auto-migration of database format.
+  * More extensive testing.
+  * Machine-readable client output.
+  * Many other small improvements.
+
 # v0.1.5
 
 Adds a --version flag to make it easier to distinguish between different
