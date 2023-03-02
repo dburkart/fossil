@@ -69,6 +69,9 @@ func deserializeV1(p string) (any, error) {
 		return nil, err
 	}
 
+	// Never trust the Path field in the database
+	db.Path = p
+
 	return &db, nil
 }
 
