@@ -97,7 +97,7 @@ func (t *TypeChecker) Visit(node ast.ASTNode) ast.Visitor {
 				t.Errors = append(t.Errors, parse.NewSyntaxError(n.Subscript.Token, fmt.Sprintf("Tuple index out of bounds, '%s' has a schema of '%s'", n.Identifier.Value(), array.ToSchema())))
 			}
 
-			t.typeLookup[n] = s.(*schema.Array).Type
+			t.typeLookup[n] = &s.(*schema.Array).Type
 			t.locations[n] = n.Identifier.Token.Location
 		case *ast.BinaryOpNode:
 			if !t.typeForNode(n.Left).IsNumeric() || !t.typeForNode(n.Right).IsNumeric() {

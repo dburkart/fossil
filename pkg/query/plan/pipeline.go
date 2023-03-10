@@ -126,7 +126,7 @@ func (w *WrappedEntry) Entry() database.Entry {
 	e, err := types.EntryFromValue(w.Value())
 	if err != nil {
 		e.Schema = "string"
-		e.Data = []byte("Invalid conversion to schema object.")
+		e.Data = []byte(err.Error())
 	}
 	e.Time = w.entry.Time
 	e.Topic = w.entry.Topic
