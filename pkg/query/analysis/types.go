@@ -99,6 +99,8 @@ func (t *TypeChecker) Visit(node ast.ASTNode) ast.Visitor {
 
 			t.typeLookup[n] = &s.(*schema.Array).Type
 			t.locations[n] = n.Identifier.Token.Location
+		case *ast.TimeWhenceNode, *ast.TimespanNode:
+			t.typeLookup[n] = &schema.Type{Name: "int64"}
 		case *ast.BinaryOpNode:
 			if !t.typeForNode(n.Left).IsNumeric() || !t.typeForNode(n.Right).IsNumeric() {
 				t.Errors = append(t.Errors, parse.NewSyntaxError(n.Op, "Both operands must be numeric"))
@@ -237,7 +239,7 @@ func (t *TypeChecker) Visit(node ast.ASTNode) ast.Visitor {
 		return t
 
 	case *ast.NumberNode, *ast.StringNode, *ast.IdentifierNode, *ast.BinaryOpNode, *ast.UnaryOpNode, *ast.TupleNode,
-		*ast.DataFunctionNode, *ast.TupleElementNode, *ast.BuiltinFunctionNode:
+		*ast.DataFunctionNode, *ast.TupleElementNode, *ast.BuiltinFunctionNode, *ast.TimespanNode, *ast.TimeWhenceNode:
 		t.push(n)
 		return t
 	}
