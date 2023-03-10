@@ -1,3 +1,10 @@
+# v0.2.1
+
+Fix one bug and one regression in v0.2.0.
+
+  * Fix a panic in the type checker when creating a tuple from another tuple element.
+  * Fix a regression with time expressions where the type checker is tripped needlessly.
+
 # v0.2.0
 
 This release adds powerful data processing capabilities to the database,
