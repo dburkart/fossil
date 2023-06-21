@@ -34,7 +34,7 @@ func (d *Dumper) Visit(node ASTNode) Visitor {
 			args += a.Value() + ", "
 		}
 		value = "name(" + node.Value() + ") args(" + args[:len(args)-2] + ")"
-	case *TupleElementNode:
+	case *ElementNode:
 		value = t.Identifier.Value() + "[" + t.Subscript.Value() + "]"
 	}
 
