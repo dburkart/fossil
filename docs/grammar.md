@@ -24,7 +24,7 @@ timespan        = "@second" / "@minute" / "@hour" / "@day" / "@week" / "@month" 
 ; Data Pipeline
 data-pipeline   = 1*data-stage
 data-stage      = "|" data-function
-data-function   = ( "filter" / "map" / "reduce" ) data-args "->" ( expression / dictionary / tuple )
+data-function   = ( "filter" / "map" / "reduce" ) data-args "->" ( expression / composite / tuple )
 data-args       = identifier [ "," data-args ]
 
 ; Expressions
@@ -44,7 +44,7 @@ integer         = 1*DIGIT
 float           = *DIGIT "." 1*DIGIT
 string          = DQUOTE *ALPHANUM DQUOTE / SQUOTE *ALPHANUM SQUOTE
 tuple           = expression 1*( "," expression )
-dictionary      = string ":" expression *( "," string ":" expression )
+composite       = string ":" expression *( "," string ":" expression )
 ```
 
 Simple Query Examples:

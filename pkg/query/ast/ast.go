@@ -142,7 +142,7 @@ type (
 		RParen     parse.Location
 	}
 
-	DictionaryNode struct {
+	CompositeNode struct {
 		BaseNode
 		Keys   []StringNode
 		Values []ASTNode
