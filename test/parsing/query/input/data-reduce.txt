@@ -2,3 +2,4 @@ PASS
 all | reduce a, b -> a + b
 all | reduce a, b -> a[0] + b[0], a[0] + b[0]
 all | reduce a, b -> a["key"], b["key"]
+all | reduce a, b -> a[key], b[key]

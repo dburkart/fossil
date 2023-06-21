@@ -234,6 +234,11 @@ func MakeStringNode(tok parse.Token) *StringNode {
 	return &StringNode{BaseNode: BaseNode{Token: tok}, Val: types.MakeFromToken(tok)}
 }
 
+// MakeStringNodeFromID is syntactic sugar to allow unquoted strings in some instances
+func MakeStringNodeFromID(tok parse.Token) *StringNode {
+	return &StringNode{BaseNode: BaseNode{Token: tok}, Val: types.MakeString(tok.Lexeme)}
+}
+
 //-- NumberNode
 
 func MakeNumberNode(tok parse.Token) *NumberNode {
