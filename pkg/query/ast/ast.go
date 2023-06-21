@@ -115,10 +115,10 @@ type (
 		Elements []ASTNode
 	}
 
-	TupleElementNode struct {
+	ElementNode struct {
 		BaseNode
 		Identifier IdentifierNode
-		Subscript  NumberNode
+		Subscript  ASTNode
 	}
 
 	DataPipelineNode struct {

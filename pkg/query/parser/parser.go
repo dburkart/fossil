@@ -491,13 +491,13 @@ func (p *Parser) termMD() ast.ASTNode {
 //
 // Grammar:
 //
-//	unary           = ( ( "-" / "+" ) ( tuple-value / integer / float / identifier ) ) / dictionary / primary
+//	unary           = ( ( "-" / "+" ) ( sub-value / integer / float / identifier ) ) / dictionary / primary
 func (p *Parser) unary() ast.ASTNode {
 	t := p.Scanner.Emit()
 	if t.Type == scanner.TOK_MINUS || t.Type == scanner.TOK_PLUS {
 		op := ast.UnaryOpNode{BaseNode: ast.BaseNode{Token: t}, Operator: t}
 
-		tupleVal := p.tupleValue()
+		tupleVal := p.subValue()
 		if tupleVal != nil {
 			op.Operand = tupleVal
 			return &op
@@ -524,14 +524,14 @@ func (p *Parser) unary() ast.ASTNode {
 //
 // Grammar:
 //
-//	primary         = builtin / tuple-value / identifier / integer / float / string / "(" expression ")"
+//	primary         = builtin / sub-value / identifier / integer / float / string / "(" expression ")"
 func (p *Parser) primary() ast.ASTNode {
 	builtin := p.builtin()
 	if builtin != nil {
 		return builtin
 	}
 
-	tupleVal := p.tupleValue()
+	tupleVal := p.subValue()
 	if tupleVal != nil {
 		return tupleVal
 	}
@@ -559,12 +559,12 @@ func (p *Parser) primary() ast.ASTNode {
 	}
 }
 
-// tupleValue returns a TupleElementNode, or Identifier if there is no subscript.
+// subValue returns a ElementNode, or Identifier if there is no subscript.
 //
 // Grammar:
 //
-//	tuple-value     = identifier "[" number "]"
-func (p *Parser) tupleValue() ast.ASTNode {
+//	sub-value     = identifier "[" ( integer / string ) "]"
+func (p *Parser) subValue() ast.ASTNode {
 	t := p.Scanner.Emit()
 
 	if t.Type != scanner.TOK_IDENTIFIER {
@@ -584,11 +584,16 @@ func (p *Parser) tupleValue() ast.ASTNode {
 
 	t = p.Scanner.Emit()
 
-	if t.Type != scanner.TOK_INTEGER {
-		panic(parse.NewSyntaxError(t, fmt.Sprintf("Error: Invalid tuple subscript '%s', expected a number.", t.Lexeme)))
-	}
+	var subscript ast.ASTNode
 
-	subscript := *ast.MakeNumberNode(t)
+	switch t.Type {
+	case scanner.TOK_INTEGER:
+		subscript = ast.MakeNumberNode(t)
+	case scanner.TOK_STRING:
+		subscript = ast.MakeStringNode(t)
+	default:
+		panic(parse.NewSyntaxError(t, fmt.Sprintf("Error: Invalid tuple subscript '%s', expected an integer or string.", t.Lexeme)))
+	}
 
 	t = p.Scanner.Emit()
 
@@ -596,7 +601,7 @@ func (p *Parser) tupleValue() ast.ASTNode {
 		panic(parse.NewSyntaxError(t, fmt.Sprintf("Error: Expected ']'")))
 	}
 
-	return &ast.TupleElementNode{Identifier: identifier, Subscript: subscript}
+	return &ast.ElementNode{Identifier: identifier, Subscript: subscript}
 }
 
 // builtin returns a BuiltinFunctionNode or an IdentifierNode or nil

@@ -32,9 +32,9 @@ expression      = comparison *( ( "!=" / "==" ) expression )
 comparison      = term *( ( ">" / ">=" / "<" / "<=" ) comparison )
 term            = term_md *( ( "-" / "+" ) term )
 term_md         = unary *( ( "/" / "*" ) term_md )
-unary           = ( ( "-" / "+" ) ( integer / tuple-value / identifier ) ) / primary
-primary         = builtin / tuple-value / identifier / integer / float / string / "(" expression ")"
-tuple-value     = identifier "[" number "]"
+unary           = ( ( "-" / "+" ) ( integer / sub-value / identifier ) ) / primary
+primary         = builtin / sub-value / identifier / integer / float / string / "(" expression ")"
+sub-value       = identifier "[" ( integer / string ) "]"
 
 ; Built in functions
 builtin         = identifier "(" expression  ")"

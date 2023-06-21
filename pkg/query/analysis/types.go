@@ -80,7 +80,7 @@ func (t *TypeChecker) Visit(node ast.ASTNode) ast.Visitor {
 			}
 			t.typeLookup[n] = s
 			t.locations[n] = n.Token.Location
-		case *ast.TupleElementNode:
+		case *ast.ElementNode:
 			var array *schema.Array
 			s, ok := t.symbols[n.Identifier.Value()]
 			if !ok {
@@ -93,8 +93,9 @@ func (t *TypeChecker) Visit(node ast.ASTNode) ast.Visitor {
 				return nil
 			}
 
-			if types.IntVal(n.Subscript.Val) > int64(array.Length-1) {
-				t.Errors = append(t.Errors, parse.NewSyntaxError(n.Subscript.Token, fmt.Sprintf("Tuple index out of bounds, '%s' has a schema of '%s'", n.Identifier.Value(), array.ToSchema())))
+			// FIXME: Handle dictionaries
+			if types.IntVal(n.Subscript.(*ast.NumberNode).Val) > int64(array.Length-1) {
+				t.Errors = append(t.Errors, parse.NewSyntaxError(n.Subscript.(*ast.NumberNode).Token, fmt.Sprintf("Tuple index out of bounds, '%s' has a schema of '%s'", n.Identifier.Value(), array.ToSchema())))
 			}
 
 			t.typeLookup[n] = &s.(*schema.Array).Type
@@ -239,7 +240,7 @@ func (t *TypeChecker) Visit(node ast.ASTNode) ast.Visitor {
 		return t
 
 	case *ast.NumberNode, *ast.StringNode, *ast.IdentifierNode, *ast.BinaryOpNode, *ast.UnaryOpNode, *ast.TupleNode,
-		*ast.DataFunctionNode, *ast.TupleElementNode, *ast.BuiltinFunctionNode, *ast.TimespanNode, *ast.TimeWhenceNode:
+		*ast.DataFunctionNode, *ast.ElementNode, *ast.BuiltinFunctionNode, *ast.TimespanNode, *ast.TimeWhenceNode:
 		t.push(n)
 		return t
 	}
