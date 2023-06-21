@@ -141,6 +141,12 @@ type (
 		Expression ASTNode
 		RParen     parse.Location
 	}
+
+	DictionaryNode struct {
+		BaseNode
+		Keys   []StringNode
+		Values []ASTNode
+	}
 )
 
 // -- BaseNode
