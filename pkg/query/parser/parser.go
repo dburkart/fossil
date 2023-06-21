@@ -357,7 +357,7 @@ func (p *Parser) dataStage() ast.ASTNode {
 //
 // Grammar:
 //
-//	data-function   = ( "filter" / "map" / "reduce" ) data-args "->" ( expression / dictionary / tuple )
+//	data-function   = ( "filter" / "map" / "reduce" ) data-args "->" ( expression / composite / tuple )
 //	data-args       = identifier [ "," data-args ]
 func (p *Parser) dataFunction() ast.ASTNode {
 	t := p.Scanner.Emit()
@@ -393,7 +393,7 @@ func (p *Parser) dataFunction() ast.ASTNode {
 		t = p.Scanner.Emit()
 	}
 
-	fn.Expression = p.dictionary()
+	fn.Expression = p.composite()
 
 	if fn.Expression == nil {
 		fn.Expression = p.tuple()
@@ -491,7 +491,7 @@ func (p *Parser) termMD() ast.ASTNode {
 //
 // Grammar:
 //
-//	unary           = ( ( "-" / "+" ) ( sub-value / integer / float / identifier ) ) / dictionary / primary
+//	unary           = ( ( "-" / "+" ) ( sub-value / integer / float / identifier ) ) / composite / primary
 func (p *Parser) unary() ast.ASTNode {
 	t := p.Scanner.Emit()
 	if t.Type == scanner.TOK_MINUS || t.Type == scanner.TOK_PLUS {
@@ -667,13 +667,13 @@ func (p *Parser) tuple() ast.ASTNode {
 	return &list
 }
 
-// dictionary returns a DictionaryNode
+// composite returns a CompositeNode
 //
 // Grammar:
 //
-//	dictionary      = string ":" primary *( "," string ":" primary )
-func (p *Parser) dictionary() ast.ASTNode {
-	dictionary := ast.DictionaryNode{}
+//	composite      = string ":" primary *( "," string ":" primary )
+func (p *Parser) composite() ast.ASTNode {
+	composite := ast.CompositeNode{}
 	found := false
 
 	for {
@@ -701,8 +701,8 @@ func (p *Parser) dictionary() ast.ASTNode {
 
 		value := p.expression()
 
-		dictionary.Keys = append(dictionary.Keys, *key)
-		dictionary.Values = append(dictionary.Values, value)
+		composite.Keys = append(composite.Keys, *key)
+		composite.Values = append(composite.Values, value)
 		found = true
 
 		// If next token is not a comma, we're done
@@ -718,5 +718,5 @@ func (p *Parser) dictionary() ast.ASTNode {
 		return nil
 	}
 
-	return &dictionary
+	return &composite
 }
