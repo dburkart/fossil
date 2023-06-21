@@ -24,7 +24,7 @@ timespan        = "@second" / "@minute" / "@hour" / "@day" / "@week" / "@month" 
 ; Data Pipeline
 data-pipeline   = 1*data-stage
 data-stage      = "|" data-function
-data-function   = ( "filter" / "map" / "reduce" ) data-args "->" ( expression / tuple )
+data-function   = ( "filter" / "map" / "reduce" ) data-args "->" ( expression / dictionary / tuple )
 data-args       = identifier [ "," data-args ]
 
 ; Expressions
@@ -32,7 +32,7 @@ expression      = comparison *( ( "!=" / "==" ) expression )
 comparison      = term *( ( ">" / ">=" / "<" / "<=" ) comparison )
 term            = term_md *( ( "-" / "+" ) term )
 term_md         = unary *( ( "/" / "*" ) term_md )
-unary           = ( "-" / "+" ) ( integer / tuple-value / identifier ) / primary
+unary           = ( ( "-" / "+" ) ( integer / tuple-value / identifier ) ) / primary
 primary         = builtin / tuple-value / identifier / integer / float / string / "(" expression ")"
 tuple-value     = identifier "[" number "]"
 
@@ -44,6 +44,7 @@ integer         = 1*DIGIT
 float           = *DIGIT "." 1*DIGIT
 string          = DQUOTE *ALPHANUM DQUOTE / SQUOTE *ALPHANUM SQUOTE
 tuple           = expression 1*( "," expression )
+dictionary      = string ":" expression *( "," string ":" expression )
 ```
 
 Simple Query Examples:

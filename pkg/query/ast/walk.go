@@ -82,6 +82,12 @@ func Walk(v Visitor, node ASTNode) {
 	case *BuiltinFunctionNode:
 		Walk(v, n.Expression)
 
+	case *DictionaryNode:
+		for idx, _ := range n.Keys {
+			Walk(v, &n.Keys[idx])
+			Walk(v, n.Values[idx])
+		}
+
 	default:
 		panic("Unexpected ASTNode passed to Walk")
 	}

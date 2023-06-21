@@ -1,0 +1,3 @@
+PASS
+all | map x -> "a" : x / 2, "b" : x
+all | map x -> "key" : "foo", "value" : x

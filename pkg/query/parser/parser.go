@@ -357,7 +357,7 @@ func (p *Parser) dataStage() ast.ASTNode {
 //
 // Grammar:
 //
-//	data-function   = ( "filter" / "map" / "reduce" ) data-args "->" ( expression / tuple )
+//	data-function   = ( "filter" / "map" / "reduce" ) data-args "->" ( expression / dictionary / tuple )
 //	data-args       = identifier [ "," data-args ]
 func (p *Parser) dataFunction() ast.ASTNode {
 	t := p.Scanner.Emit()
@@ -393,7 +393,11 @@ func (p *Parser) dataFunction() ast.ASTNode {
 		t = p.Scanner.Emit()
 	}
 
-	fn.Expression = p.tuple()
+	fn.Expression = p.dictionary()
+
+	if fn.Expression == nil {
+		fn.Expression = p.tuple()
+	}
 
 	return &fn
 }
@@ -487,7 +491,7 @@ func (p *Parser) termMD() ast.ASTNode {
 //
 // Grammar:
 //
-//	unary           = ( "-" / "+" ) ( tuple-value / integer / float / identifier ) / primary
+//	unary           = ( ( "-" / "+" ) ( tuple-value / integer / float / identifier ) ) / dictionary / primary
 func (p *Parser) unary() ast.ASTNode {
 	t := p.Scanner.Emit()
 	if t.Type == scanner.TOK_MINUS || t.Type == scanner.TOK_PLUS {
@@ -654,4 +658,53 @@ func (p *Parser) tuple() ast.ASTNode {
 	}
 
 	return &list
+}
+
+// dictionary returns a DictionaryNode
+//
+// Grammar:
+//
+//	dictionary      = string ":" primary *( "," string ":" primary )
+func (p *Parser) dictionary() ast.ASTNode {
+	dictionary := ast.DictionaryNode{}
+	found := false
+
+	for {
+		start, pos := p.Scanner.Start, p.Scanner.Pos
+		t := p.Scanner.Emit()
+
+		if t.Type != scanner.TOK_STRING {
+			p.Scanner.Rewind()
+			break
+		}
+
+		key := ast.MakeStringNode(t)
+
+		t = p.Scanner.Emit()
+
+		if t.Type != scanner.TOK_COLON {
+			p.Scanner.Start, p.Scanner.Pos = start, pos
+			break
+		}
+
+		value := p.expression()
+
+		dictionary.Keys = append(dictionary.Keys, *key)
+		dictionary.Values = append(dictionary.Values, value)
+		found = true
+
+		// If next token is not a comma, we're done
+		t = p.Scanner.Emit()
+
+		if t.Type != scanner.TOK_COMMA {
+			p.Scanner.Rewind()
+			break
+		}
+	}
+
+	if found == false {
+		return nil
+	}
+
+	return &dictionary
 }
