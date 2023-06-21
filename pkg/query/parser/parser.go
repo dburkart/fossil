@@ -591,6 +591,8 @@ func (p *Parser) subValue() ast.ASTNode {
 		subscript = ast.MakeNumberNode(t)
 	case scanner.TOK_STRING:
 		subscript = ast.MakeStringNode(t)
+	case scanner.TOK_IDENTIFIER:
+		subscript = ast.MakeStringNodeFromID(t)
 	default:
 		panic(parse.NewSyntaxError(t, fmt.Sprintf("Error: Invalid tuple subscript '%s', expected an integer or string.", t.Lexeme)))
 	}
@@ -678,12 +680,17 @@ func (p *Parser) dictionary() ast.ASTNode {
 		start, pos := p.Scanner.Start, p.Scanner.Pos
 		t := p.Scanner.Emit()
 
-		if t.Type != scanner.TOK_STRING {
+		var key *ast.StringNode
+
+		switch t.Type {
+		case scanner.TOK_STRING:
+			key = ast.MakeStringNode(t)
+		case scanner.TOK_IDENTIFIER:
+			key = ast.MakeStringNodeFromID(t)
+		default:
 			p.Scanner.Rewind()
 			break
 		}
-
-		key := ast.MakeStringNode(t)
 
 		t = p.Scanner.Emit()
 
