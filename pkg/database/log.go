@@ -38,14 +38,18 @@ func (w *WriteAheadLog) ApplyToDB(d *Database) {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
+		// Errors in the next section could mean that our write-ahead log has been corrupted.
+		// In order to make the most of the good data that we have, we simply discard anything
+		// that looks erroneous.
+		// FIXME: Add logging to indicate we have corrupted sections of the write-ahead log.
 		action := strings.Split(scanner.Text(), ";")
 		actionType, err := strconv.Atoi(action[0])
 		if err != nil {
-			log.Fatal(err)
+			continue
 		}
 		valueBytes, err := base64.StdEncoding.DecodeString(action[1])
 		if err != nil {
-			log.Fatal(err)
+			continue
 		}
 		dec := gob.NewDecoder(bytes.NewBuffer(valueBytes))
 
@@ -54,14 +58,14 @@ func (w *WriteAheadLog) ApplyToDB(d *Database) {
 			var datum Datum
 			err := dec.Decode(&datum)
 			if err != nil {
-				log.Fatal(err)
+				continue
 			}
 			d.appendInternal(&datum)
 		case actionAddSegment:
 			var segment Segment
 			err := dec.Decode(&segment.HeadTime)
 			if err != nil {
-				log.Fatal(err)
+				continue
 			}
 			if len(d.Segments) > 0 {
 				d.Current += 1
@@ -71,7 +75,7 @@ func (w *WriteAheadLog) ApplyToDB(d *Database) {
 			var topic string
 			err := dec.Decode(&topic)
 			if err != nil {
-				log.Fatal(err)
+				continue
 			}
 			pieces := strings.Split(topic, ":")
 			if len(pieces) == 1 {
