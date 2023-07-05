@@ -210,6 +210,8 @@ func (t TimespanNode) DerivedValue() int64 {
 		return int64(time.Hour * 24 * 365)
 	case "@month":
 		return int64(time.Hour * 24 * 30)
+	case "@week":
+		return int64(time.Hour * 24 * 7)
 	case "@day":
 		return int64(time.Hour * 24)
 	case "@hour":
