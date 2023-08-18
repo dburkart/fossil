@@ -9,9 +9,10 @@ package schema
 import (
 	"errors"
 	"fmt"
-	"github.com/dburkart/fossil/pkg/common/parse"
 	"strconv"
 	"strings"
+
+	"github.com/dburkart/fossil/pkg/common/parse"
 )
 
 func Parse(s string) (Object, error) {
@@ -126,6 +127,16 @@ func (p *Parser) array() Object {
 	return &array
 }
 
+// Insert a string into a list of strings (preserving order), returning the resulting index
+func insertInto(list []string, key string) ([]string, int) {
+	for idx, s := range list {
+		if strings.Compare(key, s) <= 0 {
+			return append(list[:idx], append([]string{key}, list[idx:]...)...), idx
+		}
+	}
+	return append(list, key), len(list)
+}
+
 func (p *Parser) composite() Object {
 	var composite Composite
 
@@ -143,7 +154,12 @@ func (p *Parser) composite() Object {
 			panic(parse.NewSyntaxError(tok, fmt.Sprintf("Error: unexpected token '%s', expected a map key (\"...\")", tok.Lexeme)))
 		}
 
-		composite.Keys = append(composite.Keys, tok.Lexeme)
+		var idx int
+		unquotedKey, err := strconv.Unquote(tok.Lexeme)
+		if err != nil {
+			unquotedKey = tok.Lexeme
+		}
+		composite.Keys, idx = insertInto(composite.Keys, unquotedKey)
 
 		tok = p.Scanner.Emit()
 		if tok.Type != TOK_COLON {
@@ -161,10 +177,16 @@ func (p *Parser) composite() Object {
 			}
 		}
 
-		composite.Values = append(composite.Values, val)
+		composite.Values = append(composite.Values[:idx], append([]Object{val}, composite.Values[idx:]...)...)
 
 		// Finally, every line must have a comma
 		tok = p.Scanner.Emit()
+
+		// Our composite could be over now
+		if tok.Type == TOK_CURLY_X {
+			break
+		}
+
 		if tok.Type != TOK_COMMA {
 			panic(parse.NewSyntaxError(tok, fmt.Sprintf("Error: unexpected token '%s', expected ','", tok.Lexeme)))
 		}

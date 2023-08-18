@@ -7,6 +7,7 @@
 package schema
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -113,6 +114,30 @@ func TestParseArray(t *testing.T) {
 	}
 }
 
+func slicesEqualStr(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, v := range a {
+		if strings.Compare(v, b[i]) != 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func slicesEqualObj(a, b []Object) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, v := range a {
+		if strings.Compare(v.ToSchema(), b[i].ToSchema()) != 0 {
+			return false
+		}
+	}
+	return true
+}
+
 func TestParseShallowMap(t *testing.T) {
 	p := Parser{
 		Scanner{
@@ -142,6 +167,14 @@ func TestParseShallowMap(t *testing.T) {
 
 	if _, ok := obj.(*Composite); !ok {
 		t.Fail()
+	}
+
+	if !slicesEqualStr(obj.(*Composite).Keys, []string{"\"coords\"", "\"event\""}) {
+		t.Errorf("%v", obj.(*Composite).Keys)
+	}
+
+	if !slicesEqualObj(obj.(*Composite).Values, []Object{Array{2, Type{"int32"}}, Type{"string"}}) {
+		t.Errorf("%v", obj.(*Composite).Keys)
 	}
 
 	p = Parser{
