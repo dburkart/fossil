@@ -145,10 +145,6 @@ func (a Array) IsNumeric() bool {
 	return false
 }
 
-func (c Composite) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf(`"%s"`, c.ToSchema())), nil
-}
-
 func (c Composite) Validate(val []byte) bool {
 	var size int
 	hasString := false

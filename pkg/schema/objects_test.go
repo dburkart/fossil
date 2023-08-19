@@ -44,10 +44,4 @@ func TestJSONMarshal(t *testing.T) {
 	if string(b) != `"[10]int32"` {
 		t.Fail()
 	}
-
-	tc := Composite{Keys: []string{"x", "y"}, Values: []Object{Type{Name: "int32"}, Type{Name: "int32"}}}
-	b, _ = json.Marshal(tc)
-	if string(b) != `"{'x':int32,'y':int32,}"` {
-		t.Fail()
-	}
 }
