@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -108,7 +109,49 @@ func DecodeStringForSchema(input []byte, s Object) (string, error) {
 
 		return output, nil
 	case *Composite:
-		// FIXME: Implement
+		index := 0
+		var pairs []string
+
+		for i, key := range t.Keys {
+			var err error
+			var size int
+			obj := t.Values[i]
+			var repr string
+
+			switch tt := obj.(type) {
+			case *Type:
+				switch tt.Name {
+				case "string":
+					size = int(binary.LittleEndian.Uint32(input[index : index+4]))
+					index += 4
+					repr = string(input[index : index+size])
+				case "binary":
+					size = int(binary.LittleEndian.Uint32(input[index : index+4]))
+					index += 4
+					repr, err = DecodeStringForSchema(input[index:index+size], obj)
+					if err != nil {
+						return "", err
+					}
+				default:
+					size = tt.Size()
+					repr, err = DecodeStringForSchema(input[index:index+size], obj)
+					if err != nil {
+						return "", err
+					}
+				}
+			case *Array:
+				size = tt.Size()
+				repr, err = DecodeStringForSchema(input[index:index+size], obj)
+				if err != nil {
+					return "", err
+				}
+			}
+
+			index += size
+			pairs = append(pairs, fmt.Sprintf("%s: %s", key, repr))
+		}
+
+		return strings.Join(pairs, ", "), nil
 	}
 
 	return "", errors.New("unknown schema")
@@ -201,7 +244,65 @@ func EncodeStringForSchema(input string, s Object) ([]byte, error) {
 
 		return formatted, nil
 	case *Composite:
-		// FIXME: Implement
+		var keys []string
+		c := map[string]string{}
+		pairs := strings.Split(input, ",")
+
+		for _, p := range pairs {
+			pair := strings.Split(p, ":")
+
+			if len(pair) != 2 {
+				return nil, errors.New("malformed composite literal")
+			}
+
+			s := strings.Trim(pair[0], " \t\n")
+			key, err := strconv.Unquote(s)
+			if err != nil {
+				key = s
+			}
+			value := strings.Trim(pair[1], " \t\n")
+			c[key] = value
+			keys = append(keys, key)
+		}
+
+		sort.Strings(keys)
+
+		for i, key := range keys {
+			obj := t.Values[i]
+
+			switch tt := obj.(type) {
+			case *Type:
+				switch tt.Name {
+				case "string":
+					formatted = append(formatted, binary.LittleEndian.AppendUint32([]byte{}, uint32(len(c[key])))...)
+					b, err := EncodeStringForSchema(c[key], tt)
+					if err != nil {
+						return nil, err
+					}
+					formatted = append(formatted, b...)
+				case "binary":
+					formatted = append(formatted, binary.LittleEndian.AppendUint32([]byte{}, uint32(len(c[key])))...)
+					b, err := EncodeStringForSchema(c[key], tt)
+					if err != nil {
+						return nil, err
+					}
+					formatted = append(formatted, b...)
+				default:
+					b, err := EncodeStringForSchema(c[key], tt)
+					if err != nil {
+						return nil, err
+					}
+					formatted = append(formatted, b...)
+				}
+
+			case *Array:
+				b, err := EncodeStringForSchema(c[key], tt)
+				if err != nil {
+					return nil, err
+				}
+				formatted = append(formatted, b...)
+			}
+		}
 	}
 
 	return formatted, nil
