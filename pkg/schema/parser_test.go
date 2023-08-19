@@ -169,7 +169,7 @@ func TestParseShallowMap(t *testing.T) {
 		t.Fail()
 	}
 
-	if !slicesEqualStr(obj.(*Composite).Keys, []string{"\"coords\"", "\"event\""}) {
+	if !slicesEqualStr(obj.(*Composite).Keys, []string{"coords", "event"}) {
 		t.Errorf("%v", obj.(*Composite).Keys)
 	}
 
