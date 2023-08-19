@@ -8,13 +8,14 @@ package analysis
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/dburkart/fossil/pkg/common/parse"
 	"github.com/dburkart/fossil/pkg/database"
 	"github.com/dburkart/fossil/pkg/query/ast"
 	"github.com/dburkart/fossil/pkg/query/scanner"
 	"github.com/dburkart/fossil/pkg/query/types"
 	"github.com/dburkart/fossil/pkg/schema"
-	"strings"
 )
 
 type TypeChecker struct {
@@ -82,6 +83,7 @@ func (t *TypeChecker) Visit(node ast.ASTNode) ast.Visitor {
 			t.locations[n] = n.Token.Location
 		case *ast.ElementNode:
 			var array *schema.Array
+			var composite *schema.Composite
 			s, ok := t.symbols[n.Identifier.Value()]
 			if !ok {
 				t.Errors = append(t.Errors, parse.NewSyntaxError(n.Identifier.Token, fmt.Sprintf("Unable to infer type of identifier '%s'", n.Identifier.Value())))
@@ -89,17 +91,32 @@ func (t *TypeChecker) Visit(node ast.ASTNode) ast.Visitor {
 			}
 
 			if array, ok = s.(*schema.Array); !ok {
-				t.Errors = append(t.Errors, parse.NewSyntaxError(n.Identifier.Token, fmt.Sprintf("Type of '%s' is not a tuple, subscripting not allowed", n.Identifier.Value())))
-				return nil
+				if composite, ok = s.(*schema.Composite); !ok {
+					t.Errors = append(t.Errors, parse.NewSyntaxError(n.Identifier.Token, fmt.Sprintf("Type of '%s' is not a tuple or composite, subscripting not allowed", n.Identifier.Value())))
+					return nil
+				}
 			}
 
-			// FIXME: Handle dictionaries
-			if types.IntVal(n.Subscript.(*ast.NumberNode).Val) > int64(array.Length-1) {
-				t.Errors = append(t.Errors, parse.NewSyntaxError(n.Subscript.(*ast.NumberNode).Token, fmt.Sprintf("Tuple index out of bounds, '%s' has a schema of '%s'", n.Identifier.Value(), array.ToSchema())))
-			}
+			if array != nil {
+				if types.IntVal(n.Subscript.(*ast.NumberNode).Val) > int64(array.Length-1) {
+					t.Errors = append(t.Errors, parse.NewSyntaxError(n.Subscript.(*ast.NumberNode).Token, fmt.Sprintf("Tuple index out of bounds, '%s' has a schema of '%s'", n.Identifier.Value(), array.ToSchema())))
+				}
 
-			t.typeLookup[n] = &s.(*schema.Array).Type
+				t.typeLookup[n] = &array.Type
+			} else {
+				// Ensure that the subscript is a string
+				if _, ok := n.Subscript.(*ast.StringNode); !ok {
+					t.Errors = append(t.Errors, parse.NewSyntaxError(n.Token, "Expected a string index for composite subscript"))
+					return nil
+				}
+
+				keyName := n.Subscript.(*ast.StringNode).Val
+				obj := composite.SchemaForKey(types.StringVal(keyName))
+
+				t.typeLookup[n] = obj
+			}
 			t.locations[n] = n.Identifier.Token.Location
+
 		case *ast.TimeWhenceNode, *ast.TimespanNode:
 			t.typeLookup[n] = &schema.Type{Name: "int64"}
 		case *ast.BinaryOpNode:
