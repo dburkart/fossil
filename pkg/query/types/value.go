@@ -11,12 +11,14 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math"
+	"sort"
+	"strconv"
+
 	"github.com/dburkart/fossil/pkg/common/parse"
 	"github.com/dburkart/fossil/pkg/database"
 	"github.com/dburkart/fossil/pkg/query/scanner"
 	"github.com/dburkart/fossil/pkg/schema"
-	"math"
-	"strconv"
 )
 
 type Kind int
@@ -29,6 +31,7 @@ const (
 	Int
 	Float
 	Tuple
+	Composite
 )
 
 type Value interface {
@@ -36,27 +39,30 @@ type Value interface {
 }
 
 type (
-	unknownVal struct{}
-	booleanVal bool
-	stringVal  string
-	intVal     int64
-	floatVal   float64
-	tupleVal   []Value
+	unknownVal   struct{}
+	booleanVal   bool
+	stringVal    string
+	intVal       int64
+	floatVal     float64
+	tupleVal     []Value
+	compositeVal map[string]Value
 )
 
-func (unknownVal) Kind() Kind { return Unknown }
-func (booleanVal) Kind() Kind { return Boolean }
-func (stringVal) Kind() Kind  { return String }
-func (intVal) Kind() Kind     { return Int }
-func (floatVal) Kind() Kind   { return Float }
-func (tupleVal) Kind() Kind   { return Tuple }
+func (unknownVal) Kind() Kind   { return Unknown }
+func (booleanVal) Kind() Kind   { return Boolean }
+func (stringVal) Kind() Kind    { return String }
+func (intVal) Kind() Kind       { return Int }
+func (floatVal) Kind() Kind     { return Float }
+func (tupleVal) Kind() Kind     { return Tuple }
+func (compositeVal) Kind() Kind { return Composite }
 
-func MakeUnknown() Value        { return unknownVal{} }
-func MakeBoolean(b bool) Value  { return booleanVal(b) }
-func MakeString(s string) Value { return stringVal(s) }
-func MakeInt(i int64) Value     { return intVal(i) }
-func MakeFloat(f float64) Value { return floatVal(f) }
-func MakeTuple(t []Value) Value { return tupleVal(t) }
+func MakeUnknown() Value                     { return unknownVal{} }
+func MakeBoolean(b bool) Value               { return booleanVal(b) }
+func MakeString(s string) Value              { return stringVal(s) }
+func MakeInt(i int64) Value                  { return intVal(i) }
+func MakeFloat(f float64) Value              { return floatVal(f) }
+func MakeTuple(t []Value) Value              { return tupleVal(t) }
+func MakeComposite(m map[string]Value) Value { return compositeVal(m) }
 
 func MakeFromSchemaType(b []byte, t schema.Type) Value {
 	switch t.Name {
@@ -79,6 +85,16 @@ func MakeFromSchemaType(b []byte, t schema.Type) Value {
 	}
 }
 
+func MakeFromSchemaArray(b []byte, a schema.Array) Value {
+	var values []Value
+
+	for i := 0; i < a.Length; i++ {
+		values = append(values, MakeFromSchemaType(b[i*a.Type.Size():], a.Type))
+	}
+
+	return MakeTuple(values)
+}
+
 func MakeFromEntry(entry database.Entry) Value {
 	object, err := schema.Parse(entry.Schema)
 	if err != nil {
@@ -90,13 +106,45 @@ func MakeFromEntry(entry database.Entry) Value {
 	case *schema.Type:
 		return MakeFromSchemaType(entry.Data, *t)
 	case *schema.Array:
-		var values []Value
+		return MakeFromSchemaArray(entry.Data, *t)
+	case *schema.Composite:
+		value := map[string]Value{}
 
-		for i := 0; i < t.Length; i++ {
-			values = append(values, MakeFromSchemaType(entry.Data[i*t.Type.Size():], t.Type))
+		index := 0
+
+		// Iterate through our keys, pulling out values to store in our map
+		for i, key := range t.Keys {
+			// Depending on the object type, it will take up variable amounts of space
+			var size int
+			obj := t.Values[i]
+
+			switch tt := obj.(type) {
+			case *schema.Type:
+				size = tt.Size()
+
+				// We are variable length, so read in the length of the field
+				if tt.Name == "string" || tt.Name == "binary" {
+					// Read in 4 bytes specifying size, skip it by adding to index
+					size = int(binary.LittleEndian.Uint32(entry.Data[index : index+4]))
+					index += 4
+				}
+
+				value[key] = MakeFromSchemaType(entry.Data[index:index+size], *tt)
+			case *schema.Array:
+				size = tt.Size()
+
+				if tt.Type.Name == "string" || tt.Type.Name == "binary" {
+					// Read in 4 bytes specifying size, skip it by adding to index
+					size = int(binary.LittleEndian.Uint32(entry.Data[index : index+4]))
+					index += 4
+				}
+
+				value[key] = MakeFromSchemaArray(entry.Data[index:index+size], *tt)
+			}
+
+			index += size
 		}
-
-		return MakeTuple(values)
+		return MakeComposite(value)
 	}
 
 	return MakeUnknown()
@@ -176,7 +224,63 @@ func EntryFromValue(v Value) (database.Entry, error) {
 		if !ok {
 			break
 		}
+	case compositeVal:
+		var buffer bytes.Buffer
+		composite := schema.Composite{}
+		sortedKeys := make([]string, len(v))
 
+		i := 0
+		for k := range v {
+			sortedKeys[i] = k
+			i++
+		}
+
+		sort.Strings(sortedKeys)
+
+		for _, key := range sortedKeys {
+			var t schema.Object
+			value := v[key]
+
+			switch value.(type) {
+			case intVal:
+				t = schema.Type{Name: "int64"}
+				b, err := schema.EncodeType(IntVal(value))
+				if err != nil {
+					return entry, err
+				}
+				buffer.Write(b)
+			case floatVal:
+				t = schema.Type{Name: "float64"}
+				b, err := schema.EncodeType(FloatVal(value))
+				if err != nil {
+					return entry, err
+				}
+				buffer.Write(b)
+			case booleanVal:
+				t = schema.Type{Name: "boolean"}
+				b, err := schema.EncodeType(BooleanVal(value))
+				if err != nil {
+					return entry, err
+				}
+				buffer.Write(b)
+			case stringVal:
+				s := StringVal(value)
+				t = schema.Type{Name: "string"}
+				b, err := schema.EncodeType(s)
+				if err != nil {
+					return entry, err
+				}
+				// First, write out the string length
+				buffer.Write(binary.LittleEndian.AppendUint32([]byte{}, uint32(len(s))))
+				buffer.Write(b)
+			}
+
+			composite.Keys = append(composite.Keys, key)
+			composite.Values = append(composite.Values, t)
+		}
+
+		entry.Schema = composite.ToSchema()
+		entry.Data = buffer.Bytes()
 	}
 	return entry, err
 }
@@ -198,6 +302,25 @@ func MakeFromToken(tok parse.Token) Value {
 	}
 
 	return MakeUnknown()
+}
+
+func StringVal(v Value) string {
+	switch x := v.(type) {
+	case stringVal:
+		return string(x)
+	case intVal:
+		return strconv.FormatInt(IntVal(x), 10)
+	case booleanVal:
+		boolStr := "true"
+		if !BooleanVal(x) {
+			boolStr = "false"
+		}
+		return boolStr
+	case floatVal:
+		return strconv.FormatFloat(FloatVal(x), 'e', 3, 64)
+	default:
+		panic("Could not convert string")
+	}
 }
 
 func BooleanVal(v Value) bool {
@@ -236,6 +359,15 @@ func FloatVal(v Value) float64 {
 		}
 	default:
 		panic("Not a float")
+	}
+}
+
+func CompositeVal(v Value) map[string]Value {
+	switch x := v.(type) {
+	case compositeVal:
+		return x
+	default:
+		panic("Not a composite")
 	}
 }
 
