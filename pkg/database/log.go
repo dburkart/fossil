@@ -73,7 +73,16 @@ func (w *WriteAheadLog) ApplyToDB(d *Database) {
 			if err != nil {
 				log.Fatal(err)
 			}
-			pieces := strings.Split(topic, ":")
+			var pieces []string
+			idx := strings.Index(topic, ":")
+			if idx == -1 {
+				pieces = []string{topic}
+			} else {
+				pieces = []string{
+					topic[:idx],
+					topic[idx+1:],
+				}
+			}
 			if len(pieces) == 1 {
 				d.addTopicInternal(topic, "string")
 			} else {
