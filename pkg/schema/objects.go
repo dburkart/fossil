@@ -153,17 +153,17 @@ func (c Composite) Validate(val []byte) bool {
 	var size int
 	hasString := false
 	for _, val := range c.Values {
-		switch val.(type) {
-		case Type:
-			if val.(Type).Name == "string" {
+		switch t := val.(type) {
+		case *Type:
+			if t.Name == "string" {
 				hasString = true
 			}
-			size += val.(Type).Size()
-		case Array:
-			if val.(Array).Type.Name == "string" {
+			size += t.Size()
+		case *Array:
+			if t.Type.Name == "string" {
 				hasString = true
 			}
-			size += val.(Array).Size()
+			size += t.Size()
 		}
 	}
 
