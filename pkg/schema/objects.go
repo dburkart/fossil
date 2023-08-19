@@ -182,7 +182,7 @@ func (c Composite) ToSchema() string {
 		key := c.Keys[idx]
 		val := c.Values[idx].ToSchema()
 
-		schema += fmt.Sprintf(`'%s':%s,`, key, val)
+		schema += fmt.Sprintf(`"%s":%s,`, key, val)
 	}
 
 	schema += "}"
