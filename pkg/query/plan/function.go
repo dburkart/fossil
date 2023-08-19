@@ -8,6 +8,7 @@ package plan
 
 import (
 	"fmt"
+
 	"github.com/dburkart/fossil/pkg/query/ast"
 	"github.com/dburkart/fossil/pkg/query/types"
 )
@@ -65,13 +66,12 @@ func (f *Function) Visit(node ast.ASTNode) ast.Visitor {
 
 			switch s := n.Subscript.(type) {
 			case *ast.StringNode:
-				// FIXME: Handle!
+				f.results[n] = types.CompositeVal(result)[types.StringVal(s.Val)]
 			case *ast.NumberNode:
 				f.results[n] = types.TupleVal(result)[types.IntVal(s.Val)]
 			default:
 				panic(fmt.Sprintf("Subscript %s is not valid!", n.Subscript.Value()))
 			}
-
 		case *ast.TupleNode:
 			var values []types.Value
 			for _, v := range n.Elements {
@@ -94,7 +94,7 @@ func (f *Function) Visit(node ast.ASTNode) ast.Visitor {
 
 	switch n := node.(type) {
 	case *ast.DataFunctionNode, *ast.IdentifierNode, *ast.NumberNode, *ast.UnaryOpNode, *ast.BinaryOpNode,
-		*ast.TupleNode, *ast.ElementNode, *ast.BuiltinFunctionNode:
+		*ast.TupleNode, *ast.ElementNode, *ast.BuiltinFunctionNode, *ast.CompositeNode:
 		f.push(n)
 		return f
 	}
