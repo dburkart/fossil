@@ -192,3 +192,13 @@ func (c Composite) ToSchema() string {
 func (c Composite) IsNumeric() bool {
 	return false
 }
+
+func (c Composite) SchemaForKey(key string) Object {
+	for i, v := range c.Keys {
+		if v == key {
+			return c.Values[i]
+		}
+	}
+
+	return Unknown{}
+}
