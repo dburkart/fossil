@@ -112,8 +112,12 @@ func (p *Parser) array() Object {
 		panic(parse.NewSyntaxError(tok, fmt.Sprintf("Error: unexpected token '%s', expected a ']'", tok.Lexeme)))
 	}
 
-	var dType *Type
-	dType = p.dType().(*Type)
+	obj := p.dType()
+	if obj == nil {
+		panic(parse.NewSyntaxError(tok, fmt.Sprintf("Error: unexpected token '%s', expected a valid type", tok.Lexeme)))
+	}
+
+	dType := obj.(*Type)
 	if dType == nil {
 		panic(parse.NewSyntaxError(tok, fmt.Sprintf("Error: unexpected token '%s', expected a valid type", tok.Lexeme)))
 	}
