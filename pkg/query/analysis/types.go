@@ -18,6 +18,31 @@ import (
 	"github.com/dburkart/fossil/pkg/schema"
 )
 
+func operandsComparable(lhs, rhs schema.Object) bool {
+	if lhs == nil || rhs == nil {
+		return false
+	}
+
+	if _, ok := lhs.(schema.Unknown); ok {
+		return true
+	}
+	if _, ok := rhs.(schema.Unknown); ok {
+		return true
+	}
+
+	if lhs.IsNumeric() && rhs.IsNumeric() {
+		return true
+	}
+
+	leftType, leftOk := lhs.(*schema.Type)
+	rightType, rightOk := rhs.(*schema.Type)
+	if leftOk && rightOk {
+		return leftType.Name == rightType.Name
+	}
+
+	return false
+}
+
 type TypeChecker struct {
 	Errors      []parse.SyntaxError
 	initialType schema.Object
@@ -120,23 +145,51 @@ func (t *TypeChecker) Visit(node ast.ASTNode) ast.Visitor {
 		case *ast.TimeWhenceNode, *ast.TimespanNode:
 			t.typeLookup[n] = &schema.Type{Name: "int64"}
 		case *ast.BinaryOpNode:
-			if !t.typeForNode(n.Left).IsNumeric() || !t.typeForNode(n.Right).IsNumeric() {
-				t.Errors = append(t.Errors, parse.NewSyntaxError(n.Op, "Both operands must be numeric"))
-				return nil
-			}
+			leftType := t.typeForNode(n.Left)
+			rightType := t.typeForNode(n.Right)
 
 			switch n.Op.Type {
 			case scanner.TOK_MINUS, scanner.TOK_PLUS, scanner.TOK_STAR:
-				if strings.HasPrefix(t.typeForNode(n.Left).ToSchema(), "float") ||
-					strings.HasPrefix(t.typeForNode(n.Right).ToSchema(), "float") {
+				if !leftType.IsNumeric() || !rightType.IsNumeric() {
+					t.Errors = append(t.Errors, parse.NewSyntaxError(n.Op, "Both operands must be numeric"))
+					return nil
+				}
+				if strings.HasPrefix(leftType.ToSchema(), "float") ||
+					strings.HasPrefix(rightType.ToSchema(), "float") {
 					t.typeLookup[n] = &schema.Type{Name: "float64"}
 				} else {
 					t.typeLookup[n] = &schema.Type{Name: "int64"}
 				}
 			case scanner.TOK_SLASH:
+				if !leftType.IsNumeric() || !rightType.IsNumeric() {
+					t.Errors = append(t.Errors, parse.NewSyntaxError(n.Op, "Both operands must be numeric"))
+					return nil
+				}
 				t.typeLookup[n] = &schema.Type{Name: "float64"}
-			case scanner.TOK_LESS, scanner.TOK_LESS_EQ, scanner.TOK_EQ_EQ, scanner.TOK_NOT_EQ, scanner.TOK_GREATER, scanner.TOK_GREATER_EQ:
+			case scanner.TOK_LESS, scanner.TOK_LESS_EQ, scanner.TOK_GREATER, scanner.TOK_GREATER_EQ:
+				if !leftType.IsNumeric() || !rightType.IsNumeric() {
+					t.Errors = append(t.Errors, parse.NewSyntaxError(n.Op, "Both operands must be numeric"))
+					return nil
+				}
 				t.typeLookup[n] = &schema.Type{Name: "boolean"}
+			case scanner.TOK_EQ_EQ, scanner.TOK_NOT_EQ:
+				if !operandsComparable(leftType, rightType) {
+					err := fmt.Sprintf("Operands of '%s' must be comparable, got %s and %s", n.Op.Lexeme, leftType.ToSchema(), rightType.ToSchema())
+					t.Errors = append(t.Errors, parse.NewSyntaxError(n.Op, err))
+					return nil
+				}
+				t.typeLookup[n] = &schema.Type{Name: "boolean"}
+			default:
+				if !leftType.IsNumeric() || !rightType.IsNumeric() {
+					t.Errors = append(t.Errors, parse.NewSyntaxError(n.Op, "Both operands must be numeric"))
+					return nil
+				}
+				if strings.HasPrefix(leftType.ToSchema(), "float") ||
+					strings.HasPrefix(rightType.ToSchema(), "float") {
+					t.typeLookup[n] = &schema.Type{Name: "float64"}
+				} else {
+					t.typeLookup[n] = &schema.Type{Name: "int64"}
+				}
 			}
 			t.locations[n] = parse.Location{Start: t.locations[n.Left].Start, End: t.locations[n.Right].End}
 		case *ast.UnaryOpNode:
