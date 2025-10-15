@@ -19,6 +19,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -421,7 +422,28 @@ func (d *Database) SchemaForTopic(topic string) schema.Object {
 	d.topicLock.RUnlock()
 
 	if !exists {
-		return nil
+		// Check for "inferred" topics
+		var indices []int
+		d.topicLock.RLock()
+		for key, idx := range d.topics {
+			if strings.HasPrefix(key, topic) {
+				indices = append(indices, idx)
+			}
+		}
+		d.topicLock.RUnlock()
+
+		var obj schema.Object
+
+		for i, idx := range indices {
+			if i == 0 {
+				obj = d.SchemaLookup[idx]
+				continue
+			}
+
+			obj = schema.Combine(obj, d.SchemaLookup[idx])
+		}
+
+		return obj
 	}
 
 	return d.SchemaLookup[index]
