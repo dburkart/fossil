@@ -16,6 +16,204 @@ import (
 	"strings"
 )
 
+// splitTopLevel splits an input string by the provided separator while ignoring
+// separators that appear within quoted strings or nested brackets / braces /
+// parentheses. This allows us to safely parse literals such as composite
+// members that may themselves contain comma-separated data (e.g. arrays).
+func splitTopLevel(input string, sep rune) ([]string, error) {
+	var (
+		parts        []string
+		current      strings.Builder
+		inQuote      bool
+		escaped      bool
+		depthParen   int
+		depthBracket int
+		depthBrace   int
+	)
+
+	flush := func() {
+		part := strings.TrimSpace(current.String())
+		parts = append(parts, part)
+		current.Reset()
+	}
+
+	for _, r := range input {
+		if escaped {
+			current.WriteRune(r)
+			escaped = false
+			continue
+		}
+
+		switch r {
+		case '\\':
+			if inQuote {
+				escaped = true
+			}
+		case '"':
+			inQuote = !inQuote
+		case '(':
+			if !inQuote {
+				depthParen++
+			}
+		case ')':
+			if !inQuote {
+				if depthParen == 0 {
+					return nil, errors.New("unmatched closing parenthesis")
+				}
+				depthParen--
+			}
+		case '[':
+			if !inQuote {
+				depthBracket++
+			}
+		case ']':
+			if !inQuote {
+				if depthBracket == 0 {
+					return nil, errors.New("unmatched closing bracket")
+				}
+				depthBracket--
+			}
+		case '{':
+			if !inQuote {
+				depthBrace++
+			}
+		case '}':
+			if !inQuote {
+				if depthBrace == 0 {
+					return nil, errors.New("unmatched closing brace")
+				}
+				depthBrace--
+			}
+		case sep:
+			if !inQuote && depthParen == 0 && depthBracket == 0 && depthBrace == 0 {
+				flush()
+				continue
+			}
+		}
+
+		current.WriteRune(r)
+	}
+
+	if escaped {
+		return nil, errors.New("dangling escape character in literal")
+	}
+
+	if depthParen != 0 || depthBracket != 0 || depthBrace != 0 || inQuote {
+		return nil, errors.New("unterminated literal")
+	}
+
+	flush()
+
+	return parts, nil
+}
+
+func findTopLevelColon(input string) (int, error) {
+	var (
+		inQuote      bool
+		escaped      bool
+		depthParen   int
+		depthBracket int
+		depthBrace   int
+	)
+
+	for idx, r := range input {
+		if escaped {
+			escaped = false
+			continue
+		}
+
+		switch r {
+		case '\\':
+			if inQuote {
+				escaped = true
+			}
+		case '"':
+			inQuote = !inQuote
+		case '(':
+			if !inQuote {
+				depthParen++
+			}
+		case ')':
+			if !inQuote {
+				if depthParen == 0 {
+					return -1, errors.New("unmatched closing parenthesis")
+				}
+				depthParen--
+			}
+		case '[':
+			if !inQuote {
+				depthBracket++
+			}
+		case ']':
+			if !inQuote {
+				if depthBracket == 0 {
+					return -1, errors.New("unmatched closing bracket")
+				}
+				depthBracket--
+			}
+		case '{':
+			if !inQuote {
+				depthBrace++
+			}
+		case '}':
+			if !inQuote {
+				if depthBrace == 0 {
+					return -1, errors.New("unmatched closing brace")
+				}
+				depthBrace--
+			}
+		case ':':
+			if !inQuote && depthParen == 0 && depthBracket == 0 && depthBrace == 0 {
+				return idx, nil
+			}
+		}
+	}
+
+	return -1, errors.New("malformed composite literal")
+}
+
+func consumeValueForObject(input string, obj Object) (value string, rest string, err error) {
+	tokens, err := splitTopLevel(input, ',')
+	if err != nil {
+		return "", "", err
+	}
+
+	switch tt := obj.(type) {
+	case *Type:
+		if len(tokens) == 0 || (len(tokens) == 1 && tokens[0] == "") {
+			return "", "", errors.New("malformed composite literal")
+		}
+		value = tokens[0]
+		restTokens := tokens[1:]
+		for _, token := range restTokens {
+			if token == "" {
+				return "", "", errors.New("malformed composite literal")
+			}
+		}
+		if len(restTokens) > 0 {
+			rest = strings.Join(restTokens, ",")
+		}
+	case *Array:
+		if len(tokens) < tt.Length {
+			return "", "", fmt.Errorf("schema expects %d elements, you provided %d", tt.Length, len(tokens))
+		}
+		value = strings.Join(tokens[:tt.Length], ", ")
+		restTokens := tokens[tt.Length:]
+		for _, token := range restTokens {
+			if token == "" {
+				return "", "", errors.New("malformed composite literal")
+			}
+		}
+		if len(restTokens) > 0 {
+			rest = strings.Join(restTokens, ",")
+		}
+	default:
+		return "", "", errors.New("unsupported composite member type")
+	}
+
+	return value, rest, nil
+}
+
 type SchemaType interface {
 	[]byte | bool | string | int16 | int32 | int64 | uint16 |
 		uint32 | uint64 | float32 | float64
@@ -227,8 +425,10 @@ func EncodeStringForSchema(input string, s Object) ([]byte, error) {
 			return EncodeType(f)
 		}
 	case *Array:
-		var array []string
-		array = strings.Split(input, ",")
+		array, err := splitTopLevel(input, ',')
+		if err != nil {
+			return nil, err
+		}
 		// Basic bounds checking
 		if len(array) != t.Length {
 			return nil, fmt.Errorf("schema expects %d elements, you provided %d", t.Length, len(array))
@@ -246,23 +446,45 @@ func EncodeStringForSchema(input string, s Object) ([]byte, error) {
 	case *Composite:
 		var keys []string
 		c := map[string]string{}
-		pairs := strings.Split(input, ",")
+		remainder := strings.TrimSpace(input)
+		if remainder == "" {
+			return nil, errors.New("malformed composite literal")
+		}
 
-		for _, p := range pairs {
-			pair := strings.Split(p, ":")
+		for len(remainder) > 0 {
+			remainderBefore := remainder
+			colonIdx, err := findTopLevelColon(remainder)
+			if err != nil {
+				return nil, err
+			}
 
-			if len(pair) != 2 {
+			rawKey := strings.TrimSpace(remainder[:colonIdx])
+			key, err := strconv.Unquote(rawKey)
+			if err != nil {
+				key = rawKey
+			}
+
+			obj := t.SchemaForKey(key)
+			if _, ok := obj.(Unknown); ok {
+				return nil, fmt.Errorf("unknown key '%s' in composite literal", key)
+			}
+
+			valueStart := strings.TrimSpace(remainder[colonIdx+1:])
+			valueLiteral, rest, err := consumeValueForObject(valueStart, obj)
+			if err != nil {
+				return nil, err
+			}
+
+			c[key] = valueLiteral
+			keys = append(keys, key)
+
+			remainder = strings.TrimSpace(rest)
+			if strings.HasPrefix(remainder, ",") {
+				remainder = strings.TrimSpace(remainder[1:])
+			}
+			if remainder == remainderBefore {
 				return nil, errors.New("malformed composite literal")
 			}
-
-			s := strings.Trim(pair[0], " \t\n")
-			key, err := strconv.Unquote(s)
-			if err != nil {
-				key = s
-			}
-			value := strings.Trim(pair[1], " \t\n")
-			c[key] = value
-			keys = append(keys, key)
 		}
 
 		sort.Strings(keys)
