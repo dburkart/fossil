@@ -8,6 +8,7 @@ package schema
 
 import (
 	"fmt"
+	"strings"
 )
 
 type Object interface {
@@ -18,6 +19,8 @@ type Object interface {
 
 type (
 	Unknown struct{}
+
+	Ambiguous struct{}
 
 	Type struct {
 		Name string
@@ -33,6 +36,39 @@ type (
 		Values []Object
 	}
 )
+
+func Combine(first, second Object) Object {
+	switch ft := first.(type) {
+	case *Ambiguous:
+		return &Ambiguous{}
+	case *Unknown:
+		return &Unknown{}
+	case *Type:
+		if ft.CompatibleWith(second) {
+			ot := second.(*Type)
+			if ft.Size() > ot.Size() {
+				return ft
+			} else {
+				return ot
+			}
+		}
+		return &Ambiguous{}
+	case *Array:
+		ot, ok := second.(*Array)
+		if !ok {
+			return &Ambiguous{}
+		}
+
+		if ft.Type.CompatibleWith(&ot.Type) && ft.Length == ot.Length {
+			return ft
+		}
+		return &Ambiguous{}
+	case *Composite:
+		// TODO: Implement
+		return &Ambiguous{}
+	}
+	return &Unknown{}
+}
 
 func (t Type) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf(`"%s"`, t.ToSchema())), nil
@@ -96,10 +132,33 @@ func (t Type) Validate(val []byte) bool {
 
 	return true
 }
+func (t Type) CompatibleWith(other Object) bool {
+	ot, ok := other.(*Type)
+	if !ok {
+		return false
+	}
+
+	if t.Name == ot.Name {
+		return true
+	}
+
+	if strings.HasPrefix(t.Name, "int") || strings.HasPrefix(t.Name, "float") {
+		if strings.HasPrefix(ot.Name, "int") || strings.HasPrefix(ot.Name, "float") {
+			return true
+		}
+		return false
+	}
+
+	return false
+}
 
 func (u Unknown) Validate(_ []byte) bool { return false }
 func (u Unknown) ToSchema() string       { return "Unknown" }
 func (u Unknown) IsNumeric() bool        { return false }
+
+func (u Ambiguous) Validate(_ []byte) bool { return false }
+func (u Ambiguous) ToSchema() string       { return "Ambiguous" }
+func (u Ambiguous) IsNumeric() bool        { return false }
 
 func (t Type) ToSchema() string {
 	return t.Name
